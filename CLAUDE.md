@@ -25,13 +25,18 @@ Connected to both Infra VLAN and Storage LAN.
 | Service | Infra IP | Role |
 |---------|----------|------|
 | PBS VM | 192.168.100.187 | Proxmox Backup Server |
-| MinIO | (container) | S3 storage for Restic backups |
+| MinIO | 192.168.200.210:9000 | S3 storage for Restic backups |
 
-### Key LXC Containers
+### Key LXC Containers (winston)
 
-- **Nextcloud** - File sync, backed up via Restic to MinIO
-- **Immich** - Photo management, backed up via Restic to MinIO
-- **Vaultwarden** - Password manager (previously backed up)
+| CTID | Service | Backup | Schedule |
+|------|---------|--------|----------|
+| 101 | Nextcloud | Restic → `restic-nextcloud` | Daily 00:00 |
+| 103 | Immich | Restic → `restic-immich` | Daily 00:00 |
+| 104 | WireGuard | — | — |
+| 105 | Plex | — | — |
+
+See `docs/restic-backups.md` for full backup configuration.
 
 ### Storage Flow
 
