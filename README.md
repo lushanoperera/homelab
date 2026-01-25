@@ -18,8 +18,29 @@ Storage LAN uses a separate physical interface on each host connected via dedica
 | Host | Infra IP | Storage IP | Description |
 |------|----------|------------|-------------|
 | winston | 192.168.100.38 | 192.168.200.38 | Primary Proxmox host (MS-01, i9-13900H) |
-| reginald | 192.168.100.4 | 192.168.200.4 | Secondary Proxmox host |
+| reginald | 192.168.100.4 | 192.168.200.4 | Storage host (Zimaboard 832, 7x SSD ZFS RAIDZ2) |
 | QNAP NAS | — | 192.168.200.x | Storage traffic only |
+
+### Hardware Details
+
+**Winston (Primary Compute)**
+
+| Component | Specification |
+|-----------|---------------|
+| Chassis | Minisforum MS-01 |
+| CPU | Intel i9-13900H (14C/20T, up to 5.2 GHz) |
+| Features | SR-IOV GPU passthrough, Quick Sync HW transcode |
+| Thermal | powersave governor, thermald ([docs](docs/thermal-management.md)) |
+
+**Reginald (Storage Server)**
+
+| Component | Specification |
+|-----------|---------------|
+| Chassis | Zimaboard 832 |
+| CPU | Intel Celeron N3450 (4C/4T) |
+| Expansion | SATA PCIe controller card |
+| Storage | 7x SSD in ZFS RAIDZ2 pool |
+| Role | NFS server for LXC container data |
 
 ### QNAP NAS (TS-251+)
 
