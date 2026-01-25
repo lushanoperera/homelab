@@ -17,7 +17,7 @@ Storage LAN uses a separate physical interface on each host connected via dedica
 
 | Host | Infra IP | Storage IP | Description |
 |------|----------|------------|-------------|
-| winston | 192.168.100.38 | 192.168.200.38 | Primary Proxmox host |
+| winston | 192.168.100.38 | 192.168.200.38 | Primary Proxmox host (MS-01, i9-13900H) |
 | reginald | 192.168.100.4 | 192.168.200.4 | Secondary Proxmox host |
 | QNAP NAS | — | 192.168.200.x | Storage traffic only |
 
@@ -54,7 +54,9 @@ CacheFS on winston reduces bottlenecks from reginald's 2.5GbE networking.
 ## Directory Structure
 
 ```
-├── docs/                    # Documentation
+├── docs/
+│   ├── backups.md           # Backup configuration (PBS, Restic)
+│   └── thermal-management.md # CPU governor, thermald config
 ├── reports/                 # Generated reports, logs
 ├── check-nfs-mounts.sh      # NFS mount verification script
 ├── nfs-mount-check.service  # Systemd service for NFS checks
@@ -84,6 +86,13 @@ Verifies NFS mounts are accessible and healthy.
 
 ### nfs-mount-check.service
 Systemd service unit for automated NFS mount monitoring.
+
+## Documentation
+
+| Doc | Description |
+|-----|-------------|
+| [Backups](docs/backups.md) | PBS and Restic backup configuration |
+| [Thermal Management](docs/thermal-management.md) | CPU governor, thermald, Intel P-State tuning |
 
 ## Related Projects
 
