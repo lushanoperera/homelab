@@ -1,0 +1,30 @@
+services:
+  garage:
+    image: dxflrs/garage:v1.0.1
+    container_name: garage
+    restart: always
+    environment:
+      - TZ=Europe/Rome
+    volumes:
+      # Garage config
+      - ./garage.toml:/etc/garage.toml:ro
+      # Metadata (fast storage recommended, SSD if available)
+      - /share/Data/garage/meta:/var/lib/garage/meta
+      # Data (can be HDD)
+      - /share/Data/garage/data:/var/lib/garage/data
+    ports:
+      - "3900:3900"  # S3 API
+      - "3901:3901"  # RPC (inter-node, not needed for single node but exposed for debugging)
+      - "3902:3902"  # Web/Static hosting
+      - "3903:3903"  # Admin API
+    networks:
+      qnet-static-eth0-076754:
+        ipv4_address: 192.168.100.211
+      qnet-static-eth1-400be2:
+        ipv4_address: 192.168.200.211
+
+networks:
+  qnet-static-eth0-076754:
+    external: true
+  qnet-static-eth1-400be2:
+    external: true

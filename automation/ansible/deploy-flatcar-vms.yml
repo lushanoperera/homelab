@@ -1,0 +1,59 @@
+---
+- name: Deploy Flatcar Container Linux VMs to Proxmox Homelab
+  hosts: proxmox
+  gather_facts: no
+  vars:
+    # Default values - can be overridden via group_vars or host_vars
+    vm_defaults:
+      memory: 4096
+      cores: 2
+      storage: local-lvm
+      gateway: "10.21.21.1"
+      dns1: "10.21.21.1"
+      dns2: "8.8.8.8"
+      nfs_server: "192.168.200.4"
+      enable_portainer: true
+
+    # SSH key configuration
+    ssh_public_key: "{{ lookup('file', ansible_ssh_public_key_file | default('~/.ssh/id_rsa.pub')) }}"
+
+  tasks:
+    - name: Validate required variables
+      assert:
+        that:
+          - flatcar_vms is defined
+          - flatcar_vms | length > 0
+        fail_msg: "Please define flatcar_vms list in your inventory or vars"
+
+    - name: Deploy Flatcar VMs
+      include_role:
+        name: flatcar-vm
+      vars:
+        vm_config: "{{ vm_defaults | combine(vm) }}"
+      loop: "{{ flatcar_vms }}"
+      loop_control:
+        loop_var: vm
+        label: "VM {{ vm.id }} - {{ vm.name | default('flatcar-' + vm.id | string) }}"
+
+    - name: Display deployment summary
+      debug:
+        msg: |
+          ========================================
+          Deployment Summary:
+          ========================================
+          {% for vm in flatcar_vms %}
+          VM {{ vm.id }}:
+            - Name: {{ vm.name | default('flatcar-' + vm.id | string) }}
+            - IP: {{ vm.ip }}
+            - SSH: ssh core@{{ vm.ip }}
+            {% if vm.enable_portainer | default(vm_defaults.enable_portainer) %}
+            - Portainer: https://{{ vm.ip }}:9443
+            {% endif %}
+          {% endfor %}
+
+          NFS Mounts (all VMs):
+            - /mnt/nfs_shared (from {{ vm_defaults.nfs_server }}:/rpool/shared)
+            - /mnt/nfs_media (from {{ vm_defaults.nfs_server }}:/rpool/shared/media)
+
+          Note: Wait 2-3 minutes for full boot and service startup
+          ========================================

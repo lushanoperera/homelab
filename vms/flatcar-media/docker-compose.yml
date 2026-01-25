@@ -1,0 +1,333 @@
+version: "3.9"
+
+services:
+  nordvpn:
+    image: ghcr.io/bubuntux/nordvpn:latest
+    container_name: nordvpn
+    hostname: nordvpn
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - TOKEN=${NORDVPN_TOKEN}
+      - TECHNOLOGY=NordLynx
+      - CONNECT=${NORDVPN_COUNTRY}
+      - CYBER_SEC=off
+      - DNS=1.1.1.1
+      - NET_LOCAL=${NORDVPN_NET_LOCAL}
+      - TZ=${TZ}
+      - POST_CONNECT=/scripts/nordvpn-firewall-setup.sh
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    volumes:
+      - /srv/docker/resolv.conf:/etc/resolv.conf:rw
+      - /srv/docker/scripts:/scripts:ro
+    ports:
+      - "${QBITTORRENT_PORT}:8080"    # qbittorrent web UI
+      - "${SABNZBD_PORT}:7777"        # sabnzbd web UI (actual port from config)
+      - "${PROWLARR_PORT}:9696"       # prowlarr web UI
+      - "6881:6881"                   # qbittorrent peer port
+      - "6881:6881/udp"               # qbittorrent peer port UDP
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
+    devices:
+      - /dev/net/tun
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://ipinfo.io/json"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  flaresolverr:
+    image: flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    hostname: flaresolverr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    ports:
+      - "${FLARESOLVERR_PORT}:8191"
+    volumes:
+      - ${CONFIG_ROOT}/flaresolverr:/config
+      - /srv/docker/resolv.conf:/etc/resolv.conf:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8191/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  prowlarr:
+    image: linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=${UMASK}
+    volumes:
+      - ${CONFIG_ROOT}/prowlarr:/config
+    restart: unless-stopped
+    network_mode: "service:nordvpn"
+    depends_on:
+      nordvpn:
+        condition: service_healthy
+      flaresolverr:
+        condition: service_healthy
+    healthcheck:
+      # Use root path so health check stays auth-free
+      test: ["CMD", "curl", "-f", "http://localhost:9696/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  qbittorrent:
+    image: linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=${UMASK}
+      - WEBUI_PORT=8080
+    volumes:
+      - ${CONFIG_ROOT}/qbittorrent:/config
+      - ${DOWNLOADS_ROOT}:/downloads
+      - ${MEDIA_ROOT}:/media
+    restart: unless-stopped
+    network_mode: "service:nordvpn"
+    depends_on:
+      nordvpn:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  sabnzbd:
+    image: linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=${UMASK}
+    volumes:
+      - ${CONFIG_ROOT}/sabnzbd:/config
+      - ${DOWNLOADS_ROOT}:/downloads
+      - ${MEDIA_ROOT}:/media
+    restart: unless-stopped
+    network_mode: "service:nordvpn"
+    depends_on:
+      nordvpn:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7777/api?mode=version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  radarr:
+    image: linuxserver/radarr:latest
+    container_name: radarr
+    hostname: radarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=${UMASK}
+    ports:
+      - "${RADARR_PORT}:7878"
+    volumes:
+      - ${CONFIG_ROOT}/radarr:/config
+      - ${DOWNLOADS_ROOT}:/downloads
+      - ${MEDIA_ROOT}/movies:/movies
+      - ${MEDIA_ROOT}:/media
+      - /srv/docker/resolv.conf:/etc/resolv.conf:ro
+    restart: unless-stopped
+    depends_on:
+      prowlarr:
+        condition: service_healthy
+      qbittorrent:
+        condition: service_healthy
+      sabnzbd:
+        condition: service_healthy
+    healthcheck:
+      # Root endpoint returns 200/302 prior to API key setup
+      test: ["CMD", "curl", "-f", "http://localhost:7878/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  sonarr:
+    image: linuxserver/sonarr:latest
+    container_name: sonarr
+    hostname: sonarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=${UMASK}
+    ports:
+      - "${SONARR_PORT}:8989"
+    volumes:
+      - ${CONFIG_ROOT}/sonarr:/config
+      - ${DOWNLOADS_ROOT}:/downloads
+      - ${MEDIA_ROOT}/tv:/tv
+      - ${MEDIA_ROOT}:/media
+      - /srv/docker/resolv.conf:/etc/resolv.conf:ro
+    restart: unless-stopped
+    depends_on:
+      prowlarr:
+        condition: service_healthy
+      qbittorrent:
+        condition: service_healthy
+      sabnzbd:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8989/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  lidarr:
+    image: linuxserver/lidarr:latest
+    container_name: lidarr
+    hostname: lidarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=${UMASK}
+    ports:
+      - "${LIDARR_PORT}:8686"
+    volumes:
+      - ${CONFIG_ROOT}/lidarr:/config
+      - ${DOWNLOADS_ROOT}:/downloads
+      - ${MEDIA_ROOT}/music:/music
+      - ${MEDIA_ROOT}:/media
+      - /srv/docker/resolv.conf:/etc/resolv.conf:ro
+    restart: unless-stopped
+    depends_on:
+      prowlarr:
+        condition: service_healthy
+      qbittorrent:
+        condition: service_healthy
+      sabnzbd:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8686/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  bazarr:
+    image: linuxserver/bazarr:latest
+    container_name: bazarr
+    hostname: bazarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=${UMASK}
+    ports:
+      - "${BAZARR_PORT}:6767"
+    volumes:
+      - ${CONFIG_ROOT}/bazarr:/config
+      - ${MEDIA_ROOT}/movies:/movies
+      - ${MEDIA_ROOT}/tv:/tv
+      - ${MEDIA_ROOT}:/media
+      - /srv/docker/resolv.conf:/etc/resolv.conf:ro
+    restart: unless-stopped
+    depends_on:
+      radarr:
+        condition: service_healthy
+      sonarr:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6767/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  overseerr:
+    image: linuxserver/overseerr:latest
+    container_name: overseerr
+    hostname: overseerr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=${UMASK}
+    ports:
+      - "${OVERSEERR_PORT}:5055"
+    volumes:
+      - ${CONFIG_ROOT}/overseerr:/config
+      - /srv/docker/resolv.conf:/etc/resolv.conf:ro
+    restart: unless-stopped
+    depends_on:
+      radarr:
+        condition: service_healthy
+      sonarr:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5055/api/v1/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  tautulli:
+    image: linuxserver/tautulli:latest
+    container_name: tautulli
+    hostname: tautulli
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK=${UMASK}
+    ports:
+      - "${TAUTULLI_PORT}:8181"
+    volumes:
+      - ${CONFIG_ROOT}/tautulli:/config
+      - /srv/docker/resolv.conf:/etc/resolv.conf:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8181/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    hostname: watchtower
+    environment:
+      - TZ=${TZ}
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+      - WATCHTOWER_SCHEDULE=0 0 4 * * *  # Daily at 4 AM
+      - WATCHTOWER_NOTIFICATIONS=shoutrrr
+      - WATCHTOWER_NOTIFICATION_URL=${WATCHTOWER_NOTIFICATION_URL:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+# Using default bridge network - no custom network definition needed
+# Docker will automatically create internal DNS for container-to-container communication
+# External access via host ports as defined above

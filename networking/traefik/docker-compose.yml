@@ -1,0 +1,122 @@
+version: '3.9'
+
+services:
+  traefik:
+    image: traefik:v3.3
+    container_name: traefik
+    restart: unless-stopped
+    networks:
+      dmz_macvlan:
+        ipv4_address: 192.168.7.119
+      traefik_internal:
+        aliases:
+          - traefik
+    command:
+      - "--api=true"
+      - "--api.dashboard=true"
+      - "--providers.docker=false"
+      - "--providers.file.directory=/etc/traefik"
+      - "--providers.file.watch=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.traefik.address=:8080"
+      - "--accesslog=true"
+      - "--accesslog.filepath=/logs/access.log"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--log.level=INFO"
+      - "--ping=true"
+    volumes:
+      - ./acme.json:/acme.json
+      - ./services.yml:/etc/traefik/services.yml:ro
+      - ./nextcloud-dynamic.toml:/etc/traefik/nextcloud-dynamic.toml:ro
+      - ./tls.toml:/etc/traefik/tls.toml:ro
+      - ./logs:/logs
+      - ./certs:/certs:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  crowdsec:
+    image: crowdsecurity/crowdsec:latest
+    container_name: crowdsec
+    restart: unless-stopped
+    networks:
+      traefik_internal:
+        aliases:
+          - crowdsec
+    environment:
+      - GID=1000
+      - COLLECTIONS=crowdsecurity/traefik crowdsecurity/http-cve
+    volumes:
+      - ../crowdsec/db:/var/lib/crowdsec/data
+      - ../crowdsec/config:/etc/crowdsec
+      - ../crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml
+      - ./logs:/logs:ro
+    healthcheck:
+      test: ["CMD", "cscli", "version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  crowdsec-bouncer:
+    image: ghcr.io/thespad/traefik-crowdsec-bouncer:latest
+    container_name: crowdsec-bouncer
+    restart: unless-stopped
+    networks:
+      traefik_internal:
+        aliases:
+          - bouncer
+    environment:
+      - CROWDSEC_BOUNCER_API_KEY=${CROWDSEC_BOUNCER_API_KEY}
+      - CROWDSEC_AGENT_HOST=crowdsec:8080
+      - GIN_MODE=release
+      - PORT=8082
+      - CROWDSEC_BOUNCER_LOG_LEVEL=1
+    depends_on:
+      crowdsec:
+        condition: service_healthy
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: crowdsec-metabase
+    restart: unless-stopped
+    networks:
+      traefik_internal:
+    environment:
+      - MB_DB_FILE=/metabase-data/metabase.db
+      - MB_JETTY_PORT=3001
+    volumes:
+      - ../crowdsec/metabase-data:/metabase-data
+      - ../crowdsec/db:/crowdsec-db:ro
+    depends_on:
+      crowdsec:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    networks:
+      traefik_internal:
+    environment:
+      - TUNNEL_TOKEN=eyJhIjoiMjUxNWRkYWFhOGVmNWY1MzljMjZmOWM4MGJlYTk1NGUiLCJ0IjoiMzZiNDNlZGYtNTZiNi00YTEyLWIxMjItODk0YTdhMjAzNGVjIiwicyI6Ill6VTJNall6TkdNdFkyVmpZUzAwT0RBd0xXSmtNbUV0WW1Nd1pXSmpNemN3WlRFMCJ9
+      - NO_TLS_VERIFY=true
+    command: tunnel run
+    volumes:
+      - ./certs:/certs:ro
+
+networks:
+  dmz_macvlan:
+    external: true
+  traefik_internal:
+    external: true

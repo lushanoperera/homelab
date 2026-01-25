@@ -1,0 +1,206 @@
+variant: flatcar
+version: 1.1.0
+
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+        - {{ ssh_public_key }}
+
+storage:
+  files:
+    # Static network configuration
+    - path: /etc/systemd/network/10-static.network
+      mode: 0644
+      contents:
+        inline: |
+          [Match]
+          Name=eth0
+
+          [Network]
+          Address={{ vm_ip }}/24
+          Gateway={{ vm_gateway }}
+          DNS={{ vm_dns1 }}
+          DNS={{ vm_dns2 }}
+
+    # NFS client configuration
+    - path: /etc/modules-load.d/nfs.conf
+      mode: 0644
+      contents:
+        inline: |
+          nfs
+          nfsd
+          rpcsec_gss_krb5
+
+    # Create NFS mount points
+    - path: /etc/tmpfiles.d/nfs-mounts.conf
+      mode: 0644
+      contents:
+        inline: |
+          d /mnt/nfs_shared 0755 core core -
+          d /mnt/nfs_media 0755 core core -
+
+{% if vm_enable_portainer %}
+    # Portainer Docker Compose
+    - path: /opt/portainer/docker-compose.yml
+      mode: 0644
+      contents:
+        inline: |
+          version: '3.8'
+          services:
+            portainer:
+              image: portainer/portainer-ce:2.20.3
+              container_name: portainer
+              restart: unless-stopped
+              ports:
+                - "8000:8000"
+                - "9443:9443"
+              volumes:
+                - portainer_data:/data
+                - /var/run/docker.sock:/var/run/docker.sock
+                - /mnt/nfs_shared:/mnt/nfs_shared:ro
+                - /mnt/nfs_media:/mnt/nfs_media:ro
+              security_opt:
+                - no-new-privileges:true
+          volumes:
+            portainer_data:
+              driver: local
+{% endif %}
+
+    # Docker Compose binary
+    - path: /opt/bin/docker-compose
+      mode: 0755
+      contents:
+        source: https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64
+
+systemd:
+  units:
+    # Enable Docker service
+    - name: docker.service
+      enabled: true
+
+    # NFS mount for shared directory
+    - name: mnt-nfs_shared.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=NFS Shared Mount
+        After=network-online.target
+        Wants=network-online.target
+
+        [Mount]
+        What={{ vm_nfs_server }}:/rpool/shared
+        Where=/mnt/nfs_shared
+        Type=nfs4
+        Options=rw,fsc,noatime,vers=4.2,proto=tcp,rsize=1048576,wsize=1048576,nconnect=8,soft,timeo=100,retrans=5,_netdev
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # NFS mount for media directory
+    - name: mnt-nfs_media.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=NFS Media Mount
+        After=network-online.target
+        Wants=network-online.target
+
+        [Mount]
+        What={{ vm_nfs_server }}:/rpool/shared/media
+        Where=/mnt/nfs_media
+        Type=nfs4
+        Options=rw,fsc,noatime,vers=4.2,proto=tcp,rsize=1048576,wsize=1048576,nconnect=8,soft,timeo=100,retrans=5,_netdev
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # NFS automount for shared directory
+    - name: mnt-nfs_shared.automount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=NFS Shared Automount
+        Before=local-fs.target
+
+        [Automount]
+        Where=/mnt/nfs_shared
+        TimeoutIdleSec=10
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # NFS automount for media directory
+    - name: mnt-nfs_media.automount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=NFS Media Automount
+        Before=local-fs.target
+
+        [Automount]
+        Where=/mnt/nfs_media
+        TimeoutIdleSec=10
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # Enable QEMU Guest Agent
+    - name: qemu-guest-agent.service
+      enabled: true
+
+{% if vm_enable_portainer %}
+    # Create Portainer directory
+    - name: create-portainer-dir.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Create Portainer directory
+        Before=portainer-compose.service
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/mkdir -p /opt/portainer
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # Portainer deployment service
+    - name: portainer-compose.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Deploy Portainer via Docker Compose
+        Requires=docker.service create-portainer-dir.service mnt-nfs_shared.mount mnt-nfs_media.mount
+        After=docker.service create-portainer-dir.service mnt-nfs_shared.mount mnt-nfs_media.mount
+        Wants=network-online.target
+        After=network-online.target
+
+        [Service]
+        Type=oneshot
+        WorkingDirectory=/opt/portainer
+        ExecStart=/opt/bin/docker-compose up -d
+        ExecStop=/opt/bin/docker-compose down
+        TimeoutStartSec=300
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target
+{% endif %}
+
+    # Set hostname
+    - name: set-hostname.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Set hostname
+        Before=systemd-hostnamed.service
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/hostnamectl set-hostname {{ vm_name }}
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target

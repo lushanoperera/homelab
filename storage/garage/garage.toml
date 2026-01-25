@@ -1,0 +1,29 @@
+# Garage Configuration for QNAP NAS
+# Documentation: https://garagehq.deuxfleurs.fr/documentation/reference-manual/configuration/
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+
+db_engine = "lmdb"
+
+replication_factor = 1
+
+compression_level = 1
+
+block_size = "1M"
+
+[rpc]
+bind_addr = "[::]:3901"
+secret_file = "/var/lib/garage/rpc_secret"
+
+[s3_api]
+api_bind_addr = "[::]:3900"
+s3_region = "garage"
+root_domain = ".s3.garage"
+
+[s3_web]
+bind_addr = "[::]:3902"
+root_domain = ".web.garage"
+
+[admin]
+api_bind_addr = "[::]:3903"

@@ -1,0 +1,10 @@
+[tls]
+  [[tls.certificates]]
+    certFile = "/certs/traefik.crt"
+    keyFile = "/certs/traefik.key"
+
+# Configurazione della TLS per il backend
+[tls.options]
+  [tls.options.default]
+    minVersion = "VersionTLS13"
+    sniStrict = true

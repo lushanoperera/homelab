@@ -1,0 +1,130 @@
+---
+- name: Set VM configuration facts
+  set_fact:
+    vm_id: "{{ vm.id }}"
+    vm_name: "{{ vm.name | default('flatcar-' + vm.id | string) }}"
+    vm_ip: "{{ vm.ip }}"
+    vm_memory: "{{ vm_config.memory }}"
+    vm_cores: "{{ vm_config.cores }}"
+    vm_storage: "{{ vm_config.storage }}"
+    vm_gateway: "{{ vm_config.gateway }}"
+    vm_dns1: "{{ vm_config.dns1 }}"
+    vm_dns2: "{{ vm_config.dns2 }}"
+    vm_nfs_server: "{{ vm_config.nfs_server }}"
+    vm_enable_portainer: "{{ vm_config.enable_portainer }}"
+
+- name: Validate VM configuration
+  assert:
+    that:
+      - vm_id is defined
+      - vm_id | int >= 100
+      - vm_id | int <= 999999
+      - vm_ip is defined
+      - vm_ip | ipaddr
+    fail_msg: "Invalid VM configuration: ID must be 100-999999, IP must be valid"
+
+- name: Create temporary directory for VM configs
+  tempfile:
+    state: directory
+    suffix: ".flatcar-{{ vm_id }}"
+  register: temp_dir
+  delegate_to: localhost
+
+- name: Generate Butane configuration
+  template:
+    src: flatcar-vm.bu.j2
+    dest: "{{ temp_dir.path }}/flatcar-{{ vm_id }}.bu"
+  delegate_to: localhost
+
+- name: Compile Butane to Ignition
+  docker_container:
+    name: "butane-compiler-{{ vm_id }}"
+    image: quay.io/coreos/butane:latest
+    state: started
+    detach: false
+    auto_remove: true
+    volumes:
+      - "{{ temp_dir.path }}:/workspace"
+    command: "--strict /workspace/flatcar-{{ vm_id }}.bu"
+    output_logs: true
+  register: ignition_result
+  delegate_to: localhost
+
+- name: Save Ignition configuration
+  copy:
+    content: "{{ ignition_result.container.Output }}"
+    dest: "{{ temp_dir.path }}/flatcar-{{ vm_id }}.ign"
+  delegate_to: localhost
+
+- name: Prepare Proxmox directories
+  shell: |
+    mkdir -p /var/lib/vz/snippets
+    pvesm set local --content images,iso,rootdir,backup,snippets || true
+
+- name: Upload Ignition configuration to Proxmox
+  copy:
+    src: "{{ temp_dir.path }}/flatcar-{{ vm_id }}.ign"
+    dest: "/var/lib/vz/snippets/flatcar-{{ vm_id }}.ign"
+
+- name: Check if Flatcar image exists
+  stat:
+    path: /var/lib/vz/template/iso/flatcar_production_qemu_image.img
+  register: flatcar_image
+
+- name: Download and prepare Flatcar image
+  include_tasks: download_flatcar.yml
+  when: not flatcar_image.stat.exists
+
+- name: Check if VM already exists
+  shell: qm status {{ vm_id }}
+  register: vm_exists
+  failed_when: false
+
+- name: Stop and destroy existing VM
+  shell: |
+    qm stop {{ vm_id }} || true
+    sleep 5
+    qm destroy {{ vm_id }} || true
+  when: vm_exists.rc == 0
+
+- name: Create VM
+  shell: |
+    qm create {{ vm_id }} \
+      --name {{ vm_name }} \
+      --memory {{ vm_memory }} \
+      --cores {{ vm_cores }} \
+      --sockets 1 \
+      --machine q35 \
+      --bios ovmf \
+      --efidisk0 {{ vm_storage }}:0,format=raw \
+      --net0 virtio,bridge=vmbr0 \
+      --serial0 socket \
+      --vga serial0
+
+- name: Import disk image
+  shell: |
+    cd /var/lib/vz/template/iso
+    qm importdisk {{ vm_id }} flatcar_production_qemu_image.img {{ vm_storage }}
+
+- name: Configure VM storage and boot
+  shell: |
+    qm set {{ vm_id }} --scsihw virtio-scsi-pci --scsi0 {{ vm_storage }}:vm-{{ vm_id }}-disk-1
+    qm set {{ vm_id }} --boot c --bootdisk scsi0
+
+- name: Attach Ignition configuration
+  shell: |
+    qm set {{ vm_id }} --args "-fw_cfg name=opt/com.coreos/config,file=/var/lib/vz/snippets/flatcar-{{ vm_id }}.ign"
+
+- name: Start VM
+  shell: qm start {{ vm_id }}
+
+- name: Wait for VM to start
+  wait_for:
+    timeout: 30
+  delegate_to: localhost
+
+- name: Cleanup temporary files
+  file:
+    path: "{{ temp_dir.path }}"
+    state: absent
+  delegate_to: localhost

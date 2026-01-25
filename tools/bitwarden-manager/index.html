@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vaultwarden Manager</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Vaultwarden Manager</h1>
+            <button id="exportBtn" class="btn btn-primary" disabled>Export ↓</button>
+        </header>
+
+        <div class="controls">
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" accept=".json">
+                <span id="fileName">No file loaded</span>
+            </div>
+            <div class="search-filter">
+                <input type="text" id="searchInput" placeholder="Search items..." disabled>
+                <select id="folderFilter" disabled>
+                    <option value="">All Folders</option>
+                </select>
+                <select id="typeFilter" disabled>
+                    <option value="">All Types</option>
+                    <option value="1">Logins</option>
+                    <option value="2">Notes</option>
+                    <option value="3">Cards</option>
+                    <option value="4">Identities</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="bulk-actions" id="bulkActions">
+            <button id="selectAllBtn" class="btn btn-secondary" disabled>Select All</button>
+            <button id="deselectAllBtn" class="btn btn-secondary" disabled>Deselect All</button>
+            <button id="deleteSelectedBtn" class="btn btn-danger" disabled>Delete Selected</button>
+            <div class="move-folder-wrapper">
+                <select id="moveFolderSelect" disabled>
+                    <option value="">Move to Folder...</option>
+                </select>
+                <button id="moveSelectedBtn" class="btn btn-secondary" disabled>Move</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table id="itemsTable">
+                <thead>
+                    <tr>
+                        <th class="checkbox-col"><input type="checkbox" id="headerCheckbox" disabled></th>
+                        <th>Name</th>
+                        <th>Username</th>
+                        <th>URL</th>
+                        <th>Type</th>
+                        <th>Folder</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="itemsBody">
+                    <tr class="empty-state">
+                        <td colspan="7">Load a Bitwarden/Vaultwarden export JSON to begin</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            <div class="stats" id="stats">
+                Items: 0 | Selected: 0 | Folders: 0
+            </div>
+        </footer>
+    </div>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2>Edit Item</h2>
+            <input type="hidden" id="editItemId">
+            <div class="form-group">
+                <label for="editName">Name</label>
+                <input type="text" id="editName">
+            </div>
+            <div class="form-group">
+                <label for="editFolder">Folder</label>
+                <select id="editFolder"></select>
+            </div>
+            <div class="modal-actions">
+                <button id="cancelEditBtn" class="btn btn-secondary">Cancel</button>
+                <button id="saveEditBtn" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

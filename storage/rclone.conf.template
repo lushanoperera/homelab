@@ -1,0 +1,23 @@
+# Rclone configuration for MinIO to Garage migration
+# Copy to ~/.config/rclone/rclone.conf (or merge with existing)
+
+# Source: Your existing MinIO instance
+[minio]
+type = s3
+provider = Minio
+access_key_id = admin
+secret_access_key = REPLACE_WITH_MINIO_PASSWORD
+endpoint = http://192.168.100.210:9000
+# Use path style (MinIO default)
+force_path_style = true
+
+# Destination: New Garage instance
+[garage]
+type = s3
+provider = Other
+access_key_id = REPLACE_WITH_GARAGE_KEY_ID
+secret_access_key = REPLACE_WITH_GARAGE_SECRET
+endpoint = http://192.168.100.211:3900
+region = garage
+# Garage uses path style
+force_path_style = true

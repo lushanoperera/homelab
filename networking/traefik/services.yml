@@ -1,0 +1,180 @@
+http:
+  routers:
+    # Traefik Dashboard with authentication
+    dashboard:
+      rule: "Host(`traefik.lushanoperera.com`)"
+      service: "api@internal"
+      entryPoints:
+        - traefik
+      middlewares:
+        - crowdsec-bouncer
+        - dashboard-auth
+
+    # Immich - HTTPS direct access
+    immich:
+      rule: "Host(`immich.lushanoperera.com`) || Host(`immich.giulyart.it`)"
+      service: "immich-service"
+      entryPoints:
+        - websecure
+      tls: {}
+      middlewares:
+        - security-headers
+        - rate-limit
+        - crowdsec-bouncer
+
+    # Immich - HTTP (for Cloudflare Tunnel)
+    immich-http:
+      rule: "Host(`immich.lushanoperera.com`) || Host(`immich.giulyart.it`)"
+      service: "immich-service"
+      entryPoints:
+        - web
+      middlewares:
+        - security-headers
+        - rate-limit
+        - crowdsec-bouncer
+
+    # Nextcloud - HTTPS direct access
+    nextcloud:
+      rule: "Host(`nextcloud.lushanoperera.com`) || Host(`nextcloud.giulyart.it`)"
+      service: "nextcloud-service"
+      entryPoints:
+        - websecure
+      tls: {}
+      middlewares:
+        - security-headers
+        - rate-limit
+        - crowdsec-bouncer
+
+    # Nextcloud - HTTP (for Cloudflare Tunnel)
+    nextcloud-http:
+      rule: "Host(`nextcloud.lushanoperera.com`) || Host(`nextcloud.giulyart.it`)"
+      service: "nextcloud-service"
+      entryPoints:
+        - web
+      middlewares:
+        - security-headers
+        - rate-limit
+        - crowdsec-bouncer
+
+    # Kido Frontend - HTTPS direct access
+    kido-frontend:
+      rule: "Host(`kido.giulyart.it`) && !PathPrefix(`/api`)"
+      service: "kido-frontend-service"
+      entryPoints:
+        - websecure
+      tls: {}
+      middlewares:
+        - security-headers
+        - rate-limit
+        - crowdsec-bouncer
+
+    # Kido Frontend - HTTP (for Cloudflare Tunnel)
+    kido-frontend-http:
+      rule: "Host(`kido.giulyart.it`) && !PathPrefix(`/api`)"
+      service: "kido-frontend-service"
+      entryPoints:
+        - web
+      middlewares:
+        - security-headers
+        - rate-limit
+        - crowdsec-bouncer
+
+    # Kido Backend - HTTPS direct access
+    kido-backend:
+      rule: "Host(`kido.giulyart.it`) && PathPrefix(`/api`)"
+      service: "kido-backend-service"
+      entryPoints:
+        - websecure
+      tls: {}
+      middlewares:
+        - security-headers
+        - rate-limit
+        - crowdsec-bouncer
+
+    # Kido Backend - HTTP (for Cloudflare Tunnel)
+    kido-backend-http:
+      rule: "Host(`kido.giulyart.it`) && PathPrefix(`/api`)"
+      service: "kido-backend-service"
+      entryPoints:
+        - web
+      middlewares:
+        - security-headers
+        - rate-limit
+        - crowdsec-bouncer
+
+    # CrowdSec Metabase Dashboard - HTTPS
+    crowdsec-metabase:
+      rule: "Host(`crowdsec.lushanoperera.com`)"
+      service: "metabase-service"
+      entryPoints:
+        - websecure
+      tls: {}
+      middlewares:
+        - security-headers
+        - rate-limit
+        - crowdsec-bouncer
+
+    # CrowdSec Metabase Dashboard - HTTP
+    crowdsec-metabase-http:
+      rule: "Host(`crowdsec.lushanoperera.com`)"
+      service: "metabase-service"
+      entryPoints:
+        - web
+      middlewares:
+        - security-headers
+        - rate-limit
+        - crowdsec-bouncer
+
+  services:
+    immich-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.100.103:2283"
+    nextcloud-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.100.101:11000"
+    kido-frontend-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.100.122:3000"
+    kido-backend-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.100.122:3001"
+    metabase-service:
+      loadBalancer:
+        servers:
+          - url: "http://crowdsec-metabase:3001"
+
+  middlewares:
+    # Dashboard BasicAuth
+    dashboard-auth:
+      basicAuth:
+        users:
+          - "admin:$2y$05$Uxd1gXQW3GLdcaGWn3xKdexkdPs09bsekA02aGQktG55O8eBqeLAC"
+
+    # Rate limiting
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+
+    # Security headers
+    security-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex, nofollow"
+
+    # CrowdSec bouncer
+    crowdsec-bouncer:
+      forwardAuth:
+        address: "http://bouncer:8082/api/v1/forwardAuth"
+        trustForwardHeader: true

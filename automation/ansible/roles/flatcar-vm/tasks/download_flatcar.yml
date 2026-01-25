@@ -1,0 +1,30 @@
+---
+- name: Create ISO directory
+  file:
+    path: /var/lib/vz/template/iso
+    state: directory
+
+- name: Download Flatcar image
+  get_url:
+    url: https://stable.release.flatcar-linux.net/amd64-usr/current/flatcar_production_qemu_image.img.bz2
+    dest: /var/lib/vz/template/iso/flatcar_production_qemu_image.img.bz2
+    timeout: 300
+
+- name: Download Flatcar image checksums
+  get_url:
+    url: https://stable.release.flatcar-linux.net/amd64-usr/current/flatcar_production_qemu_image.img.bz2.DIGESTS
+    dest: /var/lib/vz/template/iso/flatcar_production_qemu_image.img.bz2.DIGESTS
+
+- name: Verify image integrity
+  shell: |
+    cd /var/lib/vz/template/iso
+    grep flatcar_production_qemu_image.img.bz2 flatcar_production_qemu_image.img.bz2.DIGESTS | \
+    awk '{print $4 "  flatcar_production_qemu_image.img.bz2"}' | \
+    sha256sum --check -
+  register: checksum_result
+  failed_when: false
+
+- name: Extract Flatcar image
+  shell: |
+    cd /var/lib/vz/template/iso
+    bunzip2 flatcar_production_qemu_image.img.bz2

@@ -1,0 +1,13 @@
+[Unit]
+Description=NFS mount for media storage from winston
+Requires=network-online.target
+After=network-online.target
+
+[Mount]
+What=192.168.100.38:/mnt/nfs_media
+Where=/mnt/media
+Type=nfs
+Options=rw,hard,intr,vers=3
+
+[Install]
+WantedBy=multi-user.target

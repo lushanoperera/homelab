@@ -1,44 +1,150 @@
-# Proxmox Homelab
+# Homelab Infrastructure
 
-Scripts and configuration for managing Proxmox VE hosts.
+Consolidated infrastructure-as-code repository for a Proxmox-based homelab environment.
 
-## Infrastructure
+## Overview
 
-### Network Architecture
+This repository contains configurations, scripts, and documentation for:
+
+- **Proxmox VE hosts** (winston, reginald)
+- **Flatcar Container Linux VMs** with Docker stacks
+- **Reverse proxy** (Traefik) with security hardening (CrowdSec)
+- **S3 storage** (MinIO → Garage migration)
+- **Infrastructure automation** (Ansible, Terraform)
+
+## Architecture
+
+```
+                    Internet
+                        │
+                   Cloudflare
+                        │
+              ┌─────────┴─────────┐
+              │   Traefik (DMZ)   │
+              │  192.168.7.119    │
+              └─────────┬─────────┘
+                        │
+     ┌──────────────────┼──────────────────┐
+     │                  │                  │
+┌────┴────┐       ┌─────┴─────┐      ┌─────┴─────┐
+│ winston │       │  Flatcar  │      │ reginald  │
+│ .100.38 │       │  VM 100   │      │  .100.4   │
+│         │       │  .100.100 │      │           │
+│ LXC:    │       │           │      │ NFS       │
+│ - Nextcloud     │ Docker:   │      │ Server    │
+│ - Immich │      │ - Media   │      └───────────┘
+│ - Plex   │      │ - Traefik │
+│ - WireGuard     │ - CrowdSec│
+└─────────┘       └───────────┘
+     │                  │
+     └────────┬─────────┘
+              │
+      ┌───────┴───────┐
+      │   QNAP NAS    │
+      │   .100.254    │
+      │               │
+      │ - MinIO S3    │
+      │ - PBS VM      │
+      └───────────────┘
+```
+
+## Quick Start
+
+### SSH Access
+
+```bash
+ssh root@192.168.100.38   # winston (Proxmox)
+ssh root@192.168.100.4    # reginald (Proxmox)
+ssh core@192.168.100.100  # Flatcar VM
+```
+
+### Deploy a new Flatcar VM
+
+```bash
+./scripts/vms/deploy-flatcar-vm.sh --vm-id 105 --vm-ip 10.21.21.105
+```
+
+### Check container status
+
+```bash
+ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
+```
+
+## Directory Structure
+
+```
+├── docs/                    # Documentation
+│   ├── sr-iov/              # GPU SR-IOV guides
+│   ├── migrations/          # Migration docs
+│   └── guides/              # Deployment guides
+├── hosts/                   # Proxmox host configs
+├── vms/
+│   ├── flatcar-media/       # Media stack VM
+│   └── pbs/                 # Backup server
+├── networking/
+│   ├── traefik/             # Reverse proxy
+│   └── cloudflare-tunnel/   # Tunnel config
+├── storage/
+│   ├── minio/               # Current S3
+│   ├── garage/              # Target S3
+│   └── nfs/                 # NFS config
+├── scripts/                 # Automation scripts
+├── automation/
+│   ├── ansible/             # Playbooks
+│   └── terraform/           # IaC
+├── systemd/                 # Systemd units
+└── tools/                   # Utilities
+```
+
+## Networks
 
 | Network | Subnet | Purpose |
 |---------|--------|---------|
 | Infra VLAN | 192.168.100.0/24 | Management, services |
-| Storage LAN | 192.168.200.0/24 | Dedicated storage traffic |
+| Storage LAN | 192.168.200.0/24 | NFS, backups |
+| DMZ VLAN | 192.168.7.0/24 | Internet-facing |
 
-Storage LAN uses a separate physical interface on each host connected via dedicated unmanaged switch.
+## Services
 
-### Proxmox Hosts
+### Media Stack (Flatcar VM 100)
 
-| Host | Infra IP | Storage IP | Description |
-|------|----------|------------|-------------|
-| winston | 192.168.100.38 | 192.168.200.38 | Primary Proxmox host (MS-01, i9-13900H) |
-| reginald | 192.168.100.4 | 192.168.200.4 | Storage host (Zimaboard 832, 7x SSD ZFS RAIDZ2) |
-| QNAP NAS | 192.168.100.254 | 192.168.200.254 | TS-251+, PBS VM, MinIO |
+- qBittorrent, SABnzbd (downloaders)
+- Radarr, Sonarr, Lidarr (media managers)
+- Prowlarr (indexer)
+- Overseerr (requests)
+- Tautulli (Plex analytics)
+- NordLynx (VPN)
 
-### Hardware Details
+### LXC Containers (winston)
 
-**Winston (Primary Compute)**
+- Nextcloud (101)
+- Immich (103)
+- WireGuard (104)
+- Plex (105)
+
+### Storage
+
+- MinIO S3 (192.168.200.210) - current
+- Garage S3 (192.168.200.211) - migration target
+- Proxmox Backup Server (192.168.100.187)
+
+## Hardware
+
+### Winston (Primary Compute)
 
 | Component | Specification |
 |-----------|---------------|
 | Chassis | Minisforum MS-01 |
 | CPU | Intel i9-13900H (14C/20T, up to 5.2 GHz) |
 | Features | SR-IOV GPU passthrough, Quick Sync HW transcode |
-| Thermal | powersave governor, thermald ([docs](docs/thermal-management.md)) |
+| Thermal | powersave governor, thermald |
 
-**Reginald (Storage Server)**
+### Reginald (Storage Server)
 
 | Component | Specification |
 |-----------|---------------|
 | Chassis | Zimaboard 832 |
 | CPU | Intel Celeron N3450 (4C/4T) |
-| Expansion | SATA PCIe controller card |
 | Storage | 7x SSD in ZFS RAIDZ2 pool |
 | Role | NFS server for LXC container data |
 
@@ -47,82 +153,14 @@ Storage LAN uses a separate physical interface on each host connected via dedica
 | Service | IP | Description |
 |---------|------|-------------|
 | PBS VM | 192.168.100.187 | Proxmox Backup Server |
-| MinIO | (container) | S3-compatible storage for Restic backups |
-
-**Docker containers** running on QNAP for backup infrastructure.
-
-### Storage Architecture
-
-```
-LXC Containers (Nextcloud, Immich, Vaultwarden)
-        ↓
-   NFS Shares (192.168.100.4 / reginald)
-        ↓
-   CacheFS (192.168.100.38 / winston)
-        ↓
-   Restic Backups → MinIO S3 buckets
-```
-
-CacheFS on winston reduces bottlenecks from reginald's 2.5GbE networking.
-
-### Reverse Proxy Architecture
-
-| Proxy | Scope | Location |
-|-------|-------|----------|
-| Traefik | External (internet-facing) | See `traefik` project |
-| Nginx Proxy Manager | Internal (LAN only) | Docker on Flatcar VM |
-
-## Directory Structure
-
-```
-├── docs/
-│   ├── backups.md           # Backup configuration (PBS, Restic)
-│   └── thermal-management.md # CPU governor, thermald config
-├── scripts/
-│   └── check-nfs-mounts.sh  # NFS mount verification script
-├── systemd/
-│   └── nfs-mount-check.service  # Systemd service for NFS checks
-├── reports/                 # Generated reports, logs
-├── .env.example             # Environment template
-└── CLAUDE.md                # AI assistant instructions
-```
-
-## Setup
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/lushanoperera/homelab.git
-   cd homelab
-   ```
-
-2. Copy environment template:
-   ```bash
-   cp .env.example .env
-   ```
-
-3. Fill in credentials in `.env` (never commit this file)
-
-## Scripts
-
-### scripts/check-nfs-mounts.sh
-Verifies NFS mounts are accessible and healthy.
-
-### systemd/nfs-mount-check.service
-Systemd service unit for automated NFS mount monitoring (uses `scripts/check-nfs-mounts.sh`).
+| MinIO | 192.168.200.210 | S3-compatible storage |
 
 ## Documentation
 
-| Doc | Description |
-|-----|-------------|
-| [Backups](docs/backups.md) | PBS and Restic backup configuration |
-| [Thermal Management](docs/thermal-management.md) | CPU governor, thermald, Intel P-State tuning |
-
-## Related Projects
-
-| Project | Description |
-|---------|-------------|
-| [flatcar-homelab](../flatcar-homelab) | Flatcar Linux VM hosting NPM and other Docker containers |
-| [lxc-to-docker-migration](../lxc-to-docker-migration) | Migration scripts for LXC to Docker |
-| [proxmox-sr-iov](../proxmox-sr-iov) | SR-IOV configuration for Proxmox |
-| [traefik](../traefik) | Traefik reverse proxy for external/internet access |
-| [minio-to-garage](../minio-to-garage) | MinIO to Garage S3 migration (planned) |
+- [Backups](docs/backups.md)
+- [Thermal Management](docs/thermal-management.md)
+- [GPU SR-IOV Guide](docs/sr-iov/igpu-guide.md)
+- [LXC to Docker Migration](docs/migrations/lxc-to-docker.md)
+- [MinIO to Garage Migration](docs/migrations/minio-to-garage.md)
+- [GPU Passthrough](docs/guides/gpu-passthrough.md)
+- [Flatcar Automation](docs/guides/flatcar-automation.md)

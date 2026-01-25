@@ -1,0 +1,28 @@
+services:
+  minio:
+    image: minio/minio
+    container_name: minio-container-name
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Rome
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=281188password
+    volumes:
+      - /share/Data/minio:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address :9001 --address ":9000"
+    restart: always
+    networks:
+      qnet-static-eth0-076754:
+        ipv4_address: 192.168.100.210
+      qnet-static-eth1-400be2:
+        ipv4_address: 192.168.200.210
+
+networks:
+  qnet-static-eth0-076754:
+    external: true
+  qnet-static-eth1-400be2:
+    external: true

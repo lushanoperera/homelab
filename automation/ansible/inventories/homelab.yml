@@ -1,0 +1,42 @@
+---
+all:
+  children:
+    proxmox:
+      hosts:
+        proxmox-host:
+          ansible_host: 10.21.21.99
+          ansible_user: root
+          ansible_ssh_private_key_file: ~/.ssh/id_rsa
+
+          # List of VMs to deploy
+          flatcar_vms:
+            - id: 105
+              name: "docker-node-1"
+              ip: "10.21.21.105"
+              memory: 4096
+              cores: 2
+
+            - id: 106
+              name: "docker-node-2"
+              ip: "10.21.21.106"
+              memory: 6144
+              cores: 4
+
+            - id: 107
+              name: "media-server"
+              ip: "10.21.21.107"
+              memory: 8192
+              cores: 4
+              enable_portainer: true
+
+          # Global VM configuration
+          vm_defaults:
+            storage: local-lvm
+            gateway: "10.21.21.1"
+            dns1: "10.21.21.1"
+            dns2: "8.8.8.8"
+            nfs_server: "192.168.200.4"
+            enable_portainer: true
+
+# SSH key configuration
+ansible_ssh_public_key_file: "~/.ssh/id_rsa.pub"

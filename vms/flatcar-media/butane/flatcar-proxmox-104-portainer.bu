@@ -1,0 +1,113 @@
+variant: flatcar
+version: 1.1.0
+
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC1o+LR0vywznyrfJkK49RypPbFDZC/xORHCamB5SnZyGKs52Qv/j6B6itmZK1JeuEMm0uPRjcT5ASrmyTtJ3iw+xsOZ+xLMxK2lzOdEA5+wRb2GBT12489JXC6JK+zjUpfcW2aKvdcZtl/dFMUNbUHombALfh/70ivoKQuoMvBY+W+7fSs5KIibKZTMLtdtJ4z11jdITBBIPmELv8XroXVQuMgVftkEVOO//uDV9UNF4+xxjqLvQKkKdQnlnJK6DMqsDHLst9UvXb2we//g/JSXff3cdE088XiDZYXkvjYz+UCMHHGqbSzXEeWK+rtFtfbH7VRrKHQ9J/XI48n3auB lushano@MacBook-Pro-di-Lushano.local
+
+storage:
+  files:
+    # Static network configuration for VM
+    - path: /etc/systemd/network/10-static.network
+      mode: 0644
+      contents:
+        inline: |
+          [Match]
+          Name=eth0
+
+          [Network]
+          Address=10.21.21.104/24
+          Gateway=10.21.21.1
+          DNS=10.21.21.1
+          DNS=8.8.8.8
+
+    # Docker Compose configuration for Portainer
+    - path: /opt/portainer/docker-compose.yml
+      mode: 0644
+      contents:
+        inline: |
+          version: '3.8'
+          services:
+            portainer:
+              image: portainer/portainer-ce:2.20.3
+              container_name: portainer
+              restart: unless-stopped
+              ports:
+                - "8000:8000"
+                - "9443:9443"
+              volumes:
+                - portainer_data:/data
+                - /var/run/docker.sock:/var/run/docker.sock
+              security_opt:
+                - no-new-privileges:true
+          volumes:
+            portainer_data:
+              driver: local
+
+    # Create portainer directory
+    - path: /opt/bin/docker-compose
+      mode: 0755
+      contents:
+        source: https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64
+
+systemd:
+  units:
+    # Enable Docker service
+    - name: docker.service
+      enabled: true
+
+    # Create portainer directory
+    - name: create-portainer-dir.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Create Portainer directory
+        Before=portainer-compose.service
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/mkdir -p /opt/portainer
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # Portainer deployment service
+    - name: portainer-compose.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Deploy Portainer via Docker Compose
+        Requires=docker.service create-portainer-dir.service
+        After=docker.service create-portainer-dir.service
+        Wants=network-online.target
+        After=network-online.target
+
+        [Service]
+        Type=oneshot
+        WorkingDirectory=/opt/portainer
+        ExecStart=/opt/bin/docker-compose up -d
+        ExecStop=/opt/bin/docker-compose down
+        TimeoutStartSec=300
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # Ensure hostname is set
+    - name: set-hostname.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Set hostname
+        Before=systemd-hostnamed.service
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/hostnamectl set-hostname flatcar-portainer-104
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target

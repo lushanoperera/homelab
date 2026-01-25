@@ -1,0 +1,269 @@
+variant: flatcar
+version: 1.1.0
+
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC1o+LR0vywznyrfJkK49RypPbFDZC/xORHCamB5SnZyGKs52Qv/j6B6itmZK1JeuEMm0uPRjcT5ASrmyTtJ3iw+xsOZ+xLMxK2lzOdEA5+wRb2GBT12489JXC6JK+zjUpfcW2aKvdcZtl/dFMUNbUHombALfh/70ivoKQuoMvBY+W+7fSs5KIibKZTMLtdtJ4z11jdITBBIPmELv8XroXVQuMgVftkEVOO//uDV9UNF4+xxjqLvQKkKdQnlnJK6DMqsDHLst9UvXb2we//g/JSXff3cdE088XiDZYXkvjYz+UCMHHGqbSzXEeWK+rtFtfbH7VRrKHQ9J/XI48n3auB lushano@MacBook-Pro-di-Lushano.local
+
+storage:
+  files:
+    # Static network configuration for VM
+    - path: /etc/systemd/network/10-static.network
+      mode: 0644
+      contents:
+        inline: |
+          [Match]
+          Name=eth0
+
+          [Network]
+          Address=192.168.100.100/24
+          Gateway=192.168.100.1
+          DNS=192.168.100.1
+          DNS=8.8.8.8
+
+    # NFS client configuration
+    - path: /etc/modules-load.d/nfs.conf
+      mode: 0644
+      contents:
+        inline: |
+          nfs
+          nfsd
+          rpcsec_gss_krb5
+
+    # Docker Compose configuration for Portainer
+    - path: /opt/portainer/docker-compose.yml
+      mode: 0644
+      contents:
+        inline: |
+          version: '3.8'
+          services:
+            portainer:
+              image: portainer/portainer-ce:latest
+              container_name: portainer
+              restart: unless-stopped
+              ports:
+                - "8000:8000"
+                - "9443:9443"
+              volumes:
+                - portainer_data:/data
+                - /var/run/docker.sock:/var/run/docker.sock
+                - /mnt/nfs_shared:/mnt/nfs_shared
+                - /mnt/media:/mnt/media
+              security_opt:
+                - no-new-privileges:true
+          volumes:
+            portainer_data:
+              driver: local
+
+    # Install Docker Compose v2 plugin
+    - path: /usr/lib/docker/cli-plugins/docker-compose
+      mode: 0755
+      contents:
+        source: https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64
+
+    # Nano Docker wrapper installation script
+    - path: /opt/bin/install-nano.sh
+      mode: 0755
+      contents:
+        inline: |
+          #!/bin/bash
+          # Install nano via Docker Alpine container (more reliable than toolbox)
+          set -euo pipefail
+
+          # Create nano wrapper in home directory (writable filesystem)
+          cat > /home/core/nano << 'EOF'
+          #!/bin/bash
+          docker run --rm -it -v "$PWD":/workspace -w /workspace alpine:latest sh -c 'apk add --no-cache nano >/dev/null 2>&1 && nano "$@"' -- "$@"
+          EOF
+
+          chmod +x /home/core/nano
+          chown core:core /home/core/nano
+
+          echo "nano wrapper installed successfully at /home/core/nano"
+
+    # NFS mount configuration (working configuration)
+    - path: /etc/systemd/system/mnt-nfs_shared.mount
+      mode: 0644
+      contents:
+        inline: |
+          [Unit]
+          Description=NFS mount for shared storage
+          After=network-online.target
+          Wants=network-online.target
+
+          [Mount]
+          What=192.168.100.38:/
+          Where=/mnt/nfs_shared
+          Type=nfs4
+          Options=rw,relatime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,_netdev
+
+          [Install]
+          WantedBy=multi-user.target
+
+    # Hostname fix service (fallback for timeout issues)
+    - path: /etc/systemd/system/hostname-fix.service
+      mode: 0644
+      contents:
+        inline: |
+          [Unit]
+          Description=Fix hostname if set-hostname service fails
+          After=set-hostname.service
+          BindsTo=set-hostname.service
+
+          [Service]
+          Type=oneshot
+          ExecStart=/bin/bash -c 'sleep 30; if [[ "$(hostname)" == "localhost" ]]; then hostnamectl set-hostname docker; fi'
+          RemainAfterExit=true
+
+          [Install]
+          WantedBy=multi-user.target
+
+    # Mount point creation
+    - path: /etc/tmpfiles.d/nfs-mounts.conf
+      mode: 0644
+      contents:
+        inline: |
+          d /mnt/nfs_shared 0755 core core -
+          d /mnt/media 0755 core core -
+
+systemd:
+  units:
+    # Enable Docker service
+    - name: docker.service
+      enabled: true
+
+    # Enable QEMU Guest Agent
+    - name: qemu-guest-agent.service
+      enabled: true
+
+    # Create mount point directory
+    - name: create-mount-dirs.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Create mount directories
+        Before=mnt-nfs_shared.mount mnt-media.mount portainer-compose.service
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/mkdir -p /mnt/nfs_shared /mnt/media /opt/portainer /opt/bin
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # NFS mount for shared storage
+    - name: mnt-nfs_shared.mount
+      enabled: true
+
+    # NFS mount for media storage from winston
+    # Mounts shared media directory (includes downloads, movies, tv, music)
+    # Docker containers access downloads via /mnt/media/downloads
+    # incomplete-downloads accessible at /mnt/media/downloads/incomplete-downloads
+    # IMPORTANT: Extended timeout (300s) to prevent boot-time mount failures
+    - name: mnt-media.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=NFS mount for media storage from winston
+        Requires=network-online.target
+        After=network-online.target
+        Before=docker.service media-stack-compose.service
+
+        [Mount]
+        What=192.168.100.38:/mnt/nfs_media
+        Where=/mnt/media
+        Type=nfs4
+        Options=rw,relatime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,_netdev
+        TimeoutSec=300
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # Install nano via Docker wrapper
+    - name: install-nano.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Install nano via Docker wrapper
+        After=network-online.target docker.service
+        Wants=network-online.target
+
+        [Service]
+        Type=oneshot
+        ExecStart=/opt/bin/install-nano.sh
+        TimeoutStartSec=300
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # Hostname fix service (fallback for boot timeout issues)
+    - name: hostname-fix.service
+      enabled: true
+
+    # Portainer deployment service
+    - name: portainer-compose.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Deploy Portainer via Docker Compose
+        Requires=docker.service create-mount-dirs.service
+        After=docker.service create-mount-dirs.service mnt-nfs_shared.mount mnt-media.mount
+        Wants=network-online.target install-nano.service
+        After=network-online.target
+
+        [Service]
+        Type=oneshot
+        WorkingDirectory=/opt/portainer
+        ExecStart=/usr/bin/docker compose up -d
+        ExecStop=/usr/bin/docker compose down
+        TimeoutStartSec=300
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # Media stack deployment service
+    - name: media-stack-compose.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Deploy Media Stack via Docker Compose
+        Requires=docker.service mnt-media.mount
+        After=docker.service mnt-media.mount
+        Wants=network-online.target
+        After=network-online.target
+
+        [Service]
+        Type=oneshot
+        WorkingDirectory=/srv/docker/media-stack
+        ExecStartPre=/bin/sleep 10
+        ExecStart=/usr/bin/docker compose up -d
+        ExecStop=/usr/bin/docker compose down
+        TimeoutStartSec=600
+        Restart=on-failure
+        RestartSec=30
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # Set hostname
+    - name: set-hostname.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Set hostname to docker
+        Before=systemd-hostnamed.service
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/hostnamectl set-hostname docker
+        RemainAfterExit=true
+
+        [Install]
+        WantedBy=multi-user.target
+
