@@ -4,12 +4,22 @@ Scripts and configuration for managing Proxmox VE hosts.
 
 ## Infrastructure
 
+### Network Architecture
+
+| Network | Subnet | Purpose |
+|---------|--------|---------|
+| Infra VLAN | 192.168.100.0/24 | Management, services |
+| Storage LAN | 192.168.200.0/24 | Dedicated storage traffic |
+
+Storage LAN uses a separate physical interface on each host connected via dedicated unmanaged switch.
+
 ### Proxmox Hosts
 
-| Host | IP | Description |
-|------|------|-------------|
-| winston | 192.168.100.38 | Primary Proxmox host |
-| reginald | 192.168.100.4 | Secondary Proxmox host |
+| Host | Infra IP | Storage IP | Description |
+|------|----------|------------|-------------|
+| winston | 192.168.100.38 | 192.168.200.38 | Primary Proxmox host |
+| reginald | 192.168.100.4 | 192.168.200.4 | Secondary Proxmox host |
+| QNAP NAS | — | 192.168.200.x | Storage traffic only |
 
 ### QNAP NAS (TS-251+)
 

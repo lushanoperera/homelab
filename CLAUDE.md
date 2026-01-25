@@ -2,17 +2,28 @@
 
 ## Infrastructure Inventory
 
+### Network Architecture
+
+| Network | Subnet | Purpose |
+|---------|--------|---------|
+| Infra VLAN | 192.168.100.0/24 | Management, services, general traffic |
+| Storage LAN | 192.168.200.0/24 | Dedicated storage traffic (NFS, backups) |
+
+Storage LAN: separate physical interface per host, dedicated unmanaged switch.
+
 ### Proxmox Hosts
 
-| Host | IP | Role |
-|------|------|------|
-| winston | 192.168.100.38 | Primary Proxmox VE host |
-| reginald | 192.168.100.4 | Secondary Proxmox VE host (NFS source) |
+| Host | Infra IP | Storage IP | Role |
+|------|----------|------------|------|
+| winston | 192.168.100.38 | 192.168.200.38 | Primary Proxmox VE host |
+| reginald | 192.168.100.4 | 192.168.200.4 | Secondary Proxmox VE host (NFS source) |
 
 ### QNAP NAS (TS-251+)
 
-| Service | IP | Role |
-|---------|------|------|
+Connected to both Infra VLAN and Storage LAN.
+
+| Service | Infra IP | Role |
+|---------|----------|------|
 | PBS VM | 192.168.100.187 | Proxmox Backup Server |
 | MinIO | (container) | S3 storage for Restic backups |
 
