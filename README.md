@@ -19,7 +19,7 @@ Storage LAN uses a separate physical interface on each host connected via dedica
 |------|----------|------------|-------------|
 | winston | 192.168.100.38 | 192.168.200.38 | Primary Proxmox host (MS-01, i9-13900H) |
 | reginald | 192.168.100.4 | 192.168.200.4 | Storage host (Zimaboard 832, 7x SSD ZFS RAIDZ2) |
-| QNAP NAS | — | 192.168.200.x | Storage traffic only |
+| QNAP NAS | 192.168.100.254 | 192.168.200.254 | TS-251+, PBS VM, MinIO |
 
 ### Hardware Details
 

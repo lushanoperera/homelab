@@ -20,10 +20,13 @@ Storage LAN: separate physical interface per host, dedicated unmanaged switch.
 
 ### QNAP NAS (TS-251+)
 
-Connected to both Infra VLAN and Storage LAN.
+| Interface | IP |
+|-----------|-----|
+| Infra VLAN | 192.168.100.254 |
+| Storage LAN | 192.168.200.254 |
 
-| Service | Infra IP | Role |
-|---------|----------|------|
+| Service | IP | Role |
+|---------|-----|------|
 | PBS VM | 192.168.100.187 | Proxmox Backup Server |
 | MinIO | 192.168.200.210:9000 | S3 storage for Restic backups |
 
