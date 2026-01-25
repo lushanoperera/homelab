@@ -1,0 +1,16 @@
+[Unit]
+Description=Check and mount NFS shares before starting guests
+After=network-online.target remote-fs-pre.target
+Before=pve-guests.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/check-nfs-mounts.sh
+RemainAfterExit=yes
+TimeoutStartSec=120
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
