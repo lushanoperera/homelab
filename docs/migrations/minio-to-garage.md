@@ -242,9 +242,9 @@ export AWS_DEFAULT_REGION=garage
 
 ## Files to Create
 
-1. `/Users/disconnesso/Documents/Projects/minio-to-garage/garage.toml`
-2. `/Users/disconnesso/Documents/Projects/minio-to-garage/garage-docker-compose.yml`
-3. `/Users/disconnesso/Documents/Projects/minio-to-garage/restic-env.sh` (environment variables)
+1. `storage/garage/garage.toml`
+2. `storage/garage/docker-compose.yml`
+3. `storage/garage/restic-env.sh` (environment variables)
 
 ---
 

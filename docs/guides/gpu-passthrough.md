@@ -27,7 +27,7 @@ This guide covers the deployment of Intel iGPU SR-IOV Virtual Function 3 (VF 3) 
 1. **SR-IOV Enabled**: Virtual Functions must be created on Proxmox host
    - Check with: `lspci | grep "00:02.[1-7].*VGA"`
    - Should see 7 VGA devices (00:02.1 through 00:02.7)
-   - See: `/Users/disconnesso/Documents/Projects/proxmox-sr-iov/ms-01/MS-01-iGPU-SR-IOV-Guide.md`
+   - See: `docs/sr-iov/igpu-guide.md`
 
 2. **VF 3 Available**: Ensure VF 3 (00:02.4) is not assigned to another VM
    ```bash
@@ -455,8 +455,8 @@ Before considering deployment complete, verify:
 ## Reference Documentation
 
 ### Proxmox SR-IOV Setup
-- **Location**: `/Users/disconnesso/Documents/Projects/proxmox-sr-iov/ms-01/`
-- **Key File**: `MS-01-iGPU-SR-IOV-Guide.md`
+- **Location**: `docs/sr-iov/`
+- **Key File**: `igpu-guide.md`
 - Contains complete SR-IOV setup for Proxmox host
 
 ### Flatcar Documentation
