@@ -36,7 +36,7 @@ Connected to both Infra VLAN and Storage LAN.
 | 104 | WireGuard | — | — |
 | 105 | Plex | — | — |
 
-See `docs/restic-backups.md` for full backup configuration.
+See `docs/backups.md` for full backup configuration.
 
 ### Storage Flow
 
@@ -45,6 +45,23 @@ LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
 ```
 
 CacheFS on winston mitigates 2.5GbE bottleneck from reginald.
+
+### Flatcar Linux VM
+
+| Setting | Value |
+|---------|-------|
+| IP | 10.21.21.104 |
+| SSH | `ssh core@10.21.21.104` |
+| Host | Proxmox VM (PBS backed up) |
+
+**Services:**
+- Vaultwarden (password manager)
+- Traefik (external reverse proxy)
+- Cloudflared (Cloudflare tunnel)
+- CrowdSec (security)
+- n8n (workflow automation)
+- Portainer (Docker management)
+- NPM (internal LAN proxy)
 
 ### Reverse Proxies
 
