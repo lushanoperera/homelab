@@ -30,6 +30,13 @@ LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
 
 CacheFS on winston mitigates 2.5GbE bottleneck from reginald.
 
+### Reverse Proxies
+
+| Proxy | Scope | Location |
+|-------|-------|----------|
+| Traefik | External (internet) | Exposes services outside LAN |
+| Nginx Proxy Manager | Internal (LAN) | Docker container on Flatcar VM |
+
 ### Planned Migration
 
 MinIO → Garage (see `minio-to-garage` project)
@@ -82,8 +89,8 @@ pvecm status
 
 | Project | Path | Description |
 |---------|------|-------------|
-| flatcar-homelab | `../flatcar-homelab` | Flatcar Linux container host |
+| flatcar-homelab | `../flatcar-homelab` | Flatcar VM with NPM + Docker containers |
 | lxc-to-docker-migration | `../lxc-to-docker-migration` | LXC to Docker migration |
 | proxmox-sr-iov | `../proxmox-sr-iov` | SR-IOV configuration |
-| traefik | `../traefik` | Reverse proxy config |
+| traefik | `../traefik` | External reverse proxy (internet-facing) |
 | minio-to-garage | `../minio-to-garage` | S3 migration (planned) |

@@ -34,6 +34,13 @@ LXC Containers (Nextcloud, Immich, Vaultwarden)
 
 CacheFS on winston reduces bottlenecks from reginald's 2.5GbE networking.
 
+### Reverse Proxy Architecture
+
+| Proxy | Scope | Location |
+|-------|-------|----------|
+| Traefik | External (internet-facing) | See `traefik` project |
+| Nginx Proxy Manager | Internal (LAN only) | Docker on Flatcar VM |
+
 ## Directory Structure
 
 ```
@@ -72,8 +79,8 @@ Systemd service unit for automated NFS mount monitoring.
 
 | Project | Description |
 |---------|-------------|
-| [flatcar-homelab](../flatcar-homelab) | Flatcar Linux container host configuration |
+| [flatcar-homelab](../flatcar-homelab) | Flatcar Linux VM hosting NPM and other Docker containers |
 | [lxc-to-docker-migration](../lxc-to-docker-migration) | Migration scripts for LXC to Docker |
 | [proxmox-sr-iov](../proxmox-sr-iov) | SR-IOV configuration for Proxmox |
-| [traefik](../traefik) | Traefik reverse proxy configuration |
+| [traefik](../traefik) | Traefik reverse proxy for external/internet access |
 | [minio-to-garage](../minio-to-garage) | MinIO to Garage S3 migration (planned) |
