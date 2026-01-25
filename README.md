@@ -78,8 +78,9 @@ CacheFS on winston reduces bottlenecks from reginald's 2.5GbE networking.
 ├── docs/
 │   ├── backups.md           # Backup configuration (PBS, Restic)
 │   └── thermal-management.md # CPU governor, thermald config
+├── scripts/
+│   └── check-nfs-mounts.sh  # NFS mount verification script
 ├── reports/                 # Generated reports, logs
-├── check-nfs-mounts.sh      # NFS mount verification script
 ├── nfs-mount-check.service  # Systemd service for NFS checks
 ├── .env.example             # Environment template
 └── CLAUDE.md                # AI assistant instructions
@@ -102,11 +103,11 @@ CacheFS on winston reduces bottlenecks from reginald's 2.5GbE networking.
 
 ## Scripts
 
-### check-nfs-mounts.sh
+### scripts/check-nfs-mounts.sh
 Verifies NFS mounts are accessible and healthy.
 
 ### nfs-mount-check.service
-Systemd service unit for automated NFS mount monitoring.
+Systemd service unit for automated NFS mount monitoring (uses `scripts/check-nfs-mounts.sh`).
 
 ## Documentation
 
