@@ -280,19 +280,64 @@ zfs get mountpoint rpool/shared/media/tv
 
 ### Issue: Stale file handle errors
 
-**Symptom**: `ls: cannot open directory '/mnt/media': Stale file handle`
+**Symptom**: `ls: cannot open directory '/mnt/media/movies': Stale file handle` - but other paths like `/mnt/media/tv` work fine.
 
-**Cause**: NFS server restarted or export changed while client had open connections.
+**Cause**: NFS server restarted, export changed, or ZFS dataset modified while client had cached file handles.
 
-**Fix**:
+**Fix** (try in order):
+
 ```bash
-# Force remount
-sudo umount -l /mnt/media
-sudo systemctl start mnt-media.mount
+# 1. First try: Refresh exports on NFS server (often sufficient)
+ssh root@192.168.100.4 'exportfs -ra'
 
-# Or for systemd mount
+# 2. Test if the path is now accessible
+ls /mnt/media/movies
+
+# 3. If still stale, remount on client
 sudo systemctl restart mnt-media.mount
+
+# 4. Restart affected containers to pick up refreshed mount
+cd /srv/docker/media-stack && /opt/bin/docker-compose restart radarr bazarr
 ```
+
+**Note**: `exportfs -ra` on the NFS server often clears stale handles without requiring client-side remount. Always try this first as it's less disruptive.
+
+### Issue: Empty ZFS child dataset shadowing real data
+
+**Symptom**: Directory appears empty via NFS but data exists on the ZFS server. For example, `/media/movies/` shows 0 files via NFS but `ls /rpool/shared/media/movies/` on Reginald shows hundreds of files.
+
+**Cause**: An empty ZFS child dataset (e.g., `rpool/shared/media/movies`) is mounted at `/media/movies`, shadowing the actual data that exists in the parent dataset's directory at `/rpool/shared/media/movies`.
+
+**Diagnosis**:
+```bash
+# Check if the dataset has any data
+zfs list -o name,used,refer rpool/shared/media/movies
+# If "refer" is very small (e.g., 24K) but you expect GBs, the dataset is empty
+
+# Check where real data is
+ls -la /rpool/shared/media/movies/
+# This shows the actual directory in the parent dataset's filesystem
+```
+
+**Fix** (when data is in parent, child dataset is empty):
+```bash
+# 1. Verify the child dataset is truly empty and can be destroyed
+zfs list -o name,used,refer rpool/shared/media/movies
+
+# 2. Destroy the empty shadowing dataset
+zfs destroy rpool/shared/media/movies
+
+# 3. Create bind mount to expose the real data at expected path
+mount --bind /rpool/shared/media/movies /media/movies
+
+# 4. Persist in fstab
+echo "/rpool/shared/media/movies /media/movies none bind 0 0" >> /etc/fstab
+
+# 5. Verify NFS clients now see the data
+ssh core@192.168.100.100 'ls /mnt/media/movies | wc -l'
+```
+
+**Note**: This situation typically occurs when a ZFS child dataset was created but data was written to the parent's directory before the child was mounted. The `zfs inherit mountpoint` fix won't work here because the dataset itself is empty—the data lives in the parent's filesystem.
 
 ### Issue: Permission denied when writing
 
@@ -343,9 +388,11 @@ done
 | Child datasets invisible via NFS | Missing `crossmnt` in export | Add `crossmnt` option |
 | ZFS child mounted at wrong path | Explicit mountpoint set | Use `zfs inherit mountpoint` |
 | Data split between locations | Child dataset hiding underlying directory | Merge data, fix mountpoint |
+| Empty ZFS child shadowing real data | ZFS child dataset mounted over directory with actual content | Destroy empty dataset, use bind mount |
 | NFS re-export failing for children | NFSv4 re-export limitations | Mount directly from source |
 | `soft` mount causing silent failures | Network interruptions drop writes | Use `hard` mount option |
 | Stale data due to aggressive caching | `actimeo=600` too long | Reduce to `actimeo=60` |
+| Partial stale handles (some paths work) | Cached file handles invalid after export changes | `exportfs -ra` on server, then restart containers |
 
 ## Quick Reference Commands
 

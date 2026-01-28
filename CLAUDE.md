@@ -204,10 +204,10 @@ pvesm status        # Check storage
 ┌─────────────────────────────────────────────────────────────┐
 │ REGINALD (ZFS Source)                                       │
 │ rpool/shared/media → /media                                 │
-│   ├─ /media/downloads                                       │
-│   ├─ /media/movies                                          │
-│   ├─ /media/music                                           │
-│   └─ /media/tv                                              │
+│   ├─ /media/downloads  (ZFS child dataset)                  │
+│   ├─ /media/movies     (bind mount from /rpool/shared/...)  │
+│   ├─ /media/music      (ZFS child dataset)                  │
+│   └─ /media/tv         (ZFS child dataset)                  │
 │                                                             │
 │ NFS Export: /media (crossmnt for ZFS child datasets)        │
 └─────────────────────────┬───────────────────────────────────┘
@@ -246,10 +246,12 @@ LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
 |-------|----------|
 | Child datasets invisible via NFS | Add `crossmnt` to NFS export options |
 | ZFS child dataset wrong mountpoint | Use `zfs inherit mountpoint <dataset>` |
+| Empty ZFS child shadowing real data | Destroy empty dataset, bind mount real dir |
 | NFS re-export fails for child mounts | Mount directly from source, not via relay |
 | `soft` mount causes silent failures | Use `hard` mount option for production data |
 | Stale data from aggressive caching | Reduce `actimeo` from 600 to 60 seconds |
 | Data split between parent/child | Check `zfs get mountpoint` SOURCE is "inherited" |
+| Partial stale handles (some paths work) | `exportfs -ra` on server, restart containers |
 
 ### GPU SR-IOV
 Intel iGPU SR-IOV passthrough to Flatcar **not working** - guest requires patched `i915-sriov-dkms` driver. See `docs/sr-iov/` for details.
