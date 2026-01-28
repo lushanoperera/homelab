@@ -101,6 +101,33 @@ ssh core@192.168.100.100 'cd /srv/docker/traefik && /opt/bin/docker-compose ps'
 
 # VPN verification
 ssh core@192.168.100.100 'docker exec nordlynx curl -s https://ipinfo.io/ip'
+
+# NFS mount status
+ssh core@192.168.100.100 'systemctl status mnt-media.mount'
+```
+
+### NFS Operations
+
+```bash
+# Check NFS exports on Reginald
+ssh root@192.168.100.4 'exportfs -v | grep media'
+
+# Check ZFS mountpoints (ensure all inherited)
+ssh root@192.168.100.4 'zfs list -o name,mountpoint,mounted | grep media'
+
+# Verify data consistency across all hosts
+ssh root@192.168.100.4 'ls /media/tv | wc -l'      # Reginald
+ssh root@192.168.100.38 'ls /mnt/nfs_media/tv | wc -l'  # Winston
+ssh core@192.168.100.100 'ls /mnt/media/tv | wc -l'     # Flatcar
+
+# Write test through full chain
+ssh core@192.168.100.100 'docker exec sonarr touch /tv/test && docker exec sonarr rm /tv/test'
+
+# Reload NFS exports
+ssh root@192.168.100.4 'exportfs -ra'
+
+# Remount NFS on Flatcar (if stale)
+ssh core@192.168.100.100 'sudo systemctl restart mnt-media.mount'
 ```
 
 ### Ignition Workflow
@@ -171,6 +198,29 @@ pvesm status        # Check storage
 
 ## Storage Architecture
 
+### NFS Media Storage
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ REGINALD (ZFS Source)                                       │
+│ rpool/shared/media → /media                                 │
+│   ├─ /media/downloads                                       │
+│   ├─ /media/movies                                          │
+│   ├─ /media/music                                           │
+│   └─ /media/tv                                              │
+│                                                             │
+│ NFS Export: /media (crossmnt for ZFS child datasets)        │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ NFSv4.2
+          ┌───────────────┼───────────────┐
+          ▼               ▼               ▼
+    Flatcar VM 100   Winston          Plex LXC 105
+    (direct mount)   (Storage VLAN)   (via Winston)
+    /mnt/media       /mnt/nfs_media   /mnt/media
+```
+
+### Backup Flow
+
 ```
 LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
                                                            ↓
@@ -190,6 +240,16 @@ LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
 | Network interface naming | Always use `eth0` (not `ens18`) in Butane configs |
 | Ignition only applies once | Manual fixes needed for post-boot changes |
 | Docker Compose location | `/opt/bin/docker-compose` (standalone binary) |
+
+### NFS + ZFS
+| Issue | Solution |
+|-------|----------|
+| Child datasets invisible via NFS | Add `crossmnt` to NFS export options |
+| ZFS child dataset wrong mountpoint | Use `zfs inherit mountpoint <dataset>` |
+| NFS re-export fails for child mounts | Mount directly from source, not via relay |
+| `soft` mount causes silent failures | Use `hard` mount option for production data |
+| Stale data from aggressive caching | Reduce `actimeo` from 600 to 60 seconds |
+| Data split between parent/child | Check `zfs get mountpoint` SOURCE is "inherited" |
 
 ### GPU SR-IOV
 Intel iGPU SR-IOV passthrough to Flatcar **not working** - guest requires patched `i915-sriov-dkms` driver. See `docs/sr-iov/` for details.

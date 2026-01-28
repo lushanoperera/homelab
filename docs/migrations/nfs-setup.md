@@ -3,33 +3,41 @@
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────┐
-│  NFS Server (192.168.200.4)         │
-│  Path: /rpool/shared/media          │
-│    ├─ downloads/                    │
-│    ├─ movies/                       │
-│    ├─ tv/                           │
-│    └─ music/                        │
-└─────────────┬───────────────────────┘
-              │ NFS Export
-              ↓
-┌─────────────────────────────────────┐
-│  Flatcar VM (192.168.100.100)       │
-│  Mount: /mnt/nfs_shared/media       │
-│         ↓                           │
-│  Link:  /mnt/media  ────────────┐   │
-│                                 │   │
-│  ┌──────────────────────────────┼─┐ │
-│  │  Docker Containers           │ │ │
-│  │  - qbittorrent: /downloads ──┘ │ │
-│  │  - sabnzbd:     /downloads     │ │
-│  │  - radarr:      /downloads     │ │
-│  │  - sonarr:      /downloads     │ │
-│  │  - lidarr:      /downloads     │ │
-│  │  All: PUID=1000, PGID=1000     │ │
-│  │       UMASK=002                 │ │
-│  └─────────────────────────────────┘ │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ REGINALD (192.168.100.4 / 192.168.200.4)                    │
+│ ZFS Pool: rpool/shared/media → /media                       │
+│                                                             │
+│ ZFS Datasets (all inherit /media mountpoint):               │
+│   rpool/shared/media           → /media                     │
+│   rpool/shared/media/downloads → /media/downloads           │
+│   rpool/shared/media/movies    → /media/movies              │
+│   rpool/shared/media/music     → /media/music               │
+│   rpool/shared/media/tv        → /media/tv                  │
+│                                                             │
+│ NFS Export: /media                                          │
+│   192.168.100.0/24 (Infra VLAN) - Flatcar, LXCs             │
+│   192.168.200.0/24 (Storage VLAN) - Winston                 │
+│   Options: rw,async,no_subtree_check,no_root_squash,crossmnt│
+│                                                             │
+│ User: mediauser (1000:1000)                                 │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ NFSv4.2
+                          │
+          ┌───────────────┼───────────────┐
+          │               │               │
+          ▼               ▼               ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ FLATCAR VM 100  │ │ WINSTON         │ │ PLEX LXC 105    │
+│ 192.168.100.100 │ │ 192.168.200.38  │ │ (via Winston)   │
+│                 │ │                 │ │                 │
+│ Direct mount:   │ │ Mount:          │ │ Bind mount:     │
+│ 192.168.100.4:  │ │ 192.168.200.4:  │ │ /mnt/nfs_media  │
+│ /media          │ │ /media          │ │ → /mnt/media    │
+│ → /mnt/media    │ │ → /mnt/nfs_media│ │                 │
+│                 │ │                 │ │                 │
+│ Docker (PUID=   │ │ Re-exports to   │ │                 │
+│ 1000, PGID=1000)│ │ 192.168.100.0/24│ │                 │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
 ```
 
 ## Requirements
@@ -49,47 +57,63 @@ This ensures all services can read and write to shared directories.
 - **lidarr**: Write to `/downloads`, `/music`
 - **bazarr**: Write to `/movies`, `/tv`
 
-## NFS Server Setup (192.168.200.4)
+## NFS Server Setup (Reginald - 192.168.100.4)
 
-### 1. Create Directory Structure
+### 1. ZFS Dataset Structure
+
+**Critical**: All child datasets must inherit their mountpoint from the parent.
+
 ```bash
-# Create base directory if it doesn't exist
-mkdir -p /rpool/shared/media/{downloads,movies,tv,music,incomplete-downloads}
+# Check current mountpoints
+zfs list -o name,mountpoint,mounted | grep media
+
+# Correct output should show:
+# rpool/shared/media            /media           yes
+# rpool/shared/media/downloads  /media/downloads yes
+# rpool/shared/media/movies     /media/movies    yes
+# rpool/shared/media/music      /media/music     yes
+# rpool/shared/media/tv         /media/tv        yes
+```
+
+If a child dataset has a custom mountpoint (not inherited), fix it:
+```bash
+# Check if mountpoint is inherited
+zfs get mountpoint rpool/shared/media/tv
+
+# If SOURCE shows "local" instead of "inherited", fix it:
+zfs inherit mountpoint rpool/shared/media/tv
 ```
 
 ### 2. Set Ownership
 ```bash
 # All media directories must be owned by UID:GID 1000:1000
-chown -R 1000:1000 /rpool/shared/media
+chown -R 1000:1000 /media
 ```
 
 ### 3. Set Permissions
 ```bash
 # Directories: 775 (rwxrwxr-x) - group write enabled
-find /rpool/shared/media -type d -exec chmod 775 {} \;
+find /media -type d -exec chmod 775 {} \;
 
 # Files: 664 (rw-rw-r--) - group write enabled
-find /rpool/shared/media -type f -exec chmod 664 {} \;
+find /media -type f -exec chmod 664 {} \;
 ```
 
 ### 4. Configure NFS Export
 
-Edit `/etc/exports` and add:
-```
-/rpool/shared/media 192.168.100.0/24(rw,sync,no_subtree_check,no_root_squash)
+Edit `/etc/exports`:
+```bash
+# Media content (async for performance, crossmnt for ZFS child datasets)
+/media 192.168.100.0/24(rw,async,no_subtree_check,no_root_squash,crossmnt) \
+       192.168.200.0/24(rw,async,no_subtree_check,no_root_squash,crossmnt)
 ```
 
 **Export Options Explained:**
 - `rw`: Read-write access
-- `sync`: Write changes to disk before responding
+- `async`: Improves performance (data written to disk asynchronously)
 - `no_subtree_check`: Improves reliability
 - `no_root_squash`: Allows root on client to write as root (needed for Docker)
-
-**Alternative (more restrictive):**
-If you want to force all access as UID/GID 1000:
-```
-/rpool/shared/media 192.168.100.0/24(rw,sync,no_subtree_check,all_squash,anonuid=1000,anongid=1000)
-```
+- `crossmnt`: **Critical** - Allows NFS to traverse into ZFS child dataset mountpoints
 
 ### 5. Apply Export Configuration
 ```bash
@@ -98,37 +122,31 @@ exportfs -ra
 
 # Verify exports are active
 exportfs -v | grep media
-showmount -e localhost
+
+# Should show crossmnt option:
+# /media 192.168.100.0/24(async,wdelay,hide,crossmnt,no_subtree_check,...)
 ```
 
 ## Flatcar VM Setup (192.168.100.100)
 
-### 1. Create Mount Points
-```bash
-sudo mkdir -p /mnt/nfs_shared/media
-sudo mkdir -p /mnt/media
-```
+### Direct Mount from Reginald (Recommended)
 
-### 2. Mount NFS Share
+Flatcar should mount directly from Reginald, not via Winston re-export. This avoids NFS re-export limitations with ZFS child mounts.
 
-**Temporary Mount (for testing):**
-```bash
-sudo mount -t nfs -o rw,hard,intr,vers=3 192.168.200.4:/rpool/shared/media /mnt/nfs_shared/media
-```
-
-**Permanent Mount:**
-Add to `/etc/systemd/system/mnt-nfs_shared-media.mount`:
+**Systemd Mount Unit** (`/etc/systemd/system/mnt-media.mount`):
 ```ini
 [Unit]
-Description=NFS mount for media storage
+Description=NFS mount for media storage from reginald
 Requires=network-online.target
 After=network-online.target
+Before=docker.service media-stack-compose.service
 
 [Mount]
-What=192.168.200.4:/rpool/shared/media
-Where=/mnt/nfs_shared/media
-Type=nfs
-Options=rw,hard,intr,vers=3
+What=192.168.100.4:/media
+Where=/mnt/media
+Type=nfs4
+Options=rw,relatime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,_netdev
+TimeoutSec=300
 
 [Install]
 WantedBy=multi-user.target
@@ -137,40 +155,50 @@ WantedBy=multi-user.target
 Enable and start:
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable mnt-nfs_shared-media.mount
-sudo systemctl start mnt-nfs_shared-media.mount
+sudo systemctl enable mnt-media.mount
+sudo systemctl start mnt-media.mount
 ```
 
-### 3. Create Docker Path Link
-
-If `/mnt/media` should point to `/mnt/nfs_shared/media`:
-
-**Option A: Symlink**
-```bash
-sudo ln -s /mnt/nfs_shared/media /mnt/media
-```
-
-**Option B: Bind Mount**
-```bash
-sudo mount --bind /mnt/nfs_shared/media /mnt/media
-```
-
-**Option C: Direct NFS Mount**
-Mount NFS directly to `/mnt/media` instead of `/mnt/nfs_shared/media`
-
-### 4. Verify Mount
+### Verify Mount
 ```bash
 # Check mount
 mount | grep media
 
-# Test permissions
-ls -la /mnt/media/
-ls -la /mnt/nfs_shared/media/
+# Test all subdirectories are accessible
+ls /mnt/media/tv/
+ls /mnt/media/movies/
+ls /mnt/media/downloads/
 
-# Test write access as UID 1000
-sudo -u '#1000' touch /mnt/media/downloads/test.txt
-sudo -u '#1000' rm /mnt/media/downloads/test.txt
+# Test write access
+docker exec sonarr touch /tv/test && docker exec sonarr rm /tv/test
 ```
+
+## Winston Setup (192.168.200.38)
+
+Winston mounts from Reginald via Storage VLAN and optionally re-exports to Infra VLAN for LXC containers.
+
+### Client Mount Configuration
+
+**fstab entry**:
+```bash
+192.168.200.4:/media /mnt/nfs_media nfs nofail,_netdev,hard,timeo=150,retrans=3,rw,noatime,actimeo=60,vers=4,rsize=1048576,wsize=1048576,fsc,nconnect=4 0 0
+```
+
+**Mount Options Explained:**
+- `hard`: Retry indefinitely on server failure (safer than `soft`)
+- `timeo=150`: 15 second timeout
+- `actimeo=60`: 60 second attribute cache (balance between performance and freshness)
+- `fsc`: Enable FS-Cache (if cachefilesd is running)
+- `nconnect=4`: Use 4 parallel connections for better throughput
+
+### Re-export Configuration (for LXC containers)
+
+**exports**:
+```bash
+/mnt/nfs_media 192.168.100.0/24(rw,sync,no_subtree_check,no_root_squash,crossmnt,fsid=1)
+```
+
+**Note**: NFS re-export has limitations. LXC containers accessing `/mnt/nfs_media` will see the content correctly because Winston's mount includes `crossmnt` from Reginald. However, for Docker containers, prefer direct mount from Reginald.
 
 ## Docker Configuration
 
@@ -190,226 +218,174 @@ MEDIA_ROOT=/mnt/media
 ### docker-compose.yml Volume Mounts
 ```yaml
 services:
-  qbittorrent:
+  sonarr:
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - UMASK=${UMASK}
     volumes:
-      - ${CONFIG_ROOT}/qbittorrent:/config
+      - ${CONFIG_ROOT}/sonarr:/config
       - ${DOWNLOADS_ROOT}:/downloads
-      - ${DOWNLOADS_ROOT}/incomplete-downloads:/incomplete-downloads
+      - ${MEDIA_ROOT}/tv:/tv
       - ${MEDIA_ROOT}:/media
 ```
 
-All services must use consistent `PUID`, `PGID`, and `UMASK` settings.
-
-## Diagnostic and Fix Scripts
-
-### Diagnose Issues
-```bash
-cd /path/to/lxc-to-docker-migration
-./scripts/diagnose-nfs-permissions.sh
-```
-
-This script checks:
-- Connectivity to NFS server and Flatcar
-- Mount configuration
-- Permissions at all layers (NFS server, Flatcar mount, Docker path)
-- NFS export configuration
-- Docker container settings
-- Write access from each container
-
-### Apply Fixes
-
-**Dry-run mode (safe, shows what would be done):**
-```bash
-./scripts/fix-nfs-permissions.sh
-```
-
-**Apply fixes:**
-```bash
-./scripts/fix-nfs-permissions.sh --apply
-```
-
-This script:
-1. Sets correct ownership (1000:1000) on NFS server
-2. Sets correct permissions (dirs: 775, files: 664)
-3. Verifies/updates NFS export configuration
-4. Remounts NFS on Flatcar with correct options
-5. Restarts Docker containers
-6. Verifies write access from all containers
-
 ## Troubleshooting
 
-### Issue: "Permission denied" when writing
+### Issue: "Not a directory" when accessing subdirectories
 
-**Check 1: Ownership on NFS server**
+**Symptom**: `ls /mnt/media/tv/` returns "Not a directory" but `ls -la /mnt/media/` shows `tv` as a directory.
+
+**Cause**: NFS export missing `crossmnt` option, so child ZFS dataset mounts are not traversed.
+
+**Fix on Reginald**:
 ```bash
-ssh root@192.168.200.4 "ls -lnd /rpool/shared/media /rpool/shared/media/downloads"
-```
-Should show: `drwxrwxr-x ... 1000 1000 ...`
-
-**Check 2: NFS export options**
-```bash
-ssh root@192.168.200.4 "exportfs -v | grep media"
-```
-Should include: `rw`, `no_root_squash` (or `all_squash,anonuid=1000,anongid=1000`)
-
-**Check 3: NFS mount on Flatcar**
-```bash
-ssh core@192.168.100.100 "mount | grep media"
-```
-Should show: `type nfs` with `rw` option
-
-**Check 4: Container configuration**
-```bash
-ssh core@192.168.100.100 "docker exec qbittorrent env | grep -E '(PUID|PGID|UMASK)'"
-```
-Should show: `PUID=1000`, `PGID=1000`, `UMASK=002`
-
-### Issue: Changes not reflected in containers
-
-**Restart containers:**
-```bash
-ssh core@192.168.100.100 "cd /srv/docker/media-stack && docker compose restart"
-```
-
-**Or individual service:**
-```bash
-ssh core@192.168.100.100 "docker restart qbittorrent"
-```
-
-### Issue: "Stale file handle" errors
-
-NFS mount became stale, remount:
-```bash
-ssh core@192.168.100.100 "sudo umount -f /mnt/nfs_shared/media && sudo mount /mnt/nfs_shared/media"
-```
-
-### Issue: Only root can write, UID 1000 cannot
-
-**Problem**: NFS export has `root_squash` or wrong `all_squash` settings
-
-**Fix on NFS server**:
-```bash
-# Edit /etc/exports, change to:
-/rpool/shared/media 192.168.100.0/24(rw,sync,no_subtree_check,no_root_squash)
-
-# Reload
+# Add crossmnt to export
+sed -i 's|no_root_squash)|no_root_squash,crossmnt)|g' /etc/exports
 exportfs -ra
 ```
 
-### Issue: Some services can write, others cannot
+### Issue: ZFS child dataset has wrong mountpoint
 
-**Problem**: Inconsistent PUID/PGID/UMASK across containers
+**Symptom**: `zfs get mountpoint rpool/shared/media/tv` shows a custom path instead of inherited.
 
-**Fix**: Verify all services have same environment variables in docker-compose.yml:
+**Cause**: The dataset was created with explicit mountpoint or modified later.
+
+**Fix**:
 ```bash
-ssh core@192.168.100.100 "cd /srv/docker/media-stack && grep -A 3 'environment:' docker-compose.yml | grep -E '(PUID|PGID|UMASK)'"
+# Make dataset inherit mountpoint from parent
+zfs inherit mountpoint rpool/shared/media/tv
+
+# Verify
+zfs list -o name,mountpoint rpool/shared/media/tv
+# Should show: /media/tv
 ```
 
-All should show `1000`, `1000`, `002`
+### Issue: Data visible locally but not via NFS
+
+**Symptom**: Content exists at `/media/tv/` on Reginald but NFS clients see empty directory.
+
+**Cause**: ZFS child dataset mounted at wrong location, NFS shows underlying empty directory.
+
+**Diagnosis**:
+```bash
+# Check if path is a mountpoint
+mountpoint /media/tv
+# Should say "is a mountpoint"
+
+# Check ZFS dataset mountpoint
+zfs get mountpoint rpool/shared/media/tv
+# SOURCE should be "inherited from rpool/shared/media"
+```
+
+### Issue: Stale file handle errors
+
+**Symptom**: `ls: cannot open directory '/mnt/media': Stale file handle`
+
+**Cause**: NFS server restarted or export changed while client had open connections.
+
+**Fix**:
+```bash
+# Force remount
+sudo umount -l /mnt/media
+sudo systemctl start mnt-media.mount
+
+# Or for systemd mount
+sudo systemctl restart mnt-media.mount
+```
+
+### Issue: Permission denied when writing
+
+**Check 1: Ownership on NFS server**
+```bash
+ssh root@192.168.100.4 "ls -lnd /media /media/tv"
+# Should show: drwxrwxr-x ... 1000 1000 ...
+```
+
+**Check 2: NFS export options**
+```bash
+ssh root@192.168.100.4 "exportfs -v | grep media"
+# Should include: rw, no_root_squash, crossmnt
+```
+
+**Check 3: Container PUID/PGID**
+```bash
+docker exec sonarr env | grep -E '(PUID|PGID)'
+# Should show: PUID=1000, PGID=1000
+```
 
 ## Testing Write Access
 
-### From Flatcar Host
+### Full Chain Test
 ```bash
-# As root
-ssh core@192.168.100.100 "sudo touch /mnt/media/downloads/test-root && sudo rm /mnt/media/downloads/test-root"
+# Create test file from container
+TIMESTAMP=$(date +%s)
+docker exec sonarr touch /tv/chain_test_$TIMESTAMP
 
-# As UID 1000
-ssh core@192.168.100.100 "sudo -u '#1000' touch /mnt/media/downloads/test-user && sudo rm /mnt/media/downloads/test-user"
+# Verify on Reginald
+ssh root@192.168.100.4 "ls /media/tv/chain_test_* && rm /media/tv/chain_test_*"
 ```
 
-### From Docker Containers
+### Test All Containers
 ```bash
-# qbittorrent
-ssh core@192.168.100.100 "docker exec qbittorrent touch /downloads/test && docker exec qbittorrent rm /downloads/test"
-
-# Test all download clients
 for service in qbittorrent sabnzbd radarr sonarr lidarr; do
     echo "Testing $service..."
-    ssh core@192.168.100.100 "docker exec $service touch /downloads/test-$service && docker exec $service rm /downloads/test-$service"
+    docker exec $service touch /downloads/test-$service
+    docker exec $service rm /downloads/test-$service
+    echo "$service: OK"
 done
+```
+
+## Lessons Learned
+
+| Issue | Root Cause | Solution |
+|-------|------------|----------|
+| Child datasets invisible via NFS | Missing `crossmnt` in export | Add `crossmnt` option |
+| ZFS child mounted at wrong path | Explicit mountpoint set | Use `zfs inherit mountpoint` |
+| Data split between locations | Child dataset hiding underlying directory | Merge data, fix mountpoint |
+| NFS re-export failing for children | NFSv4 re-export limitations | Mount directly from source |
+| `soft` mount causing silent failures | Network interruptions drop writes | Use `hard` mount option |
+| Stale data due to aggressive caching | `actimeo=600` too long | Reduce to `actimeo=60` |
+
+## Quick Reference Commands
+
+```bash
+# Check NFS exports on Reginald
+ssh root@192.168.100.4 "exportfs -v | grep media"
+
+# Check ZFS mountpoints
+ssh root@192.168.100.4 "zfs list -o name,mountpoint,mounted | grep media"
+
+# Check mounts on Flatcar
+ssh core@192.168.100.100 "mount | grep media"
+
+# Check mounts on Winston
+ssh root@192.168.100.38 "mount | grep nfs_media"
+
+# Test write from container
+ssh core@192.168.100.100 "docker exec sonarr touch /tv/test && docker exec sonarr rm /tv/test"
+
+# Restart NFS mount on Flatcar
+ssh core@192.168.100.100 "sudo systemctl restart mnt-media.mount"
+
+# Reload NFS exports on Reginald
+ssh root@192.168.100.4 "exportfs -ra"
+
+# Check container health
+ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "sonarr|radarr"'
 ```
 
 ## Security Considerations
 
 ### UID/GID 1000 Consistency
 - Using UID/GID 1000 across all containers ensures consistent permissions
-- Create a dedicated user on NFS server (optional but recommended):
-  ```bash
-  # On NFS server
-  useradd -u 1000 -g 1000 mediauser
-  ```
+- Dedicated user on Reginald: `mediauser` (UID 1000, GID 1000)
 
 ### Network Security
-- NFS export is restricted to `192.168.100.0/24` subnet
-- Consider firewall rules to further restrict access to Flatcar VM only:
-  ```bash
-  # On NFS server (example using iptables)
-  iptables -A INPUT -p tcp --dport 2049 -s 192.168.100.100 -j ACCEPT
-  iptables -A INPUT -p tcp --dport 2049 -j DROP
-  ```
+- NFS export restricted to specific subnets
+- Infra VLAN (192.168.100.0/24): Flatcar, LXC containers
+- Storage VLAN (192.168.200.0/24): Winston (dedicated storage traffic)
 
 ### no_root_squash Implications
-- `no_root_squash` allows root on client to write as root on server
-- Only enable for trusted clients
-- Alternative: Use `all_squash,anonuid=1000,anongid=1000` to force all access as UID 1000
-
-## Performance Tuning
-
-### NFS Mount Options
-Add these options for better performance:
-```bash
-mount -t nfs -o rw,hard,intr,vers=3,rsize=8192,wsize=8192,timeo=14 \
-    192.168.200.4:/rpool/shared/media /mnt/nfs_shared/media
-```
-
-Options:
-- `rsize=8192,wsize=8192`: Read/write buffer size
-- `timeo=14`: Timeout in deciseconds (1.4 seconds)
-- `vers=3`: Use NFSv3 (more compatible)
-
-### NFS Server Tuning
-Edit `/etc/nfs.conf` (or similar) to increase threads:
-```ini
-[nfsd]
-threads=16
-```
-
-## Quick Reference Commands
-
-```bash
-# Diagnostic
-./scripts/diagnose-nfs-permissions.sh
-
-# Fix (dry-run)
-./scripts/fix-nfs-permissions.sh
-
-# Fix (apply)
-./scripts/fix-nfs-permissions.sh --apply
-
-# Check NFS exports
-ssh root@192.168.200.4 "exportfs -v"
-
-# Check mounts
-ssh core@192.168.100.100 "mount | grep media"
-
-# Test write from container
-ssh core@192.168.100.100 "docker exec qbittorrent touch /downloads/test.txt"
-
-# Restart all containers
-ssh core@192.168.100.100 "cd /srv/docker/media-stack && docker compose restart"
-
-# Check container logs
-ssh core@192.168.100.100 "docker logs qbittorrent --tail 50"
-```
-
-## Further Reading
-
-- [NFS Server Configuration](https://wiki.archlinux.org/title/NFS)
-- [LinuxServer.io Docker Images](https://docs.linuxserver.io/)
-- [Docker Volumes Documentation](https://docs.docker.com/storage/volumes/)
-- [Flatcar Linux Documentation](https://www.flatcar.org/docs/latest/)
+- Allows root on client to write as root on server
+- Only enable for trusted clients on isolated VLANs
