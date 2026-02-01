@@ -2,19 +2,19 @@
 
 ## Hardware
 
-| Component | Specification |
-|-----------|---------------|
-| Chassis | Minisforum MS-01 |
-| CPU | Intel i9-13900H (14C/20T, up to 5.2 GHz) |
-| RAM | TBD |
-| Network | 2.5GbE + Storage LAN |
+| Component | Specification                            |
+| --------- | ---------------------------------------- |
+| Chassis   | Minisforum MS-01                         |
+| CPU       | Intel i9-13900H (14C/20T, up to 5.2 GHz) |
+| RAM       | TBD                                      |
+| Network   | 2.5GbE + Storage LAN                     |
 
 ## Network
 
-| Interface | IP | Purpose |
-|-----------|-----|---------|
-| Infra | 192.168.100.38 | Management |
-| Storage | 192.168.200.38 | NFS, backups |
+| Interface | IP             | Purpose      |
+| --------- | -------------- | ------------ |
+| Infra     | 192.168.100.38 | Management   |
+| Storage   | 192.168.200.38 | NFS, backups |
 
 ## SSH
 
@@ -30,17 +30,17 @@ ssh root@192.168.100.38
 
 ## LXC Containers
 
-| CTID | Service |
-|------|---------|
-| 101 | Nextcloud |
-| 103 | Immich |
-| 104 | WireGuard |
-| 105 | Plex |
+| CTID | Service   |
+| ---- | --------- |
+| 101  | Nextcloud |
+| 103  | Immich    |
+| 104  | WireGuard |
+| 105  | Plex      |
 
 ## VMs
 
-| VMID | Name | Purpose |
-|------|------|---------|
-| 100 | flatcar-media | Media stack |
+| VMID | Name          | Purpose     |
+| ---- | ------------- | ----------- |
+| 100  | flatcar-media | Media stack |
 
 See `../../docs/thermal-management.md` for thermal configuration.

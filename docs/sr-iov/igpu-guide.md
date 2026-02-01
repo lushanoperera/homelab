@@ -24,12 +24,14 @@
 **SR-IOV (Single Root I/O Virtualization)** allows the Intel integrated GPU to be split into up to **7 Virtual Functions (VFs)**. Each VF acts as an independent GPU that can be assigned to different VMs or LXC containers simultaneously.
 
 ### Use Cases
+
 - **Media Servers**: Hardware-accelerated transcoding in Plex/Jellyfin across multiple containers
 - **Windows VMs**: GPU acceleration for multiple Windows 11 guests (Remote Desktop only)
 - **Development**: Test GPU-dependent applications across multiple environments
 - **Gaming Streaming**: GPU-accelerated game streaming services
 
 ### Limitations
+
 - **No Physical Display**: VMs with assigned VFs cannot output to physical monitors
 - **Remote Access Only**: Windows guests require Remote Desktop or similar remote access
 - **Max 7 VFs**: Can create up to 7 virtual GPU instances
@@ -40,12 +42,14 @@
 ## Hardware & Software Requirements
 
 ### Hardware Requirements
+
 - **CPU**: Intel i9-13900H (12th/13th Gen Intel Core)
 - **System**: Minisforum MS-01
 - **RAM**: 32GB+ recommended (96GB for heavy workloads)
 - **Optional**: HDMI dummy plug (for stability)
 
 ### Software Requirements
+
 - **Proxmox VE**: 8.1.4+ or 9.0 (based on Debian 13 "Trixie")
   - **Proxmox 9.0**: Kernel 6.14.11-3-pve (CONFIRMED WORKING ✅)
   - **Proxmox 8.x**: Kernel 6.5.11-8-pve or 6.5.13-3-pve recommended
@@ -60,30 +64,39 @@
 ## Phase 1: BIOS Configuration
 
 ### Access BIOS
+
 1. Reboot the MS-01
 2. Press **DEL** or **F2** during POST to enter BIOS
 
 ### Required BIOS Settings
 
 #### Virtualization Settings
+
 Navigate to: **Advanced → CPU Configuration**
+
 - **Intel Virtualization Technology (VT-x)**: **Enabled**
 - **VT-d (Intel Virtualization Technology for Directed I/O)**: **Enabled**
 
 #### SR-IOV Settings
+
 Navigate to: **Advanced → PCI Subsystem Settings**
+
 - **SR-IOV Support**: **Enabled**
 
 #### Graphics Settings
+
 Navigate to: **Advanced → Onboard Devices Configuration**
+
 - **Primary Video Device**: **Hybrid** (or **iGPU**)
   - **CRITICAL**: Do NOT set to "Auto" or "PCIe" if you want to use SR-IOV
 
 #### Power Management (Optional but Recommended)
+
 - **Power Management**: Disable CPU C-States for better stability
 - **ASPM (Active State Power Management)**: **Disabled**
 
 ### Save and Exit
+
 - Press **F10** to save changes and reboot
 
 ---
@@ -124,6 +137,7 @@ apt install -y build-essential git dkms sysfsutils pve-headers-$(uname -r) mokut
 ```
 
 **Dependencies Explained**:
+
 - `build-essential` - Compiler toolchain for DKMS module compilation
 - `git` - For cloning repositories
 - `dkms` - Dynamic Kernel Module Support
@@ -138,6 +152,7 @@ dmesg | grep -e DMAR -e IOMMU
 ```
 
 **Expected Output**: Should show IOMMU initialization messages like:
+
 ```
 DMAR: IOMMU enabled
 DMAR: Intel(R) Virtualization Technology for Directed I/O
@@ -257,6 +272,7 @@ dkms status
 ```
 
 **Expected Output**:
+
 ```
 i915-sriov-dkms/2025.10.10, 6.5.11-8-pve, x86_64: installed
 ```
@@ -348,6 +364,7 @@ lspci | grep VGA
 ```
 
 **Expected Output**: You should see 8 devices (1 physical + 7 virtual):
+
 ```
 00:02.0 VGA compatible controller: Intel Corporation Raptor Lake-P [Iris Xe Graphics] (rev 04)
 00:02.1 VGA compatible controller: Intel Corporation Raptor Lake-P [Iris Xe Graphics] (rev 04)
@@ -381,6 +398,7 @@ cat /sys/bus/pci/devices/0000:00:02.0/sriov_numvfs
 #### Step 1: Create Privileged LXC Container
 
 When creating the container, ensure:
+
 - **Unprivileged container**: No (create privileged container)
 - **Nesting**: Enabled
 - **Keyctl**: Enabled
@@ -396,16 +414,16 @@ stat /dev/dri/renderD*
 
 **VF to Device Mapping**:
 
-| VF # | PCI Address | Card Device | Render Device | Major:Minor |
-|------|-------------|-------------|---------------|-------------|
-| Physical GPU | 00:02.0 | card0 | renderD128 | 226:128 |
-| VF 0 | 00:02.1 | card1 | renderD129 | 226:129 |
-| VF 1 | 00:02.2 | card2 | renderD130 | 226:130 |
-| VF 2 | 00:02.3 | card3 | renderD131 | 226:131 |
-| VF 3 | 00:02.4 | card4 | renderD132 | 226:132 |
-| VF 4 | 00:02.5 | card5 | renderD133 | 226:133 |
-| VF 5 | 00:02.6 | card6 | renderD134 | 226:134 |
-| VF 6 | 00:02.7 | card7 | renderD135 | 226:135 |
+| VF #         | PCI Address | Card Device | Render Device | Major:Minor |
+| ------------ | ----------- | ----------- | ------------- | ----------- |
+| Physical GPU | 00:02.0     | card0       | renderD128    | 226:128     |
+| VF 0         | 00:02.1     | card1       | renderD129    | 226:129     |
+| VF 1         | 00:02.2     | card2       | renderD130    | 226:130     |
+| VF 2         | 00:02.3     | card3       | renderD131    | 226:131     |
+| VF 3         | 00:02.4     | card4       | renderD132    | 226:132     |
+| VF 4         | 00:02.5     | card5       | renderD133    | 226:133     |
+| VF 5         | 00:02.6     | card6       | renderD134    | 226:134     |
+| VF 6         | 00:02.7     | card7       | renderD135    | 226:135     |
 
 **Note**: Do NOT use card0/renderD128 (physical GPU) - use VF devices instead.
 
@@ -426,6 +444,7 @@ lxc.mount.entry: /dev/dri/renderD129 dev/dri/renderD129 none bind,optional,creat
 ```
 
 **For multiple containers, use different VFs**:
+
 - Container 100: Use VF 0 (renderD129, minor 129)
 - Container 101: Use VF 1 (renderD130, minor 130)
 - Container 102: Use VF 2 (renderD131, minor 131)
@@ -452,6 +471,7 @@ ls -la /dev/dri
 ### For Windows 11 VMs
 
 #### Step 1: Create Windows 11 VM
+
 - Use OVMF (UEFI) BIOS
 - Enable TPM 2.0
 - Install with VirtIO drivers
@@ -463,12 +483,14 @@ qm set [VM_ID] -hostpci0 0000:00:02.1,x-vga=0,rombar=0,pcie=1
 ```
 
 **Parameter Explanation**:
+
 - `0000:00:02.1` - VF 0 PCI address (use .2, .3, etc. for other VFs)
 - `x-vga=0` - Not primary display adapter
 - `rombar=0` - Disable ROM BAR (required for iGPU VFs)
 - `pcie=1` - Enable PCIe (required for Q35/OVMF guests)
 
 **Note**: Use different VF addresses for different VMs:
+
 - VM 200: Use 0000:00:02.1 (VF 0)
 - VM 201: Use 0000:00:02.2 (VF 1)
 - VM 202: Use 0000:00:02.3 (VF 2)
@@ -477,6 +499,7 @@ qm set [VM_ID] -hostpci0 0000:00:02.1,x-vga=0,rombar=0,pcie=1
 #### Step 3: Install Intel Graphics Driver
 
 Inside Windows VM:
+
 1. Download Intel Graphics Driver from intel.com
 2. Install driver (may show warnings about unsigned driver)
 3. Reboot VM
@@ -515,6 +538,7 @@ ls -la /dev/dri/
 ```
 
 **Expected Output**:
+
 ```
 card0 (Physical GPU)
 card1-7 (Virtual Functions)
@@ -534,10 +558,12 @@ vainfo --display drm --device /dev/dri/renderD129
 ## Jellyfin Hardware Acceleration Setup
 
 ### Step 1: Access Jellyfin Dashboard
+
 1. Navigate to **Dashboard** → **Playback**
 2. Scroll to **Hardware Acceleration**
 
 ### Step 2: Configure Hardware Acceleration
+
 - **Hardware acceleration**: Intel QuickSync (QSV)
 - **Enable hardware decoding for**: Enable all codecs
   - H264
@@ -549,7 +575,9 @@ vainfo --display drm --device /dev/dri/renderD129
 - **Prefer OS native DXVA or VA-API hardware decoders**: Enabled
 
 ### Step 3: Test Transcoding
+
 Play a video that requires transcoding and check:
+
 ```bash
 # Monitor the VF assigned to your Jellyfin container (e.g., renderD129)
 intel_gpu_top --device /dev/dri/renderD129
@@ -562,15 +590,19 @@ You should see GPU utilization increase during transcoding.
 ## Plex Hardware Acceleration Setup
 
 ### Prerequisites
+
 - Plex Pass subscription required for hardware transcoding
 
 ### Step 1: Enable Hardware Acceleration
+
 1. Navigate to **Settings** → **Transcoder**
 2. **Use hardware acceleration when available**: Enabled
 3. **Use hardware-accelerated video encoding**: Enabled
 
 ### Step 2: Verify
+
 Check transcoding sessions during playback:
+
 - Dashboard should show "(hw)" next to transcoding streams
 
 ---
@@ -578,23 +610,29 @@ Check transcoding sessions during playback:
 ## Best Practices
 
 ### Resource Allocation
+
 - **Don't overcommit**: If running 7 VMs/containers, monitor performance
 - **VRAM sharing**: All VFs share system RAM (consider 32GB+ RAM)
 - **CPU allocation**: i9-13900H has 14 cores (6P+8E), allocate wisely
 
 ### Kernel Management
+
 - **Pin kernel version**: Prevent automatic upgrades to 6.8.x
+
 ```bash
 proxmox-boot-tool kernel pin 6.5.13-3-pve
 ```
 
 ### DKMS Updates
+
 - After kernel updates, rebuild DKMS:
+
 ```bash
 dkms install -m i915-sriov-dkms -v [VERSION] -k $(uname -r)
 ```
 
 ### Backup Strategy
+
 - **Before kernel updates**: Snapshot Proxmox system
 - **Configuration files**: Backup `/etc/default/grub`, `/etc/sysfs.conf`
 - **VM/LXC configs**: Regular backups of `/etc/pve/`
@@ -604,11 +642,13 @@ dkms install -m i915-sriov-dkms -v [VERSION] -k $(uname -r)
 ## Performance Expectations
 
 ### Transcoding Performance (Jellyfin/Plex)
+
 - **4K HEVC → 1080p H.264**: 120-150 FPS per stream
 - **Concurrent streams**: 3-5 simultaneous 4K transcodes
 - **Tone mapping**: Hardware VPP tone mapping supported
 
 ### Encoding Performance
+
 - **x264 preset**: Similar to "fast" CPU preset
 - **Power efficiency**: 5-10W GPU vs 40-60W CPU transcoding
 
@@ -617,17 +657,20 @@ dkms install -m i915-sriov-dkms -v [VERSION] -k $(uname -r)
 ## Maintenance
 
 ### Monthly Tasks
+
 - Check kernel version (ensure not accidentally upgraded to 6.8.x)
 - Review DKMS status: `dkms status`
 - Monitor system logs: `dmesg | grep i915`
 
 ### After Proxmox Updates
+
 1. Check kernel version: `uname -r`
 2. Verify DKMS module: `dkms status`
 3. If kernel changed, rebuild DKMS
 4. Reboot and verify VFs: `lspci | grep VGA`
 
 ### Signs of Issues
+
 - VFs not appearing after reboot
 - VMs failing to start with PCI passthrough errors
 - GPU not visible in VMs/containers
@@ -640,15 +683,18 @@ dkms install -m i915-sriov-dkms -v [VERSION] -k $(uname -r)
 ## Additional Resources
 
 ### Official Documentation
+
 - **Proxmox PCI Passthrough**: https://pve.proxmox.com/wiki/PCI(e)_Passthrough
 - **Intel SR-IOV Documentation**: https://www.intel.com/sriov
 
 ### Community Resources
+
 - **Level1Techs Forum**: https://forum.level1techs.com/t/i915-sr-iov-on-i9-13900h-minisforum-ms-01-proxmox-pve-kernel-6-5-jellyfin-full-hardware-accelerated-lxc/209943
 - **Derek Seaman's Blog**: https://www.derekseaman.com/2024/07/proxmox-ve-8-2-windows-11-vgpu-vt-d-passthrough-with-intel-alder-lake.html
 - **GitHub Repository**: https://github.com/strongtz/i915-sriov-dkms
 
 ### Support
+
 - **Proxmox Forums**: https://forum.proxmox.com
 - **r/homelab**: Reddit community
 - **GitHub Issues**: strongtz/i915-sriov-dkms issues page

@@ -4,12 +4,12 @@ Migrate S3 storage on QNAP NAS from MinIO to Garage for Restic backups.
 
 ## Why Garage?
 
-| Metric | MinIO | Garage |
-|--------|-------|--------|
-| RAM (idle) | ~218 MB | ~5 MB |
-| RAM (active) | 4-32 GB | 1-2 GB |
-| Complexity | Medium | Low |
-| NAS suitability | Heavy | Designed for it |
+| Metric          | MinIO   | Garage          |
+| --------------- | ------- | --------------- |
+| RAM (idle)      | ~218 MB | ~5 MB           |
+| RAM (active)    | 4-32 GB | 1-2 GB          |
+| Complexity      | Medium  | Low             |
+| NAS suitability | Heavy   | Designed for it |
 
 ## Files Overview
 
@@ -33,6 +33,7 @@ Copy all files to your QNAP NAS.
 ### 2. Edit configuration
 
 Edit `migrate.sh` and set `MINIO_BUCKET` to your current bucket name:
+
 ```bash
 MINIO_BUCKET="your-restic-bucket"  # UPDATE THIS
 ```
@@ -69,6 +70,7 @@ chmod +x migrate.sh
 ### 4. Update backup scripts
 
 After verification, update your backup scripts to use:
+
 ```bash
 source restic-env.sh
 restic backup /path/to/data
@@ -77,25 +79,27 @@ restic backup /path/to/data
 ### 5. Decommission MinIO
 
 Once confident, stop MinIO:
+
 ```bash
 docker-compose -f qnap-minio_docker-compose.yml down
 ```
 
 ## Network Configuration
 
-| Service | IP | Port | Purpose |
-|---------|-----|------|---------|
-| MinIO | 192.168.100.210 | 9000 | S3 API (existing) |
-| MinIO | 192.168.100.210 | 9001 | Console (existing) |
-| Garage | 192.168.100.211 | 3900 | S3 API (new) |
-| Garage | 192.168.100.211 | 3902 | Web hosting |
-| Garage | 192.168.100.211 | 3903 | Admin API |
+| Service | IP              | Port | Purpose            |
+| ------- | --------------- | ---- | ------------------ |
+| MinIO   | 192.168.100.210 | 9000 | S3 API (existing)  |
+| MinIO   | 192.168.100.210 | 9001 | Console (existing) |
+| Garage  | 192.168.100.211 | 3900 | S3 API (new)       |
+| Garage  | 192.168.100.211 | 3902 | Web hosting        |
+| Garage  | 192.168.100.211 | 3903 | Admin API          |
 
 ## Important Notes
 
 ### AWS SDK Compatibility
 
 Recent AWS SDKs require these environment variables (already in `restic-env.sh`):
+
 ```bash
 export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
 export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required

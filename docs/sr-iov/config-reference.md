@@ -36,6 +36,7 @@ GRUB_CMDLINE_LINUX=""
 ```
 
 **Parameter Breakdown**:
+
 - `quiet` - Reduces boot messages
 - `intel_iommu=on` - Enables Intel IOMMU
 - `iommu=pt` - IOMMU passthrough mode (better performance)
@@ -44,6 +45,7 @@ GRUB_CMDLINE_LINUX=""
 - `module_blacklist=xe` - Prevents xe driver from loading (conflicts with i915)
 
 **After editing, always run**:
+
 ```bash
 update-grub
 proxmox-boot-tool refresh
@@ -81,6 +83,7 @@ blacklist xe
 ```
 
 **After creating, run**:
+
 ```bash
 update-initramfs -u -k all
 ```
@@ -142,6 +145,7 @@ startup: order=1
 ```
 
 **VF Mapping**:
+
 - `renderD128` → VF 0 (00:02.1)
 - `renderD129` → VF 1 (00:02.2)
 - `renderD130` → VF 2 (00:02.3)
@@ -153,18 +157,21 @@ startup: order=1
 ### Multiple Containers with Different VFs
 
 **Container 100 (Jellyfin)** - Uses VF 0:
+
 ```bash
 lxc.cgroup2.devices.allow: c 226:128 rwm
 lxc.mount.entry: /dev/dri/renderD128 dev/dri/renderD128 none bind,optional,create=file
 ```
 
 **Container 101 (Plex)** - Uses VF 1:
+
 ```bash
 lxc.cgroup2.devices.allow: c 226:129 rwm
 lxc.mount.entry: /dev/dri/renderD129 dev/dri/renderD129 none bind,optional,create=file
 ```
 
 **Container 102 (Emby)** - Uses VF 2:
+
 ```bash
 lxc.cgroup2.devices.allow: c 226:130 rwm
 lxc.mount.entry: /dev/dri/renderD130 dev/dri/renderD130 none bind,optional,create=file
@@ -196,6 +203,7 @@ lxc.mount.entry: /dev/dri/renderD128 dev/dri/renderD128 none bind,optional,creat
 ### Windows 11 VM with VF
 
 **Command to add VF**:
+
 ```bash
 # Add VF 1 (00:02.1) to VM 200
 qm set 200 -hostpci0 0000:00:02.1,x-vga=0,rombar=0
@@ -205,6 +213,7 @@ qm set 201 -hostpci0 0000:00:02.2,x-vga=0,rombar=0
 ```
 
 **Full VM config** (`/etc/pve/qemu-server/200.conf`):
+
 ```bash
 # Windows 11 VM with SR-IOV VF
 agent: 1
@@ -236,6 +245,7 @@ startup: order=2
 ```
 
 **Parameter explanations**:
+
 - `hostpci0: 0000:00:02.1` - PCI passthrough of VF 1
 - `x-vga=0` - Not primary display adapter
 - `rombar=0` - Disable ROM BAR (required for iGPU VFs)
@@ -250,6 +260,7 @@ qm set 300 -hostpci0 0000:00:02.3,x-vga=0,rombar=0
 ```
 
 **VM config** (`/etc/pve/qemu-server/300.conf`):
+
 ```bash
 agent: 1
 balloon: 2048
@@ -327,11 +338,13 @@ lspci | grep VGA
 ```
 
 **Make executable**:
+
 ```bash
 chmod +x /usr/local/bin/create-vfs.sh
 ```
 
 **Create systemd service** (`/etc/systemd/system/create-vfs.service`):
+
 ```ini
 [Unit]
 Description=Create Intel iGPU Virtual Functions
@@ -347,6 +360,7 @@ WantedBy=multi-user.target
 ```
 
 **Enable service**:
+
 ```bash
 systemctl enable create-vfs.service
 systemctl start create-vfs.service
@@ -361,6 +375,7 @@ systemctl start create-vfs.service
 **Location**: Jellyfin Dashboard → Playback → Hardware Acceleration
 
 **Configuration**:
+
 ```
 Hardware acceleration: Intel QuickSync (QSV)
 VA-API Device: /dev/dri/renderD128
@@ -376,6 +391,7 @@ Prefer OS native DXVA or VA-API hardware decoders: ☑
 ```
 
 **Test transcoding**:
+
 ```bash
 # Inside container
 vainfo --display drm --device /dev/dri/renderD128
@@ -386,12 +402,14 @@ vainfo --display drm --device /dev/dri/renderD128
 **Location**: Settings → Transcoder
 
 **Configuration**:
+
 ```
 Use hardware acceleration when available: Enabled
 Use hardware-accelerated video encoding: Enabled
 ```
 
 **Verify** (requires Plex Pass):
+
 - Dashboard during transcoding shows "(hw)" indicator
 
 ### Emby Hardware Acceleration
@@ -399,6 +417,7 @@ Use hardware-accelerated video encoding: Enabled
 **Location**: Dashboard → Playback → Transcoding
 
 **Configuration**:
+
 ```
 Hardware acceleration: Video Acceleration API (VAAPI)
 VA API Device: /dev/dri/renderD128
@@ -414,11 +433,13 @@ Enable hardware encoding for:
 ### Intel GPU Top Configuration
 
 **Install**:
+
 ```bash
 apt install intel-gpu-tools
 ```
 
 **Monitor all VFs**:
+
 ```bash
 intel_gpu_top -d sriov
 ```
@@ -468,11 +489,13 @@ echo ""
 ```
 
 **Make executable**:
+
 ```bash
 chmod +x /usr/local/bin/monitor-sr-iov.sh
 ```
 
 **Run**:
+
 ```bash
 /usr/local/bin/monitor-sr-iov.sh
 ```
@@ -484,6 +507,7 @@ crontab -e
 ```
 
 Add:
+
 ```bash
 # SR-IOV daily health check at 6 AM
 0 6 * * * /usr/local/bin/monitor-sr-iov.sh > /var/log/sr-iov-daily-$(date +\%Y\%m\%d).log 2>&1
@@ -543,11 +567,13 @@ ls -t sr-iov-config-*.tar.gz | tail -n +8 | xargs rm -f 2>/dev/null
 ```
 
 **Make executable**:
+
 ```bash
 chmod +x /usr/local/bin/backup-sr-iov-config.sh
 ```
 
 **Run before changes**:
+
 ```bash
 /usr/local/bin/backup-sr-iov-config.sh
 ```
@@ -679,16 +705,16 @@ journalctl -xe | grep i915
 
 ### PCI Addresses to Render Devices
 
-| PCI Address | Device Type | Render Device | Container Config |
-|-------------|-------------|---------------|------------------|
-| 0000:00:02.0 | Physical GPU | card0 | N/A (host only) |
-| 0000:00:02.1 | VF 0 | renderD128 | c 226:128 rwm |
-| 0000:00:02.2 | VF 1 | renderD129 | c 226:129 rwm |
-| 0000:00:02.3 | VF 2 | renderD130 | c 226:130 rwm |
-| 0000:00:02.4 | VF 3 | renderD131 | c 226:131 rwm |
-| 0000:00:02.5 | VF 4 | renderD132 | c 226:132 rwm |
-| 0000:00:02.6 | VF 5 | renderD133 | c 226:133 rwm |
-| 0000:00:02.7 | VF 6 | renderD134 | c 226:134 rwm |
+| PCI Address  | Device Type  | Render Device | Container Config |
+| ------------ | ------------ | ------------- | ---------------- |
+| 0000:00:02.0 | Physical GPU | card0         | N/A (host only)  |
+| 0000:00:02.1 | VF 0         | renderD128    | c 226:128 rwm    |
+| 0000:00:02.2 | VF 1         | renderD129    | c 226:129 rwm    |
+| 0000:00:02.3 | VF 2         | renderD130    | c 226:130 rwm    |
+| 0000:00:02.4 | VF 3         | renderD131    | c 226:131 rwm    |
+| 0000:00:02.5 | VF 4         | renderD132    | c 226:132 rwm    |
+| 0000:00:02.6 | VF 5         | renderD133    | c 226:133 rwm    |
+| 0000:00:02.7 | VF 6         | renderD134    | c 226:134 rwm    |
 
 ### Character Device Major/Minor Numbers
 
@@ -705,6 +731,7 @@ crw-rw---- 1 root render 226, 129 Oct 11 10:00 renderD129
 
 **Major number**: Always 226 for DRM devices
 **Minor numbers**:
+
 - 0-15: card devices
 - 128+: render devices
 
@@ -803,6 +830,7 @@ fi
 ```
 
 **Make executable and run**:
+
 ```bash
 chmod +x /usr/local/bin/validate-sr-iov.sh
 /usr/local/bin/validate-sr-iov.sh

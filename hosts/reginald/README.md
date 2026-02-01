@@ -2,19 +2,19 @@
 
 ## Hardware
 
-| Component | Specification |
-|-----------|---------------|
-| Chassis | Zimaboard 832 |
-| CPU | Intel Celeron N3450 (4C/4T) |
-| Expansion | SATA PCIe controller card |
-| Storage | 7x SSD in ZFS RAIDZ2 pool |
+| Component | Specification               |
+| --------- | --------------------------- |
+| Chassis   | Zimaboard 832               |
+| CPU       | Intel Celeron N3450 (4C/4T) |
+| Expansion | SATA PCIe controller card   |
+| Storage   | 7x SSD in ZFS RAIDZ2 pool   |
 
 ## Network
 
-| Interface | IP | Purpose |
-|-----------|-----|---------|
-| Infra | 192.168.100.4 | Management |
-| Storage | 192.168.200.4 | NFS server |
+| Interface | IP            | Purpose    |
+| --------- | ------------- | ---------- |
+| Infra     | 192.168.100.4 | Management |
+| Storage   | 192.168.200.4 | NFS server |
 
 ## SSH
 

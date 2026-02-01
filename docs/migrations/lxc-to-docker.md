@@ -9,12 +9,14 @@
 Complete migration of 10 LXC containers from Proxmox to Docker containers on Flatcar Linux while preserving exact IP addresses and ensuring zero data loss.
 
 ### Source Environment
+
 - **Proxmox Host**: 192.168.100.38
 - **Credentials**: root / 281188password
 - **Container Type**: LXC containers (Proxmox VE)
 - **Services**: Media management stack (Arr suite + downloaders)
 
 ### Target Environment
+
 - **Flatcar Host**: 192.168.100.100
 - **User**: core (SSH key authentication)
 - **Platform**: Flatcar Linux + Docker + Docker Compose + Portainer
@@ -25,33 +27,34 @@ Complete migration of 10 LXC containers from Proxmox to Docker containers on Fla
 
 ### Containers to Migrate
 
-| Service | LXC ID | Current IP | Target IP | Port | Purpose |
-|---------|--------|------------|-----------|------|---------|
-| qbittorrent | 109 | 192.168.100.109 | 192.168.100.109 | 8080 | BitTorrent client |
-| sabnzbd | 110 | 192.168.100.110 | 192.168.100.110 | 8080 | Usenet downloader |
-| radarr | 111 | 192.168.100.111 | 192.168.100.111 | 7878 | Movie automation |
-| sonarr | 112 | 192.168.100.112 | 192.168.100.112 | 8989 | TV show automation |
-| lidarr | 113 | 192.168.100.113 | 192.168.100.113 | 8686 | Music automation |
-| bazarr | 114 | 192.168.100.114 | 192.168.100.114 | 6767 | Subtitle automation |
-| flaresolver | 115 | 192.168.100.115 | 192.168.100.115 | 8191 | Anti-bot solver |
-| prowlarr | 116 | 192.168.100.116 | 192.168.100.116 | 9696 | Indexer manager |
-| overseerr | 117 | 192.168.100.117 | 192.168.100.117 | 5055 | Request portal |
-| tautulli | 121 | 192.168.100.121 | 192.168.100.121 | 8181 | Plex monitoring |
+| Service     | LXC ID | Current IP      | Target IP       | Port | Purpose             |
+| ----------- | ------ | --------------- | --------------- | ---- | ------------------- |
+| qbittorrent | 109    | 192.168.100.109 | 192.168.100.109 | 8080 | BitTorrent client   |
+| sabnzbd     | 110    | 192.168.100.110 | 192.168.100.110 | 8080 | Usenet downloader   |
+| radarr      | 111    | 192.168.100.111 | 192.168.100.111 | 7878 | Movie automation    |
+| sonarr      | 112    | 192.168.100.112 | 192.168.100.112 | 8989 | TV show automation  |
+| lidarr      | 113    | 192.168.100.113 | 192.168.100.113 | 8686 | Music automation    |
+| bazarr      | 114    | 192.168.100.114 | 192.168.100.114 | 6767 | Subtitle automation |
+| flaresolver | 115    | 192.168.100.115 | 192.168.100.115 | 8191 | Anti-bot solver     |
+| prowlarr    | 116    | 192.168.100.116 | 192.168.100.116 | 9696 | Indexer manager     |
+| overseerr   | 117    | 192.168.100.117 | 192.168.100.117 | 5055 | Request portal      |
+| tautulli    | 121    | 192.168.100.121 | 192.168.100.121 | 8181 | Plex monitoring     |
 
 ### Media Directory Mapping
 
-| Purpose | Source Path (LXC) | Target Path (Docker) | Flatcar Mount |
-|---------|-------------------|---------------------|---------------|
-| Downloads | Various | `/downloads` | `/mnt/media/downloads` |
-| Incomplete | Various | `/incomplete-downloads` | `/mnt/media/downloads/incomplete-downloads` |
-| Movies | Various | `/movies` | `/mnt/media/movies` |
-| TV Shows | Various | `/tv` | `/mnt/media/tv` |
-| Music | Various | `/music` | `/mnt/media/music` |
-| Config | LXC internal | `/config` | `/srv/docker/media-stack/config/<service>` |
+| Purpose    | Source Path (LXC) | Target Path (Docker)    | Flatcar Mount                               |
+| ---------- | ----------------- | ----------------------- | ------------------------------------------- |
+| Downloads  | Various           | `/downloads`            | `/mnt/media/downloads`                      |
+| Incomplete | Various           | `/incomplete-downloads` | `/mnt/media/downloads/incomplete-downloads` |
+| Movies     | Various           | `/movies`               | `/mnt/media/movies`                         |
+| TV Shows   | Various           | `/tv`                   | `/mnt/media/tv`                             |
+| Music      | Various           | `/music`                | `/mnt/media/music`                          |
+| Config     | LXC internal      | `/config`               | `/srv/docker/media-stack/config/<service>`  |
 
 ## 🏗️ Architecture
 
 ### Network Design
+
 - **Type**: Docker macvlan network
 - **Name**: `media_macvlan`
 - **Subnet**: 192.168.100.0/24
@@ -60,7 +63,8 @@ Complete migration of 10 LXC containers from Proxmox to Docker containers on Fla
 - **Parent Interface**: eth0 (to be verified on Flatcar)
 
 ### Container Architecture
-- **Base Images**: LinuxServer.io (lscr.io/linuxserver/*)
+
+- **Base Images**: LinuxServer.io (lscr.io/linuxserver/\*)
 - **User/Group**: 1000:1000 (PUID/PGID)
 - **Timezone**: Etc/UTC
 - **Restart Policy**: unless-stopped
@@ -70,6 +74,7 @@ Complete migration of 10 LXC containers from Proxmox to Docker containers on Fla
 ## 🛠️ Migration Components
 
 ### Files Created
+
 ```
 lxc-to-docker-migration/
 ├── docker-compose.yml          # Main container orchestration
@@ -85,6 +90,7 @@ lxc-to-docker-migration/
 ```
 
 ### Environment Configuration (.env)
+
 ```bash
 # User and permissions
 PUID=1000
@@ -119,9 +125,11 @@ TAUTULLI_PORT=8181
 ## 🔄 Migration Process
 
 ### Phase 1: Pre-Migration (5-10 minutes)
+
 **Script**: `./scripts/pre-migration.sh`
 
 **Actions**:
+
 1. Test SSH connectivity to both hosts
 2. Inventory all LXC containers and their configurations
 3. Create timestamped snapshots of all containers
@@ -130,15 +138,18 @@ TAUTULLI_PORT=8181
 6. Generate migration plan summary
 
 **Verification**:
+
 - [ ] All containers found and accessible
 - [ ] Snapshots created successfully
 - [ ] Flatcar directories prepared
 - [ ] Network connectivity confirmed
 
 ### Phase 2: Migration Execution (20-30 minutes)
+
 **Script**: `./scripts/migrate.sh`
 
 **Actions**:
+
 1. Set up macvlan network on Flatcar
 2. For each container (in dependency order):
    - Stop LXC container gracefully
@@ -149,6 +160,7 @@ TAUTULLI_PORT=8181
 4. Verify all services are accessible
 
 **Order of Migration**:
+
 1. flaresolverr (no dependencies)
 2. prowlarr (depends on flaresolverr)
 3. qbittorrent & sabnzbd (downloaders)
@@ -158,9 +170,11 @@ TAUTULLI_PORT=8181
 7. tautulli (independent)
 
 ### Phase 3: Validation (5-10 minutes)
+
 **Script**: `./scripts/validate.sh`
 
 **Actions**:
+
 1. Check Docker container status
 2. Test network connectivity (ping tests)
 3. Validate HTTP endpoints and health checks
@@ -169,6 +183,7 @@ TAUTULLI_PORT=8181
 6. Generate validation report
 
 **Success Criteria**:
+
 - [ ] All containers running and healthy
 - [ ] All IP addresses responding to ping
 - [ ] All web interfaces accessible
@@ -176,7 +191,9 @@ TAUTULLI_PORT=8181
 - [ ] No container restart loops
 
 ### Phase 4: Post-Migration Testing
+
 **Manual Actions**:
+
 1. Access each service web interface
 2. Test download workflows (manual download)
 3. Verify automation is working
@@ -187,12 +204,14 @@ TAUTULLI_PORT=8181
 ## 🔒 Safety Measures
 
 ### Backup Strategy
+
 - **LXC Snapshots**: Automatic timestamped snapshots before any changes
 - **Data Backup**: Complete rsync backup to local staging area
 - **Configuration Export**: Container configs saved to files
 - **Docker Data Backup**: Backup created before rollback operations
 
 ### Risk Mitigation
+
 - **Dry Run Mode**: All scripts support `--dry-run` for testing
 - **Incremental Migration**: One container at a time
 - **Immediate Rollback**: Complete rollback capability at any point
@@ -200,9 +219,11 @@ TAUTULLI_PORT=8181
 - **Logging**: Comprehensive logging for troubleshooting
 
 ### Rollback Procedures
+
 **Script**: `./scripts/rollback.sh`
 
 **Emergency Rollback**:
+
 1. Stop all Docker containers
 2. Remove macvlan network
 3. Clear ARP caches
@@ -210,6 +231,7 @@ TAUTULLI_PORT=8181
 5. Optionally restore from snapshots
 
 **Rollback Triggers**:
+
 - Migration script failures
 - Data corruption detected
 - Network connectivity issues
@@ -219,6 +241,7 @@ TAUTULLI_PORT=8181
 ## ⚠️ Pre-Migration Checklist
 
 ### Critical Verifications Required
+
 - [ ] **Network Interface**: Confirm actual interface name on Flatcar (currently assumed `eth0`)
 - [ ] **LXC Data Paths**: Verify actual container data locations before migration
 - [ ] **Media Permissions**: Ensure `/mnt/media/*` directories have 1000:1000 ownership
@@ -228,6 +251,7 @@ TAUTULLI_PORT=8181
 - [ ] **Network Conflicts**: Verify no other devices use IPs 192.168.100.109-121
 
 ### Dependencies to Install
+
 ```bash
 # On local machine (for scripts)
 sudo apt install -y sshpass rsync curl
@@ -240,6 +264,7 @@ sshpass -p "281188password" ssh root@192.168.100.38 "pct list"
 ## 🚀 Execution Commands
 
 ### Quick Start (When Ready)
+
 ```bash
 # 1. Prepare environment
 ./scripts/pre-migration.sh
@@ -258,6 +283,7 @@ sshpass -p "281188password" ssh root@192.168.100.38 "pct list"
 ```
 
 ### Environment Variables Override
+
 ```bash
 # Use custom settings
 export PROXMOX_HOST=192.168.100.38
@@ -271,17 +297,18 @@ export DRY_RUN=true  # For testing
 
 ## 📊 Expected Timeline
 
-| Phase | Duration | Description |
-|-------|----------|-------------|
-| Pre-migration | 5-10 min | Snapshots, backups, environment prep |
-| Migration | 20-30 min | Container stop, data sync, startup |
-| Validation | 5-10 min | Testing and verification |
-| Manual Testing | 15-30 min | User validation of services |
-| **Total Downtime** | **20-30 min** | Time services are unavailable |
+| Phase              | Duration      | Description                          |
+| ------------------ | ------------- | ------------------------------------ |
+| Pre-migration      | 5-10 min      | Snapshots, backups, environment prep |
+| Migration          | 20-30 min     | Container stop, data sync, startup   |
+| Validation         | 5-10 min      | Testing and verification             |
+| Manual Testing     | 15-30 min     | User validation of services          |
+| **Total Downtime** | **20-30 min** | Time services are unavailable        |
 
 ## 🔍 Troubleshooting
 
 ### Common Issues
+
 1. **Network Interface**: Update `MACVLAN_PARENT` in `.env` if not `eth0`
 2. **Permission Errors**: Run `sudo chown -R 1000:1000 /mnt/media` on Flatcar
 3. **IP Conflicts**: Clear DHCP reservations or use `ip neigh flush all`
@@ -289,6 +316,7 @@ export DRY_RUN=true  # For testing
 5. **Data Sync Issues**: Verify source paths and network connectivity
 
 ### Log Locations
+
 - Migration logs: `migration-YYYYMMDD_HHMMSS.log`
 - Validation logs: `validation-YYYYMMDD_HHMMSS.log`
 - Docker logs: `docker logs <container_name>`
@@ -297,6 +325,7 @@ export DRY_RUN=true  # For testing
 ## ✅ Post-Migration Checklist
 
 ### Immediate (Day 1)
+
 - [ ] All containers running and accessible
 - [ ] Downloads working (test manual download)
 - [ ] API integrations functioning
@@ -304,6 +333,7 @@ export DRY_RUN=true  # For testing
 - [ ] Network connectivity stable
 
 ### Short-term (48-72 hours)
+
 - [ ] Automation workflows completing successfully
 - [ ] No unexpected container restarts
 - [ ] Media processing working correctly
@@ -311,6 +341,7 @@ export DRY_RUN=true  # For testing
 - [ ] No data corruption detected
 
 ### Cleanup (After 1 week of stable operation)
+
 - [ ] Remove LXC container snapshots
 - [ ] Delete temporary backup files
 - [ ] Update documentation with any changes
@@ -319,12 +350,14 @@ export DRY_RUN=true  # For testing
 ## 📞 Support Information
 
 ### Key Files for Troubleshooting
+
 - `docker-compose.yml` - Container configuration
 - `.env` - Environment variables
 - `scripts/validate.sh` - Diagnostic tests
 - Migration logs - Detailed operation records
 
 ### Recovery Options
+
 1. **Partial Rollback**: Stop specific containers, restart LXC equivalents
 2. **Complete Rollback**: Use `rollback.sh` script
 3. **Snapshot Restore**: Use `rollback.sh --restore-snapshots`

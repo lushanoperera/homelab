@@ -4,11 +4,11 @@ CrowdSec intrusion detection and prevention for Traefik.
 
 ## Components
 
-| Container | Port | Purpose |
-|-----------|------|---------|
-| crowdsec | 8080 | Main CrowdSec engine |
-| crowdsec-bouncer | 8082 | Traefik ForwardAuth |
-| crowdsec-metabase | 3001 | Dashboard |
+| Container         | Port | Purpose              |
+| ----------------- | ---- | -------------------- |
+| crowdsec          | 8080 | Main CrowdSec engine |
+| crowdsec-bouncer  | 8082 | Traefik ForwardAuth  |
+| crowdsec-metabase | 3001 | Dashboard            |
 
 ## Common Operations
 

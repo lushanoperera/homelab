@@ -43,7 +43,9 @@
 ## Requirements
 
 ### Common Configuration (Critical!)
+
 All Docker containers **must** use the same user/group IDs:
+
 - **PUID**: 1000
 - **PGID**: 1000
 - **UMASK**: 002 (directories: 775, files: 664)
@@ -51,6 +53,7 @@ All Docker containers **must** use the same user/group IDs:
 This ensures all services can read and write to shared directories.
 
 ### Services Using Shared Storage
+
 - **qbittorrent, sabnzbd**: Write to `/downloads`, `/incomplete-downloads`
 - **radarr**: Write to `/downloads`, `/movies`
 - **sonarr**: Write to `/downloads`, `/tv`
@@ -76,6 +79,7 @@ zfs list -o name,mountpoint,mounted | grep media
 ```
 
 If a child dataset has a custom mountpoint (not inherited), fix it:
+
 ```bash
 # Check if mountpoint is inherited
 zfs get mountpoint rpool/shared/media/tv
@@ -85,12 +89,14 @@ zfs inherit mountpoint rpool/shared/media/tv
 ```
 
 ### 2. Set Ownership
+
 ```bash
 # All media directories must be owned by UID:GID 1000:1000
 chown -R 1000:1000 /media
 ```
 
 ### 3. Set Permissions
+
 ```bash
 # Directories: 775 (rwxrwxr-x) - group write enabled
 find /media -type d -exec chmod 775 {} \;
@@ -102,6 +108,7 @@ find /media -type f -exec chmod 664 {} \;
 ### 4. Configure NFS Export
 
 Edit `/etc/exports`:
+
 ```bash
 # Media content (async for performance, crossmnt for ZFS child datasets)
 /media 192.168.100.0/24(rw,async,no_subtree_check,no_root_squash,crossmnt) \
@@ -109,6 +116,7 @@ Edit `/etc/exports`:
 ```
 
 **Export Options Explained:**
+
 - `rw`: Read-write access
 - `async`: Improves performance (data written to disk asynchronously)
 - `no_subtree_check`: Improves reliability
@@ -116,6 +124,7 @@ Edit `/etc/exports`:
 - `crossmnt`: **Critical** - Allows NFS to traverse into ZFS child dataset mountpoints
 
 ### 5. Apply Export Configuration
+
 ```bash
 # Reload NFS exports
 exportfs -ra
@@ -134,6 +143,7 @@ exportfs -v | grep media
 Flatcar should mount directly from Reginald, not via Winston re-export. This avoids NFS re-export limitations with ZFS child mounts.
 
 **Systemd Mount Unit** (`/etc/systemd/system/mnt-media.mount`):
+
 ```ini
 [Unit]
 Description=NFS mount for media storage from reginald
@@ -153,6 +163,7 @@ WantedBy=multi-user.target
 ```
 
 Enable and start:
+
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable mnt-media.mount
@@ -160,6 +171,7 @@ sudo systemctl start mnt-media.mount
 ```
 
 ### Verify Mount
+
 ```bash
 # Check mount
 mount | grep media
@@ -180,11 +192,13 @@ Winston mounts from Reginald via Storage VLAN and optionally re-exports to Infra
 ### Client Mount Configuration
 
 **fstab entry**:
+
 ```bash
 192.168.200.4:/media /mnt/nfs_media nfs nofail,_netdev,hard,timeo=150,retrans=3,rw,noatime,actimeo=60,vers=4,rsize=1048576,wsize=1048576,fsc,nconnect=4 0 0
 ```
 
 **Mount Options Explained:**
+
 - `hard`: Retry indefinitely on server failure (safer than `soft`)
 - `timeo=150`: 15 second timeout
 - `actimeo=60`: 60 second attribute cache (balance between performance and freshness)
@@ -194,6 +208,7 @@ Winston mounts from Reginald via Storage VLAN and optionally re-exports to Infra
 ### Re-export Configuration (for LXC containers)
 
 **exports**:
+
 ```bash
 /mnt/nfs_media 192.168.100.0/24(rw,sync,no_subtree_check,no_root_squash,crossmnt,fsid=1)
 ```
@@ -203,6 +218,7 @@ Winston mounts from Reginald via Storage VLAN and optionally re-exports to Infra
 ## Docker Configuration
 
 ### Environment Variables (.env)
+
 ```bash
 # User and permissions
 PUID=1000
@@ -216,6 +232,7 @@ MEDIA_ROOT=/mnt/media
 ```
 
 ### docker-compose.yml Volume Mounts
+
 ```yaml
 services:
   sonarr:
@@ -239,6 +256,7 @@ services:
 **Cause**: NFS export missing `crossmnt` option, so child ZFS dataset mounts are not traversed.
 
 **Fix on Reginald**:
+
 ```bash
 # Add crossmnt to export
 sed -i 's|no_root_squash)|no_root_squash,crossmnt)|g' /etc/exports
@@ -252,6 +270,7 @@ exportfs -ra
 **Cause**: The dataset was created with explicit mountpoint or modified later.
 
 **Fix**:
+
 ```bash
 # Make dataset inherit mountpoint from parent
 zfs inherit mountpoint rpool/shared/media/tv
@@ -268,6 +287,7 @@ zfs list -o name,mountpoint rpool/shared/media/tv
 **Cause**: ZFS child dataset mounted at wrong location, NFS shows underlying empty directory.
 
 **Diagnosis**:
+
 ```bash
 # Check if path is a mountpoint
 mountpoint /media/tv
@@ -309,6 +329,7 @@ cd /srv/docker/media-stack && /opt/bin/docker-compose restart radarr bazarr
 **Cause**: An empty ZFS child dataset (e.g., `rpool/shared/media/movies`) is mounted at `/media/movies`, shadowing the actual data that exists in the parent dataset's directory at `/rpool/shared/media/movies`.
 
 **Diagnosis**:
+
 ```bash
 # Check if the dataset has any data
 zfs list -o name,used,refer rpool/shared/media/movies
@@ -320,6 +341,7 @@ ls -la /rpool/shared/media/movies/
 ```
 
 **Fix** (when data is in parent, child dataset is empty):
+
 ```bash
 # 1. Verify the child dataset is truly empty and can be destroyed
 zfs list -o name,used,refer rpool/shared/media/movies
@@ -342,18 +364,21 @@ ssh core@192.168.100.100 'ls /mnt/media/movies | wc -l'
 ### Issue: Permission denied when writing
 
 **Check 1: Ownership on NFS server**
+
 ```bash
 ssh root@192.168.100.4 "ls -lnd /media /media/tv"
 # Should show: drwxrwxr-x ... 1000 1000 ...
 ```
 
 **Check 2: NFS export options**
+
 ```bash
 ssh root@192.168.100.4 "exportfs -v | grep media"
 # Should include: rw, no_root_squash, crossmnt
 ```
 
 **Check 3: Container PUID/PGID**
+
 ```bash
 docker exec sonarr env | grep -E '(PUID|PGID)'
 # Should show: PUID=1000, PGID=1000
@@ -362,6 +387,7 @@ docker exec sonarr env | grep -E '(PUID|PGID)'
 ## Testing Write Access
 
 ### Full Chain Test
+
 ```bash
 # Create test file from container
 TIMESTAMP=$(date +%s)
@@ -372,6 +398,7 @@ ssh root@192.168.100.4 "ls /media/tv/chain_test_* && rm /media/tv/chain_test_*"
 ```
 
 ### Test All Containers
+
 ```bash
 for service in qbittorrent sabnzbd radarr sonarr lidarr; do
     echo "Testing $service..."
@@ -383,16 +410,16 @@ done
 
 ## Lessons Learned
 
-| Issue | Root Cause | Solution |
-|-------|------------|----------|
-| Child datasets invisible via NFS | Missing `crossmnt` in export | Add `crossmnt` option |
-| ZFS child mounted at wrong path | Explicit mountpoint set | Use `zfs inherit mountpoint` |
-| Data split between locations | Child dataset hiding underlying directory | Merge data, fix mountpoint |
-| Empty ZFS child shadowing real data | ZFS child dataset mounted over directory with actual content | Destroy empty dataset, use bind mount |
-| NFS re-export failing for children | NFSv4 re-export limitations | Mount directly from source |
-| `soft` mount causing silent failures | Network interruptions drop writes | Use `hard` mount option |
-| Stale data due to aggressive caching | `actimeo=600` too long | Reduce to `actimeo=60` |
-| Partial stale handles (some paths work) | Cached file handles invalid after export changes | `exportfs -ra` on server, then restart containers |
+| Issue                                   | Root Cause                                                   | Solution                                          |
+| --------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------- |
+| Child datasets invisible via NFS        | Missing `crossmnt` in export                                 | Add `crossmnt` option                             |
+| ZFS child mounted at wrong path         | Explicit mountpoint set                                      | Use `zfs inherit mountpoint`                      |
+| Data split between locations            | Child dataset hiding underlying directory                    | Merge data, fix mountpoint                        |
+| Empty ZFS child shadowing real data     | ZFS child dataset mounted over directory with actual content | Destroy empty dataset, use bind mount             |
+| NFS re-export failing for children      | NFSv4 re-export limitations                                  | Mount directly from source                        |
+| `soft` mount causing silent failures    | Network interruptions drop writes                            | Use `hard` mount option                           |
+| Stale data due to aggressive caching    | `actimeo=600` too long                                       | Reduce to `actimeo=60`                            |
+| Partial stale handles (some paths work) | Cached file handles invalid after export changes             | `exportfs -ra` on server, then restart containers |
 
 ## Quick Reference Commands
 
@@ -425,14 +452,17 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}" | g
 ## Security Considerations
 
 ### UID/GID 1000 Consistency
+
 - Using UID/GID 1000 across all containers ensures consistent permissions
 - Dedicated user on Reginald: `mediauser` (UID 1000, GID 1000)
 
 ### Network Security
+
 - NFS export restricted to specific subnets
 - Infra VLAN (192.168.100.0/24): Flatcar, LXC containers
 - Storage VLAN (192.168.200.0/24): Winston (dedicated storage traffic)
 
 ### no_root_squash Implications
+
 - Allows root on client to write as root on server
 - Only enable for trusted clients on isolated VLANs

@@ -26,6 +26,7 @@
 ### Problem: DKMS Fails to Build on Kernel 6.8.x
 
 **Symptoms**:
+
 - DKMS compilation errors during `apt upgrade`
 - Error messages mentioning "too many arguments to function pm_runtime_get_if_active"
 - Virtual functions not created after upgrading to kernel 6.8.12-x-pve
@@ -121,6 +122,7 @@ echo 'Pin-Priority: -1' >> /etc/apt/preferences.d/no-kernel-68
 ### Problem: DKMS Module Fails to Build
 
 **Symptoms**:
+
 ```
 Error! Build of i915-sriov-dkms/2025.10.10 for kernel 6.x.x (x86_64) failed
 ```
@@ -170,6 +172,7 @@ apt install pve-headers-$(uname -r)
 ### Problem: No VFs Appear After Reboot
 
 **Symptoms**:
+
 ```bash
 lspci | grep VGA
 # Only shows one device (00:02.0)
@@ -187,6 +190,7 @@ cat /proc/cmdline
 Must include: `intel_iommu=on iommu=pt i915.enable_guc=3 i915.max_vfs=7`
 
 If missing, re-edit `/etc/default/grub` and run:
+
 ```bash
 update-grub
 proxmox-boot-tool refresh
@@ -200,6 +204,7 @@ echo 7 > /sys/bus/pci/devices/0000:00:02.0/sriov_numvfs
 ```
 
 Then verify:
+
 ```bash
 lspci | grep VGA
 ```
@@ -211,6 +216,7 @@ cat /etc/sysfs.conf
 ```
 
 Should contain:
+
 ```
 devices/pci0000:00/0000:00:02.0/sriov_numvfs = 7
 ```
@@ -245,6 +251,7 @@ Should show IOMMU groups. If empty, BIOS settings may be incorrect.
 ### Problem: IOMMU Not Detected
 
 **Symptoms**:
+
 ```bash
 dmesg | grep -i iommu
 # No output or "IOMMU disabled"
@@ -256,10 +263,12 @@ dmesg | grep -i iommu
 2. Check these settings:
 
 **Advanced → CPU Configuration**:
+
 - Intel Virtualization Technology (VT-x): **Enabled**
 - VT-d: **Enabled**
 
 **Advanced → PCI Subsystem Settings**:
+
 - SR-IOV Support: **Enabled**
 
 3. Save and exit
@@ -272,10 +281,12 @@ dmesg | grep -e DMAR -e IOMMU
 ### Problem: Graphics Mode Not Set to Hybrid
 
 **Symptoms**:
+
 - VFs not creating
 - GPU not available for SR-IOV
 
 **Solution**:
+
 1. Enter BIOS
 2. Navigate: **Advanced → Onboard Devices Configuration**
 3. Set **Primary Video Device** to **Hybrid** or **iGPU**
@@ -288,6 +299,7 @@ dmesg | grep -e DMAR -e IOMMU
 ### Problem: LXC Container Can't Access GPU
 
 **Symptoms**:
+
 ```bash
 # Inside container
 ls /dev/dri
@@ -301,6 +313,7 @@ nano /etc/pve/lxc/[CONTAINER_ID].conf
 ```
 
 Must include:
+
 ```bash
 lxc.cgroup2.devices.allow: c 226:0 rwm
 lxc.cgroup2.devices.allow: c 226:128 rwm
@@ -319,12 +332,14 @@ Should show `renderD128`, `renderD129`, etc.
 ### Solution 3: Use Privileged Container
 
 For initial testing, create a **privileged** container:
+
 - Uncheck "Unprivileged container" during creation
 - Or edit config: `unprivileged: 0`
 
 ### Problem: VM Fails to Start with PCI Passthrough Error
 
 **Symptoms**:
+
 ```
 kvm: -device vfio-pci,host=0000:00:02.1: vfio 0000:00:02.1: failed to open /dev/vfio/XX: Device or resource busy
 ```
@@ -360,15 +375,18 @@ echo 1 > /sys/bus/pci/rescan
 ### Problem: Low Transcoding Performance
 
 **Symptoms**:
+
 - Jellyfin/Plex using CPU instead of GPU
 - Transcoding slower than expected
 
 ### Solution 1: Verify Hardware Acceleration Enabled
 
 **Jellyfin**:
+
 - Dashboard → Playback → Hardware acceleration: **Intel QuickSync (QSV)**
 
 **Plex**:
+
 - Settings → Transcoder → Use hardware acceleration: **Enabled**
 
 ### Solution 2: Check GPU is Accessible
@@ -381,6 +399,7 @@ vainfo
 Should show Intel iHD driver and supported profiles.
 
 If not installed:
+
 ```bash
 apt install intel-media-va-driver-non-free vainfo
 ```
@@ -397,12 +416,14 @@ Start transcoding and verify GPU utilization increases.
 ### Problem: Multiple Streams Cause Stuttering
 
 **Symptoms**:
+
 - First stream works, additional streams stutter
 - GPU usage at 100%
 
 **Cause**: GPU overcommit or insufficient system RAM.
 
 **Solution**:
+
 - Reduce number of active VMs/containers using VFs
 - Increase system RAM (96GB recommended for heavy workloads)
 - Lower transcoding quality settings
@@ -414,6 +435,7 @@ Start transcoding and verify GPU utilization increases.
 ### Problem: Module Not Loading Due to Secure Boot
 
 **Symptoms**:
+
 ```bash
 dmesg | grep i915
 # Shows signature verification failed
@@ -432,6 +454,7 @@ reboot
 ```
 
 During boot:
+
 1. MOK Manager appears
 2. Select "Enroll MOK"
 3. Continue
@@ -460,6 +483,7 @@ mokutil --list-enrolled
 ### Problem: xe Driver Loading Instead of i915
 
 **Symptoms**:
+
 ```bash
 lsmod | grep xe
 # Shows xe module loaded
@@ -474,21 +498,25 @@ nano /etc/modprobe.d/blacklist-xe.conf
 ```
 
 Add:
+
 ```
 blacklist xe
 ```
 
 Update initramfs:
+
 ```bash
 update-initramfs -u -k all
 ```
 
 Verify GRUB parameters include:
+
 ```
 module_blacklist=xe
 ```
 
 Reboot and verify:
+
 ```bash
 lsmod | grep xe
 # Should show no output
@@ -503,6 +531,7 @@ lsmod | grep i915
 ### Problem: System Freezes or Crashes
 
 **Symptoms**:
+
 - Random system freezes
 - Kernel panics
 - NULL pointer dereference errors in dmesg
@@ -525,11 +554,13 @@ See [Kernel 6.8.x Issues](#kernel-68x-issues) section above.
 #### Disable ASPM
 
 Add to GRUB parameters:
+
 ```
 pcie_aspm=off
 ```
 
 Update and reboot:
+
 ```bash
 update-grub
 proxmox-boot-tool refresh
@@ -556,16 +587,20 @@ reboot
 2. Select "Rescue Mode"
 3. Mount root filesystem
 4. Chroot into system:
+
 ```bash
 mount /dev/sdX /mnt
 chroot /mnt
 ```
+
 5. Fix GRUB config:
+
 ```bash
 nano /etc/default/grub
 # Remove problematic parameters
 update-grub
 ```
+
 6. Reboot
 
 ### Complete DKMS Removal
@@ -661,6 +696,7 @@ mokutil --sb-state 2>/dev/null || echo "mokutil not installed"
 ```
 
 Make executable and run:
+
 ```bash
 chmod +x /root/sr-iov-diag.sh
 /root/sr-iov-diag.sh
@@ -677,6 +713,7 @@ chmod +x /root/sr-iov-diag.sh
 **Cause**: DKMS module not loaded or BIOS settings incorrect.
 
 **Solution**:
+
 1. Check `lsmod | grep i915`
 2. Check BIOS SR-IOV settings
 3. Verify kernel parameters
@@ -688,6 +725,7 @@ chmod +x /root/sr-iov-diag.sh
 **Cause**: VF already assigned to another VM/container.
 
 **Solution**:
+
 ```bash
 # Find which VM is using it
 grep -r "00:02.1" /etc/pve/qemu-server/*.conf
@@ -701,6 +739,7 @@ grep -r "renderD" /etc/pve/lxc/*.conf
 **Cause**: VFIO not properly configured or VF not available.
 
 **Solution**:
+
 ```bash
 # Check IOMMU groups
 ls /sys/kernel/iommu_groups/
@@ -710,6 +749,7 @@ lsmod | grep vfio_pci
 ```
 
 If not loaded:
+
 ```bash
 modprobe vfio-pci
 ```
@@ -767,6 +807,7 @@ tar -czf /root/sr-iov-debug-$(date +%Y%m%d).tar.gz -C /tmp sr-iov-debug
 ### Before Asking for Help
 
 Prepare this information:
+
 1. Proxmox version: `pveversion`
 2. Kernel version: `uname -r`
 3. DKMS status: `dkms status`
@@ -783,6 +824,7 @@ Prepare this information:
 ### Reporting Issues
 
 When reporting issues, include:
+
 - Hardware: "Minisforum MS-01, i9-13900H"
 - Proxmox version
 - Kernel version
@@ -827,5 +869,6 @@ After troubleshooting, verify all is working:
 ---
 
 **Related Documents**:
+
 - MS-01-iGPU-SR-IOV-Guide.md - Main installation guide
 - MS-01-Config-Reference.md - Configuration templates

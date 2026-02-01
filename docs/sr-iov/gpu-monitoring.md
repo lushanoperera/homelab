@@ -24,12 +24,14 @@ Failed to detect engines! (No such file or directory)
 The `gpu-monitor` script provides a dashboard view of all GPUs and VFs.
 
 #### Installation
+
 ```bash
 # Already installed at:
 /usr/local/bin/gpu-monitor
 ```
 
 #### Usage
+
 ```bash
 # Single snapshot
 sudo gpu-monitor
@@ -42,6 +44,7 @@ watch -n 2 -c sudo gpu-monitor
 ```
 
 #### Output Example
+
 ```
 ╔════════════════════════════════════════════════════════════════════════╗
 ║          MS-01 Intel iGPU SR-IOV Monitoring Dashboard                 ║
@@ -80,6 +83,7 @@ VF 2 - CT 105 (Plex)
 ### 2. Manual Debug Interface Monitoring
 
 #### Check GPU Frequency
+
 ```bash
 # Physical GPU
 cat /sys/kernel/debug/dri/0000:00:02.0/i915_frequency_info
@@ -92,6 +96,7 @@ cat /sys/kernel/debug/dri/0000:00:02.0/i915_frequency_info
 ```
 
 #### Check Engine Activity
+
 ```bash
 # Physical GPU
 cat /sys/kernel/debug/dri/0000:00:02.0/i915_engine_info
@@ -104,6 +109,7 @@ cat /sys/kernel/debug/dri/0000:00:02.0/i915_engine_info
 ```
 
 #### Check GPU Info
+
 ```bash
 # Detailed GPU information
 cat /sys/kernel/debug/dri/0000:00:02.0/i915_gpu_info | less
@@ -116,6 +122,7 @@ cat /sys/kernel/debug/dri/0000:00:02.0/i915_gpu_info | less
 ```
 
 #### Check Power Domain Info
+
 ```bash
 cat /sys/kernel/debug/dri/0000:00:02.0/i915_power_domain_info
 
@@ -146,21 +153,25 @@ ls -la /sys/kernel/debug/dri/0000:00:02.3/
 ### 4. One-Liner Quick Checks
 
 #### Quick GPU Frequency Check
+
 ```bash
 grep "freq:" /sys/kernel/debug/dri/0000:00:02.0/i915_frequency_info
 ```
 
 #### Check if Any Engine is Busy
+
 ```bash
 grep "Awake?" /sys/kernel/debug/dri/0000:00:02.0/i915_engine_info
 ```
 
 #### Monitor All Runtimes
+
 ```bash
 grep "Runtime:" /sys/kernel/debug/dri/0000:00:02.0/i915_engine_info
 ```
 
 #### Continuous Frequency Watch
+
 ```bash
 watch -n 1 'grep -E "Current|Actual" /sys/kernel/debug/dri/0000:00:02.0/i915_frequency_info'
 ```
@@ -170,6 +181,7 @@ watch -n 1 'grep -E "Current|Actual" /sys/kernel/debug/dri/0000:00:02.0/i915_fre
 ### 5. Container-Level Monitoring
 
 #### From Inside Plex Container (105)
+
 ```bash
 # Enter container
 pct enter 105
@@ -189,18 +201,21 @@ tail -f /var/lib/plexmediaserver/Library/Application\ Support/Plex\ Media\ Serve
 ### 6. sysfs-Based Monitoring
 
 #### Check VF Count
+
 ```bash
 cat /sys/bus/pci/devices/0000:00:02.0/sriov_numvfs
 # Output: 7
 ```
 
 #### List All GPU Devices
+
 ```bash
 ls -la /dev/dri/
 # Shows: card0-7, renderD128-135
 ```
 
 #### Check Device Permissions
+
 ```bash
 ls -la /dev/dri/by-path/ | grep pci
 # Shows all PCI device mappings
@@ -211,12 +226,15 @@ ls -la /dev/dri/by-path/ | grep pci
 ## Alternative Tools
 
 ### 1. radeontop
+
 **Status**: ❌ Doesn't work (AMD GPUs only)
 
 ### 2. nvtop
+
 **Status**: ❌ Doesn't work (NVIDIA GPUs only)
 
 ### 3. gpustat
+
 **Status**: ⚠️ May work with modifications
 
 ```bash
@@ -229,6 +247,7 @@ gpustat
 ```
 
 ### 4. igt-gpu-tools
+
 **Status**: ✅ Partially works
 
 ```bash
@@ -241,6 +260,7 @@ intel_gpu_time       # May work
 ```
 
 **Try these**:
+
 ```bash
 # Check if these work
 intel_gpu_frequency --get
@@ -268,11 +288,13 @@ done
 ```
 
 Make it executable:
+
 ```bash
 chmod +x /usr/local/bin/gpu-freq-watch
 ```
 
 Run:
+
 ```bash
 sudo gpu-freq-watch
 ```
@@ -374,6 +396,7 @@ htop
    - Force transcoding (change quality)
 
 2. **Monitor on host**:
+
    ```bash
    # Terminal 1: Watch frequency
    watch -n 0.5 'grep -E "Current|Actual" /sys/kernel/debug/dri/0000:00:02.0/i915_frequency_info'
@@ -392,6 +415,7 @@ htop
    ```
 
 **Expected**:
+
 - GPU frequency should increase (300-1500 MHz)
 - Video engines (vcs0, vcs1) should show "Awake? 1"
 - Runtime should increase over time
@@ -434,6 +458,7 @@ echo "debugfs /sys/kernel/debug debugfs defaults 0 0" >> /etc/fstab
 ## Recommended Monitoring Approach
 
 **For daily use**:
+
 ```bash
 # Quick check
 sudo gpu-monitor
@@ -443,6 +468,7 @@ watch -n 2 -c sudo gpu-monitor
 ```
 
 **For troubleshooting**:
+
 ```bash
 # Full debug info
 cat /sys/kernel/debug/dri/0000:00:02.0/i915_gpu_info | less
@@ -450,6 +476,7 @@ cat /sys/kernel/debug/dri/0000:00:02.0/i915_engine_info | less
 ```
 
 **For transcoding tests**:
+
 ```bash
 # Monitor frequency in real-time
 watch -n 0.5 'grep -E "Current|Actual" /sys/kernel/debug/dri/0000:00:02.0/i915_frequency_info'
@@ -460,6 +487,7 @@ watch -n 0.5 'grep -E "Current|Actual" /sys/kernel/debug/dri/0000:00:02.0/i915_f
 ## Future Improvements
 
 Potential future enhancements:
+
 1. Web-based dashboard (Grafana + Prometheus)
 2. Per-VF GPU metrics (requires kernel driver support)
 3. Historical usage tracking
@@ -470,14 +498,14 @@ Potential future enhancements:
 
 ## Summary
 
-| Tool | Status | Use Case |
-|------|--------|----------|
-| intel_gpu_top | ❌ Broken | N/A |
-| gpu-monitor (custom) | ✅ Works | Dashboard view of all VFs |
-| debugfs interfaces | ✅ Works | Detailed GPU info |
-| sysfs interfaces | ✅ Works | Basic device info |
-| vainfo | ✅ Works | Test GPU from containers |
-| watch commands | ✅ Works | Real-time monitoring |
+| Tool                 | Status    | Use Case                  |
+| -------------------- | --------- | ------------------------- |
+| intel_gpu_top        | ❌ Broken | N/A                       |
+| gpu-monitor (custom) | ✅ Works  | Dashboard view of all VFs |
+| debugfs interfaces   | ✅ Works  | Detailed GPU info         |
+| sysfs interfaces     | ✅ Works  | Basic device info         |
+| vainfo               | ✅ Works  | Test GPU from containers  |
+| watch commands       | ✅ Works  | Real-time monitoring      |
 
 **Best Practice**: Use `gpu-monitor` for overview, debugfs for detailed troubleshooting.
 

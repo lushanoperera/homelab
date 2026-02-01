@@ -98,11 +98,11 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 
 ## Networks
 
-| Network | Subnet | Purpose |
-|---------|--------|---------|
-| Infra VLAN | 192.168.100.0/24 | Management, services |
-| Storage LAN | 192.168.200.0/24 | NFS, backups |
-| DMZ VLAN | 192.168.7.0/24 | Internet-facing |
+| Network     | Subnet           | Purpose              |
+| ----------- | ---------------- | -------------------- |
+| Infra VLAN  | 192.168.100.0/24 | Management, services |
+| Storage LAN | 192.168.200.0/24 | NFS, backups         |
+| DMZ VLAN    | 192.168.7.0/24   | Internet-facing      |
 
 ## Services
 
@@ -132,28 +132,28 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 
 ### Winston (Primary Compute)
 
-| Component | Specification |
-|-----------|---------------|
-| Chassis | Minisforum MS-01 |
-| CPU | Intel i9-13900H (14C/20T, up to 5.2 GHz) |
-| Features | SR-IOV GPU passthrough, Quick Sync HW transcode |
-| Thermal | powersave governor, thermald |
+| Component | Specification                                   |
+| --------- | ----------------------------------------------- |
+| Chassis   | Minisforum MS-01                                |
+| CPU       | Intel i9-13900H (14C/20T, up to 5.2 GHz)        |
+| Features  | SR-IOV GPU passthrough, Quick Sync HW transcode |
+| Thermal   | powersave governor, thermald                    |
 
 ### Reginald (Storage Server)
 
-| Component | Specification |
-|-----------|---------------|
-| Chassis | Zimaboard 832 |
-| CPU | Intel Celeron N3450 (4C/4T) |
-| Storage | 7x SSD in ZFS RAIDZ2 pool |
-| Role | NFS server for LXC container data |
+| Component | Specification                     |
+| --------- | --------------------------------- |
+| Chassis   | Zimaboard 832                     |
+| CPU       | Intel Celeron N3450 (4C/4T)       |
+| Storage   | 7x SSD in ZFS RAIDZ2 pool         |
+| Role      | NFS server for LXC container data |
 
 ### QNAP NAS (TS-251+)
 
-| Service | IP | Description |
-|---------|------|-------------|
-| PBS VM | 192.168.100.187 | Proxmox Backup Server |
-| MinIO | 192.168.200.210 | S3-compatible storage |
+| Service | IP              | Description           |
+| ------- | --------------- | --------------------- |
+| PBS VM  | 192.168.100.187 | Proxmox Backup Server |
+| MinIO   | 192.168.200.210 | S3-compatible storage |
 
 ## Documentation
 

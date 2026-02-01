@@ -4,12 +4,12 @@
 
 Winston (Minisforum MS-01, i9-13900H) thermal configuration for optimal performance and temperature control.
 
-| Load | Expected | Actual |
-|------|----------|--------|
-| Idle | 35-45°C | ~47°C |
-| Light (backup, Plex HW transcode) | 45-60°C | ~50°C |
-| Heavy | 60-85°C | — |
-| Throttle | 100°C | — |
+| Load                              | Expected | Actual |
+| --------------------------------- | -------- | ------ |
+| Idle                              | 35-45°C  | ~47°C  |
+| Light (backup, Plex HW transcode) | 45-60°C  | ~50°C  |
+| Heavy                             | 60-85°C  | —      |
+| Throttle                          | 100°C    | —      |
 
 ---
 
@@ -19,10 +19,10 @@ Winston (Minisforum MS-01, i9-13900H) thermal configuration for optimal performa
 
 Set to `powersave` for dynamic frequency scaling instead of always running at max frequency.
 
-| Setting | Value |
-|---------|-------|
-| Governor | `powersave` |
-| Persistence | systemd service |
+| Setting      | Value                                      |
+| ------------ | ------------------------------------------ |
+| Governor     | `powersave`                                |
+| Persistence  | systemd service                            |
 | Service file | `/etc/systemd/system/cpu-governor.service` |
 
 **Service file:**
@@ -52,11 +52,11 @@ systemctl enable --now thermald
 
 ### Intel P-State Settings
 
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| `hwp_dynamic_boost` | 1 | Hardware P-state dynamic boost enabled |
-| `max_perf_pct` | 100 | Max performance percentage (can lower if needed) |
-| `no_turbo` | 0 | Turbo Boost enabled |
+| Parameter           | Value | Description                                      |
+| ------------------- | ----- | ------------------------------------------------ |
+| `hwp_dynamic_boost` | 1     | Hardware P-state dynamic boost enabled           |
+| `max_perf_pct`      | 100   | Max performance percentage (can lower if needed) |
+| `no_turbo`          | 0     | Turbo Boost enabled                              |
 
 ---
 
@@ -84,6 +84,7 @@ EOF
 ```
 
 **Expected output:**
+
 - Governor: `powersave`
 - Temperature: <60°C under light load
 - thermald: `active`
@@ -137,6 +138,7 @@ Add to `cpu-governor.service` ExecStart for persistence.
 Winston has SR-IOV enabled for GPU passthrough (`i915.enable_guc=3 i915.max_vfs=7`).
 
 **If GPU passthrough becomes unstable after thermal changes:**
+
 - C-state modifications from thermald may conflict with SR-IOV
 - Monitor for GPU VF stability
 - Rollback thermal changes if needed
@@ -147,6 +149,6 @@ See: `proxmox-sr-iov/ms-01/MS-01-Troubleshooting.md` for C-state/ASPM stability 
 
 ## History
 
-| Date | Change |
-|------|--------|
+| Date       | Change                                                                 |
+| ---------- | ---------------------------------------------------------------------- |
 | 2025-01-25 | Initial configuration: powersave governor, thermald, HWP dynamic boost |

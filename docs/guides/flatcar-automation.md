@@ -13,12 +13,14 @@ Choose the approach that best fits your workflow:
 ## 📋 Prerequisites
 
 All approaches require:
+
 - **Proxmox host** with SSH access
 - **SSH key pair** (`~/.ssh/id_rsa.pub` by default)
 - **Docker** installed locally (for Butane compilation)
 - **NFS server** accessible from your network
 
 ### Additional Requirements by Approach:
+
 - **Ansible**: `ansible-core` and `community.docker` collection
 - **Terraform**: `terraform` binary and `telmate/proxmox` provider
 
@@ -29,6 +31,7 @@ All approaches require:
 The simplest way to deploy individual VMs quickly.
 
 ### Features
+
 - ✅ Single self-contained script
 - ✅ Command-line parameter configuration
 - ✅ Built-in validation and error handling
@@ -60,16 +63,16 @@ The simplest way to deploy individual VMs quickly.
 
 ### Common Parameters
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `--vm-id` | VM ID (100-999999) | Required |
-| `--vm-ip` | Static IP address | Required |
-| `--vm-name` | VM hostname | `flatcar-<ID>` |
-| `--memory` | Memory in MB | `4096` |
-| `--cores` | CPU cores | `2` |
-| `--proxmox-host` | Proxmox host IP | `10.21.21.99` |
-| `--nfs-server` | NFS server IP | `192.168.200.4` |
-| `--ssh-key` | SSH public key file | `~/.ssh/id_rsa.pub` |
+| Parameter        | Description         | Default             |
+| ---------------- | ------------------- | ------------------- |
+| `--vm-id`        | VM ID (100-999999)  | Required            |
+| `--vm-ip`        | Static IP address   | Required            |
+| `--vm-name`      | VM hostname         | `flatcar-<ID>`      |
+| `--memory`       | Memory in MB        | `4096`              |
+| `--cores`        | CPU cores           | `2`                 |
+| `--proxmox-host` | Proxmox host IP     | `10.21.21.99`       |
+| `--nfs-server`   | NFS server IP       | `192.168.200.4`     |
+| `--ssh-key`      | SSH public key file | `~/.ssh/id_rsa.pub` |
 
 ### Examples
 
@@ -101,6 +104,7 @@ The simplest way to deploy individual VMs quickly.
 Ideal for managing multiple VMs and maintaining consistent configuration.
 
 ### Features
+
 - ✅ Declarative configuration
 - ✅ Multi-VM deployment in parallel
 - ✅ Template-based customization
@@ -200,6 +204,7 @@ ansible-playbook -i ansible/inventories/development.yml ansible/deploy-flatcar-v
 Best for infrastructure as code and version-controlled deployments.
 
 ### Features
+
 - ✅ Infrastructure as Code
 - ✅ State management
 - ✅ Resource dependencies
@@ -289,11 +294,13 @@ terraform apply -target="proxmox_vm_qemu.flatcar_vms[\"docker-1\"]"
 All approaches support customizing network settings:
 
 **Bash Script:**
+
 ```bash
 --gateway 192.168.1.1 --dns1 192.168.1.1 --dns2 8.8.8.8
 ```
 
 **Ansible:**
+
 ```yaml
 vm_defaults:
   gateway: "192.168.1.1"
@@ -302,6 +309,7 @@ vm_defaults:
 ```
 
 **Terraform:**
+
 ```hcl
 network_config = {
   gateway = "192.168.1.1"
@@ -315,10 +323,12 @@ network_config = {
 Modify NFS server and mount options:
 
 **Default NFS Mounts:**
+
 - `/mnt/nfs_shared` ← `192.168.200.4:/rpool/shared`
 - `/mnt/nfs_media` ← `192.168.200.4:/rpool/shared/media`
 
 **Custom NFS Server:**
+
 - Bash: `--nfs-server 192.168.1.100`
 - Ansible: `vm_defaults.nfs_server: "192.168.1.100"`
 - Terraform: `nfs_server = "192.168.1.100"`
@@ -326,6 +336,7 @@ Modify NFS server and mount options:
 ### Hardware Configuration
 
 **VM Specifications:**
+
 - Memory: 1GB-64GB (default: 4GB)
 - CPU Cores: 1-32 (default: 2)
 - Storage: Configurable pool (default: `local-lvm`)
@@ -333,6 +344,7 @@ Modify NFS server and mount options:
 ### Portainer Configuration
 
 **Enable/Disable Portainer:**
+
 - Bash: `--no-portainer` flag
 - Ansible: `enable_portainer: false` per VM
 - Terraform: `enable_portainer = false` per VM
@@ -368,6 +380,7 @@ ssh root@10.21.21.99 'qm guest cmd 105 status'
 ### Common Issues
 
 **Network Issues:**
+
 ```bash
 # Check interface name in VM
 ssh core@<VM_IP> 'ip addr show'
@@ -377,6 +390,7 @@ ssh core@<VM_IP> 'sudo systemctl status systemd-networkd'
 ```
 
 **NFS Mount Issues:**
+
 ```bash
 # Check NFS availability
 showmount -e 192.168.200.4
@@ -386,6 +400,7 @@ ssh core@<VM_IP> 'systemctl status mnt-nfs_shared.mount'
 ```
 
 **Portainer Timeout:**
+
 ```bash
 # Restart Portainer container
 ssh core@<VM_IP> 'docker restart portainer'
@@ -435,15 +450,15 @@ flatcar-deployment/
 
 ### Default Configuration
 
-| Setting | Value | Description |
-|---------|-------|-------------|
-| **Memory** | 4096 MB | RAM allocation |
-| **CPU Cores** | 2 | Virtual CPU cores |
-| **Storage** | local-lvm | Proxmox storage pool |
-| **Network** | vmbr0 | Bridge interface |
-| **Gateway** | 10.21.21.1 | Network gateway |
-| **DNS** | 10.21.21.1, 8.8.8.8 | DNS servers |
-| **NFS Server** | 192.168.200.4 | NFS server IP |
+| Setting        | Value               | Description          |
+| -------------- | ------------------- | -------------------- |
+| **Memory**     | 4096 MB             | RAM allocation       |
+| **CPU Cores**  | 2                   | Virtual CPU cores    |
+| **Storage**    | local-lvm           | Proxmox storage pool |
+| **Network**    | vmbr0               | Bridge interface     |
+| **Gateway**    | 10.21.21.1          | Network gateway      |
+| **DNS**        | 10.21.21.1, 8.8.8.8 | DNS servers          |
+| **NFS Server** | 192.168.200.4       | NFS server IP        |
 
 ### Supported VM IDs
 
@@ -456,17 +471,20 @@ flatcar-deployment/
 ## 🎉 Quick Deploy Examples
 
 **Single VM for testing:**
+
 ```bash
 ./scripts/deploy-flatcar-vm.sh --vm-id 199 --vm-ip 10.21.21.199
 ```
 
 **Production cluster with Ansible:**
+
 ```bash
 # Edit ansible/inventories/production.yml with your VMs
 ansible-playbook -i ansible/inventories/production.yml ansible/deploy-flatcar-vms.yml
 ```
 
 **Infrastructure as Code with Terraform:**
+
 ```bash
 cd terraform/
 terraform plan -out=homelab.tfplan

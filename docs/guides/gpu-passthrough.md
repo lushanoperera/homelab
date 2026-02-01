@@ -30,6 +30,7 @@ This guide covers the deployment of Intel iGPU SR-IOV Virtual Function 3 (VF 3) 
    - See: `docs/sr-iov/igpu-guide.md`
 
 2. **VF 3 Available**: Ensure VF 3 (00:02.4) is not assigned to another VM
+
    ```bash
    # On Proxmox host
    grep "hostpci.*00:02.4" /etc/pve/qemu-server/*.conf
@@ -60,6 +61,7 @@ lspci | grep "00:02.4"
 ```
 
 **Expected Output**:
+
 ```
 00:02.4 VGA compatible controller: Intel Corporation Raptor Lake-P [Iris Xe Graphics] (rev 04)
 ```
@@ -71,6 +73,7 @@ qm stop 100
 ```
 
 Wait for VM to fully stop:
+
 ```bash
 qm status 100
 # Should show: status: stopped
@@ -83,6 +86,7 @@ qm set 100 -hostpci0 0000:00:02.4,x-vga=0,rombar=0,pcie=1
 ```
 
 **Parameter Explanation**:
+
 - `0000:00:02.4` - PCI address of VF 3
 - `x-vga=0` - Not primary display (headless GPU)
 - `rombar=0` - Disable ROM BAR (required for Intel iGPU VFs)
@@ -95,6 +99,7 @@ qm config 100 | grep hostpci
 ```
 
 **Expected Output**:
+
 ```
 hostpci0: 0000:00:02.4,pcie=1,rombar=0,x-vga=0
 ```
@@ -106,6 +111,7 @@ qm start 100
 ```
 
 Monitor startup:
+
 ```bash
 qm status 100
 # Wait for: status: running
@@ -130,6 +136,7 @@ lspci | grep VGA
 ```
 
 **Expected Output**:
+
 ```
 00:06.0 VGA compatible controller: Intel Corporation Raptor Lake-P [Iris Xe Graphics] (rev 04)
 ```
@@ -143,6 +150,7 @@ ls -la /dev/dri/
 ```
 
 **Expected Output**:
+
 ```
 total 0
 drwxr-xr-x  2 root root         80 Oct 11 10:00 .
@@ -160,6 +168,7 @@ crw-rw----  1 root render 226, 128 Oct 11 10:00 renderD128
 ```
 
 **Expected Output**:
+
 ```
 === Intel iGPU VF 3 Verification ===
 
@@ -188,6 +197,7 @@ sudo systemctl status gpu-setup.service
 ```
 
 **Expected Output**:
+
 ```
 ● gpu-setup.service - Setup Intel iGPU VF 3 for Docker
      Loaded: loaded (/etc/systemd/system/gpu-setup.service; enabled; preset: enabled)
@@ -208,6 +218,7 @@ docker run --rm --device=/dev/dri/renderD128 alpine:latest ls -la /dev/dri/rende
 ```
 
 **Expected Output**:
+
 ```
 crw-rw---- 1 root 226, 128 Oct 11 10:00 /dev/dri/renderD128
 ```
@@ -234,7 +245,7 @@ services:
   your-service:
     image: your-image:latest
     devices:
-      - /dev/dri/renderD128:/dev/dri/renderD128  # Adjust device name if different
+      - /dev/dri/renderD128:/dev/dri/renderD128 # Adjust device name if different
     # Optional: Add environment variables for VAAPI
     environment:
       - LIBVA_DRIVER_NAME=iHD
@@ -266,6 +277,7 @@ services:
 ### Problem: No DRI Device Found
 
 **Symptoms**:
+
 ```bash
 ls /dev/dri/
 # Returns: No such file or directory
@@ -274,16 +286,20 @@ ls /dev/dri/
 **Solutions**:
 
 1. **Check PCI Passthrough**:
+
    ```bash
    lspci | grep VGA
    ```
+
    - If no VGA device, check Proxmox host configuration
    - Verify `qm config 100` shows hostpci0
 
 2. **Check Kernel Modules**:
+
    ```bash
    lsmod | grep i915
    ```
+
    - Should show i915 module loaded
    - If not: `sudo modprobe i915`
 
@@ -296,6 +312,7 @@ ls /dev/dri/
 ### Problem: Device Permission Denied
 
 **Symptoms**:
+
 ```bash
 docker run --rm --device=/dev/dri/renderD128 alpine:latest ls /dev/dri/renderD128
 # Returns: Permission denied
@@ -304,12 +321,15 @@ docker run --rm --device=/dev/dri/renderD128 alpine:latest ls /dev/dri/renderD12
 **Solutions**:
 
 1. **Check Device Permissions**:
+
    ```bash
    ls -la /dev/dri/renderD128
    ```
+
    - Should show: `crw-rw---- 1 root render`
 
 2. **Add User to Render Group**:
+
    ```bash
    sudo usermod -aG render core
    # Logout and login again
@@ -324,9 +344,11 @@ docker run --rm --device=/dev/dri/renderD128 alpine:latest ls /dev/dri/renderD12
 ### Problem: Wrong Device Number
 
 **Symptoms**:
+
 - Verification script looks for renderD132 but device is renderD128
 
 **Solution**:
+
 - The device number may vary based on kernel enumeration
 - Use whichever renderD device is available (128, 129, 130, etc.)
 - Update verification script and docker-compose files accordingly
@@ -334,6 +356,7 @@ docker run --rm --device=/dev/dri/renderD128 alpine:latest ls /dev/dri/renderD12
 ### Problem: VM Won't Start After Adding GPU
 
 **Symptoms**:
+
 ```bash
 qm start 100
 # Returns: Error or VM fails to start
@@ -342,19 +365,23 @@ qm start 100
 **Solutions**:
 
 1. **Check VF Availability on Host**:
+
    ```bash
    # On Proxmox host
    lspci | grep "00:02.4"
    ```
+
    - Ensure VF exists on host
 
 2. **Check IOMMU Groups**:
+
    ```bash
    # On Proxmox host
    find /sys/kernel/iommu_groups/ -type l | grep 00:02.4
    ```
 
 3. **Remove and Re-add PCI Device**:
+
    ```bash
    # On Proxmox host
    qm set 100 -delete hostpci0
@@ -372,6 +399,7 @@ qm start 100
 ## Configuration Files
 
 ### Butane Configuration
+
 - **Location**: `configs/flatcar-proxmox-100-docker.bu`
 - **Compiled To**: `ignition/flatcar-proxmox-100-docker.ign`
 
@@ -427,11 +455,13 @@ To apply this GPU configuration to an existing VM:
 ### Performance Expectations
 
 **Hardware Transcoding** (Jellyfin/Plex/Emby):
+
 - **4K HEVC → 1080p H.264**: 120-150 FPS
 - **Concurrent Streams**: 3-5 simultaneous 4K transcodes
 - **Power Usage**: 5-10W (vs 40-60W CPU transcoding)
 
 **Encoding Quality**:
+
 - Similar to x264 "fast" preset
 - QuickSync (QSV) hardware encoder
 
@@ -455,16 +485,19 @@ Before considering deployment complete, verify:
 ## Reference Documentation
 
 ### Proxmox SR-IOV Setup
+
 - **Location**: `docs/sr-iov/`
 - **Key File**: `igpu-guide.md`
 - Contains complete SR-IOV setup for Proxmox host
 
 ### Flatcar Documentation
+
 - **Official Docs**: https://www.flatcar.org/docs/latest/
 - **Ignition Spec**: https://coreos.github.io/ignition/
 - **Butane Spec**: https://coreos.github.io/butane/
 
 ### Intel SR-IOV
+
 - **Device Mapping**: See MS-01-Config-Reference.md lines 682-691
 - **VF to renderD mapping**: renderD128-135 (VF 0-6)
 

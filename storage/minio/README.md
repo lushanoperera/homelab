@@ -4,9 +4,9 @@ Current S3-compatible storage for Restic backups on QNAP NAS.
 
 ## Access
 
-| Service | IP | Port |
-|---------|-----|------|
-| S3 API | 192.168.200.210 | 9000 |
+| Service | IP              | Port |
+| ------- | --------------- | ---- |
+| S3 API  | 192.168.200.210 | 9000 |
 | Console | 192.168.200.210 | 9001 |
 
 ## Migration

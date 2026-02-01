@@ -5,6 +5,7 @@
 **Recommendation: Migrate to Garage**
 
 For your use case (Restic backups on QNAP NAS), Garage is the better choice due to:
+
 - **40x lower memory usage** (~5 MB idle vs ~218 MB for MinIO)
 - **Official Restic support** documented at [Garage HQ](https://garagehq.deuxfleurs.fr/documentation/connect/backup/)
 - **Simpler operation** - single binary, minimal dependencies
@@ -27,18 +28,18 @@ For your use case (Restic backups on QNAP NAS), Garage is the better choice due 
 
 ## Comparison Matrix
 
-| Aspect | MinIO | Garage | Winner |
-|--------|-------|--------|--------|
-| **RAM (idle)** | ~218 MB | ~5 MB | Garage |
-| **RAM (active)** | 4-32 GB | 1-2 GB | Garage |
-| **Throughput** | 2.8 GB/s | 1.6 GB/s | MinIO |
-| **S3 Compatibility** | Full | Core operations | MinIO |
-| **Restic Support** | Yes | Official docs | Tie |
-| **Setup Complexity** | Medium | Low | Garage |
-| **Web Console** | Built-in | Separate | MinIO |
-| **Small File Handling** | Poor | Better | Garage |
-| **Erasure Coding** | Yes | No (replication) | MinIO |
-| **Object Versioning** | Yes | No | MinIO |
+| Aspect                  | MinIO    | Garage           | Winner |
+| ----------------------- | -------- | ---------------- | ------ |
+| **RAM (idle)**          | ~218 MB  | ~5 MB            | Garage |
+| **RAM (active)**        | 4-32 GB  | 1-2 GB           | Garage |
+| **Throughput**          | 2.8 GB/s | 1.6 GB/s         | MinIO  |
+| **S3 Compatibility**    | Full     | Core operations  | MinIO  |
+| **Restic Support**      | Yes      | Official docs    | Tie    |
+| **Setup Complexity**    | Medium   | Low              | Garage |
+| **Web Console**         | Built-in | Separate         | MinIO  |
+| **Small File Handling** | Poor     | Better           | Garage |
+| **Erasure Coding**      | Yes      | No (replication) | MinIO  |
+| **Object Versioning**   | Yes      | No               | MinIO  |
 
 ---
 
@@ -46,17 +47,18 @@ For your use case (Restic backups on QNAP NAS), Garage is the better choice due 
 
 Garage implements all S3 operations Restic needs:
 
-| Operation | Status |
-|-----------|--------|
-| GetObject / PutObject | Supported |
+| Operation                    | Status    |
+| ---------------------------- | --------- |
+| GetObject / PutObject        | Supported |
 | DeleteObject / DeleteObjects | Supported |
-| ListObjects / ListObjectsV2 | Supported |
-| Multipart uploads | Supported |
-| Signature v4 | Supported |
-| Path-style URLs | Supported |
-| Presigned URLs | Supported |
+| ListObjects / ListObjectsV2  | Supported |
+| Multipart uploads            | Supported |
+| Signature v4                 | Supported |
+| Path-style URLs              | Supported |
+| Presigned URLs               | Supported |
 
 **Not supported but not needed for Restic:**
+
 - ACLs/IAM policies
 - Object versioning
 - Object tagging
@@ -69,6 +71,7 @@ Garage implements all S3 operations Restic needs:
 ### Phase 1: Deploy Garage
 
 **1. Create garage.toml configuration:**
+
 ```toml
 metadata_dir = "/share/Data/garage/meta"
 data_dir = "/share/Data/garage/data"
@@ -89,6 +92,7 @@ api_bind_addr = "[::]:3903"
 ```
 
 **2. Docker Compose for Garage:**
+
 ```yaml
 services:
   garage:
@@ -100,9 +104,9 @@ services:
       - /share/Data/garage/data:/var/lib/garage/data
       - ./garage.toml:/etc/garage.toml:ro
     ports:
-      - "3900:3900"  # S3 API
-      - "3902:3902"  # Web
-      - "3903:3903"  # Admin
+      - "3900:3900" # S3 API
+      - "3902:3902" # Web
+      - "3903:3903" # Admin
     networks:
       qnet-static-eth0-076754:
         ipv4_address: 192.168.100.211
@@ -142,6 +146,7 @@ docker exec garage /garage bucket allow restic-backups \
 **Step 1: Configure rclone for both endpoints**
 
 Create/edit `~/.config/rclone/rclone.conf`:
+
 ```ini
 [minio]
 type = s3
@@ -160,6 +165,7 @@ region = garage
 ```
 
 **Step 2: Verify source data**
+
 ```bash
 # List existing MinIO buckets
 rclone lsd minio:
@@ -169,6 +175,7 @@ rclone size minio:<your-restic-bucket>
 ```
 
 **Step 3: Sync data to Garage**
+
 ```bash
 # Dry run first
 rclone sync minio:<your-restic-bucket> garage:restic-backups --dry-run -P
@@ -178,6 +185,7 @@ rclone sync minio:<your-restic-bucket> garage:restic-backups -P --transfers 4
 ```
 
 **Step 4: Verify migration**
+
 ```bash
 # Set environment for Garage
 export AWS_ACCESS_KEY_ID=<garage-key-id>
@@ -198,6 +206,7 @@ restic snapshots
 ### Phase 4: Verify & Cutover
 
 1. Test Restic operations:
+
    ```bash
    restic snapshots
    restic check
@@ -215,14 +224,18 @@ restic snapshots
 ## Important Configuration Notes
 
 ### AWS SDK Checksum Fix
+
 Recent AWS SDKs require these environment variables:
+
 ```bash
 export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
 export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
 ```
 
 ### Region Setting
+
 Ensure your AWS region matches garage.toml:
+
 ```bash
 export AWS_DEFAULT_REGION=garage
 ```
@@ -231,12 +244,12 @@ export AWS_DEFAULT_REGION=garage
 
 ## Risks & Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Data loss during migration | High | Keep MinIO running until verified |
-| Performance difference | Low | Backups are not throughput-critical |
-| AWS SDK compatibility | Medium | Use env vars documented above |
-| No erasure coding | Low | Single-node anyway; use filesystem redundancy |
+| Risk                       | Impact | Mitigation                                    |
+| -------------------------- | ------ | --------------------------------------------- |
+| Data loss during migration | High   | Keep MinIO running until verified             |
+| Performance difference     | Low    | Backups are not throughput-critical           |
+| AWS SDK compatibility      | Medium | Use env vars documented above                 |
+| No erasure coding          | Low    | Single-node anyway; use filesystem redundancy |
 
 ---
 
