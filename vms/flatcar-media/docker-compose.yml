@@ -1,46 +1,39 @@
-version: "3.9"
-
 services:
-  nordvpn:
-    image: ghcr.io/bubuntux/nordvpn:latest
-    container_name: nordvpn
-    hostname: nordvpn
-    privileged: true
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    hostname: gluetun
     cap_add:
       - NET_ADMIN
-      - NET_RAW
-    environment:
-      - TOKEN=${NORDVPN_TOKEN}
-      - TECHNOLOGY=NordLynx
-      - CONNECT=${NORDVPN_COUNTRY}
-      - CYBER_SEC=off
-      - DNS=1.1.1.1
-      - NET_LOCAL=${NORDVPN_NET_LOCAL}
-      - TZ=${TZ}
-      - POST_CONNECT=/scripts/nordvpn-firewall-setup.sh
-    dns:
-      - 1.1.1.1
-      - 1.0.0.1
-    volumes:
-      - /srv/docker/resolv.conf:/etc/resolv.conf:rw
-      - /srv/docker/scripts:/scripts:ro
+    devices:
+      - /dev/net/tun:/dev/net/tun
     ports:
-      - "${QBITTORRENT_PORT}:8080"    # qbittorrent web UI
-      - "${SABNZBD_PORT}:7777"        # sabnzbd web UI (actual port from config)
-      - "${PROWLARR_PORT}:9696"       # prowlarr web UI
-      - "6881:6881"                   # qbittorrent peer port
-      - "6881:6881/udp"               # qbittorrent peer port UDP
+      - "${QBITTORRENT_PORT}:8080" # qbittorrent web UI
+      - "${SABNZBD_PORT}:7777" # sabnzbd web UI
+      - "${PROWLARR_PORT}:9696" # prowlarr web UI
+      - "6881:6881" # qbittorrent peer port
+      - "6881:6881/udp" # qbittorrent peer port UDP
+      - "8001:8000" # gluetun control server (for port forward info)
+    environment:
+      - VPN_SERVICE_PROVIDER=protonvpn
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${PROTON_WIREGUARD_KEY}
+      - WIREGUARD_ADDRESSES=${PROTON_WIREGUARD_ADDRESS}
+      - VPN_PORT_FORWARDING=on
+      - PORT_FORWARD_ONLY=on
+      - SERVER_COUNTRIES=${VPN_COUNTRY:-Netherlands}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_ROOT}/gluetun:/gluetun
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=1
-    devices:
-      - /dev/net/tun
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://ipinfo.io/json"]
-      interval: 60s
+      test: ["CMD", "/gluetun-entrypoint", "healthcheck"]
+      interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 30s
+      retries: 5
+      start_period: 60s
 
   flaresolverr:
     image: flaresolverr/flaresolverr:latest
@@ -74,9 +67,9 @@ services:
     volumes:
       - ${CONFIG_ROOT}/prowlarr:/config
     restart: unless-stopped
-    network_mode: "service:nordvpn"
+    network_mode: "service:gluetun"
     depends_on:
-      nordvpn:
+      gluetun:
         condition: service_healthy
       flaresolverr:
         condition: service_healthy
@@ -102,9 +95,9 @@ services:
       - ${DOWNLOADS_ROOT}:/downloads
       - ${MEDIA_ROOT}:/media
     restart: unless-stopped
-    network_mode: "service:nordvpn"
+    network_mode: "service:gluetun"
     depends_on:
-      nordvpn:
+      gluetun:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
@@ -126,9 +119,9 @@ services:
       - ${DOWNLOADS_ROOT}:/downloads
       - ${MEDIA_ROOT}:/media
     restart: unless-stopped
-    network_mode: "service:nordvpn"
+    network_mode: "service:gluetun"
     depends_on:
-      nordvpn:
+      gluetun:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:7777/api?mode=version"]
@@ -321,7 +314,7 @@ services:
       - TZ=${TZ}
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_INCLUDE_RESTARTING=true
-      - WATCHTOWER_SCHEDULE=0 0 4 * * *  # Daily at 4 AM
+      - WATCHTOWER_SCHEDULE=0 0 4 * * * # Daily at 4 AM
       - WATCHTOWER_NOTIFICATIONS=shoutrrr
       - WATCHTOWER_NOTIFICATION_URL=${WATCHTOWER_NOTIFICATION_URL:-}
     volumes:

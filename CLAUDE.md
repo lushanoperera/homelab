@@ -6,31 +6,33 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 
 ### Network Architecture
 
-| Network | Subnet | Purpose |
-|---------|--------|---------|
-| Infra VLAN | 192.168.100.0/24 | Management, services, general traffic |
+| Network     | Subnet           | Purpose                                  |
+| ----------- | ---------------- | ---------------------------------------- |
+| Infra VLAN  | 192.168.100.0/24 | Management, services, general traffic    |
 | Storage LAN | 192.168.200.0/24 | Dedicated storage traffic (NFS, backups) |
-| DMZ VLAN | 192.168.7.0/24 | Internet-facing services (Traefik) |
+| DMZ VLAN    | 192.168.7.0/24   | Internet-facing services (Traefik)       |
 
 ### Hosts & VMs
 
-| Host/VM | IP | Role |
-|---------|-----|------|
-| winston | 192.168.100.38 / .200.38 | Primary Proxmox VE host |
-| reginald | 192.168.100.4 / .200.4 | Secondary Proxmox VE host (NFS source) |
-| flatcar-media (VM 100) | 192.168.100.100 | Media stack (Sonarr, Radarr, qBittorrent) |
-| PBS | 192.168.100.187 | Proxmox Backup Server (on QNAP) |
-| QNAP NAS | 192.168.100.254 / .200.254 | Storage (MinIO S3, NFS) |
+| Host/VM                | IP                         | Role                                      |
+| ---------------------- | -------------------------- | ----------------------------------------- |
+| winston                | 192.168.100.38 / .200.38   | Primary Proxmox VE host                   |
+| reginald               | 192.168.100.4 / .200.4     | Secondary Proxmox VE host (NFS source)    |
+| flatcar-media (VM 100) | 192.168.100.100            | Media stack (Sonarr, Radarr, qBittorrent) |
+| PBS                    | 192.168.100.187            | Proxmox Backup Server (on QNAP)           |
+| QNAP NAS               | 192.168.100.254 / .200.254 | Storage (MinIO S3, NFS)                   |
 
 ### Services by Location
 
 **Flatcar VM 100** (`ssh core@192.168.100.100`):
-- Media stack: nordlynx, prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr, overseerr, tautulli
+
+- Media stack: gluetun (ProtonVPN), prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr, overseerr, tautulli
 - Traefik (DMZ IP: 192.168.7.119)
 - CrowdSec + Bouncer
 - Cloudflared tunnel
 
 **LXC Containers (winston)**:
+
 - 101: Nextcloud
 - 103: Immich
 - 104: WireGuard
@@ -99,8 +101,17 @@ ssh core@192.168.100.100 'cd /srv/docker/media-stack && /opt/bin/docker-compose 
 # Traefik stack
 ssh core@192.168.100.100 'cd /srv/docker/traefik && /opt/bin/docker-compose ps'
 
-# VPN verification
-ssh core@192.168.100.100 'docker exec nordlynx curl -s https://ipinfo.io/ip'
+# VPN verification (ProtonVPN via gluetun)
+ssh core@192.168.100.100 'docker exec gluetun wget -qO- https://ipinfo.io/ip'
+
+# Check forwarded port
+ssh core@192.168.100.100 'docker exec gluetun cat /tmp/gluetun/forwarded_port'
+
+# Check qBittorrent listening port matches
+ssh core@192.168.100.100 'docker exec gluetun wget -qO- "http://localhost:8080/api/v2/app/preferences" 2>/dev/null | grep -oP "\"listen_port\":\s*\K\d+"'
+
+# Manual port sync (usually automatic via timer)
+ssh core@192.168.100.100 '/opt/bin/qbt-port-sync.sh'
 
 # NFS mount status
 ssh core@192.168.100.100 'systemctl status mnt-media.mount'
@@ -189,12 +200,12 @@ pvesm status        # Check storage
 
 ## Network Services Map
 
-| Service | Hostname | Backend |
-|---------|----------|---------|
-| Immich | immich.lushanoperera.com | 192.168.100.103:2283 |
-| Nextcloud | nextcloud.lushanoperera.com | 192.168.100.101:11000 |
-| Traefik Dashboard | traefik.lushanoperera.com | 192.168.7.119:8080 |
-| CrowdSec Dashboard | crowdsec.lushanoperera.com | crowdsec-metabase:3001 |
+| Service            | Hostname                    | Backend                |
+| ------------------ | --------------------------- | ---------------------- |
+| Immich             | immich.lushanoperera.com    | 192.168.100.103:2283   |
+| Nextcloud          | nextcloud.lushanoperera.com | 192.168.100.101:11000  |
+| Traefik Dashboard  | traefik.lushanoperera.com   | 192.168.7.119:8080     |
+| CrowdSec Dashboard | crowdsec.lushanoperera.com  | crowdsec-metabase:3001 |
 
 ## Storage Architecture
 
@@ -227,36 +238,40 @@ LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
                                                      (migrating to Garage)
 ```
 
-| Service | IP | Ports |
-|---------|-----|-------|
-| MinIO | 192.168.200.210 | 9000 (S3), 9001 (Console) |
-| Garage | 192.168.200.211 | 3900 (S3), 3902 (Web), 3903 (Admin) |
+| Service | IP              | Ports                               |
+| ------- | --------------- | ----------------------------------- |
+| MinIO   | 192.168.200.210 | 9000 (S3), 9001 (Console)           |
+| Garage  | 192.168.200.211 | 3900 (S3), 3902 (Web), 3903 (Admin) |
 
 ## Lessons Learned
 
 ### Flatcar-Specific
-| Issue | Solution |
-|-------|----------|
-| Network interface naming | Always use `eth0` (not `ens18`) in Butane configs |
-| Ignition only applies once | Manual fixes needed for post-boot changes |
-| Docker Compose location | `/opt/bin/docker-compose` (standalone binary) |
+
+| Issue                      | Solution                                          |
+| -------------------------- | ------------------------------------------------- |
+| Network interface naming   | Always use `eth0` (not `ens18`) in Butane configs |
+| Ignition only applies once | Manual fixes needed for post-boot changes         |
+| Docker Compose location    | `/opt/bin/docker-compose` (standalone binary)     |
 
 ### NFS + ZFS
-| Issue | Solution |
-|-------|----------|
-| Child datasets invisible via NFS | Add `crossmnt` to NFS export options |
-| ZFS child dataset wrong mountpoint | Use `zfs inherit mountpoint <dataset>` |
-| Empty ZFS child shadowing real data | Destroy empty dataset, bind mount real dir |
-| NFS re-export fails for child mounts | Mount directly from source, not via relay |
-| `soft` mount causes silent failures | Use `hard` mount option for production data |
-| Stale data from aggressive caching | Reduce `actimeo` from 600 to 60 seconds |
-| Data split between parent/child | Check `zfs get mountpoint` SOURCE is "inherited" |
-| Partial stale handles (some paths work) | `exportfs -ra` on server, restart containers |
+
+| Issue                                   | Solution                                         |
+| --------------------------------------- | ------------------------------------------------ |
+| Child datasets invisible via NFS        | Add `crossmnt` to NFS export options             |
+| ZFS child dataset wrong mountpoint      | Use `zfs inherit mountpoint <dataset>`           |
+| Empty ZFS child shadowing real data     | Destroy empty dataset, bind mount real dir       |
+| NFS re-export fails for child mounts    | Mount directly from source, not via relay        |
+| `soft` mount causes silent failures     | Use `hard` mount option for production data      |
+| Stale data from aggressive caching      | Reduce `actimeo` from 600 to 60 seconds          |
+| Data split between parent/child         | Check `zfs get mountpoint` SOURCE is "inherited" |
+| Partial stale handles (some paths work) | `exportfs -ra` on server, restart containers     |
 
 ### GPU SR-IOV
+
 Intel iGPU SR-IOV passthrough to Flatcar **not working** - guest requires patched `i915-sriov-dkms` driver. See `docs/sr-iov/` for details.
 
 ### AWS SDK (Garage)
+
 ```bash
 export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
 export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
@@ -265,6 +280,7 @@ export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
 ## Safety Rules
 
 **HARD BLOCK - Always confirm before:**
+
 - `rm -rf` or any recursive deletion
 - VM/container destruction (`qm destroy`, `pct destroy`)
 - Storage removal
@@ -272,6 +288,7 @@ export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
 - Cluster operations
 
 **Never:**
+
 - Run destructive commands without explicit user confirmation
 - Modify production VMs without backup verification
 - Change network settings that could cause connectivity loss

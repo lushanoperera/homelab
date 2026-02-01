@@ -1,0 +1,19 @@
+[Unit]
+Description=Sync gluetun forwarded port to qBittorrent
+After=docker.service
+Requires=docker.service
+# Ensure containers are healthy before running
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/bin/qbt-port-sync.sh
+StandardOutput=journal
+StandardError=journal
+# Retry on failure (gluetun might still be connecting)
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
