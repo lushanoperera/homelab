@@ -39,6 +39,8 @@ systemd:
       enabled: true
     - name: qemu-guest-agent.service
       enabled: true
+    # NFS mounts use 'hard' option for production data reliability
+    # VPN (gluetun) is configured via docker-compose post-deployment
     - name: mnt-nfs_shared.mount
       enabled: true
       contents: |
@@ -49,7 +51,7 @@ systemd:
         What=$NFS_SERVER:/rpool/shared
         Where=/mnt/nfs_shared
         Type=nfs4
-        Options=rw,fsc,noatime,vers=4.2,proto=tcp,rsize=1048576,wsize=1048576,nconnect=8,soft,timeo=100,retrans=5,_netdev
+        Options=rw,fsc,noatime,vers=4.2,proto=tcp,rsize=1048576,wsize=1048576,nconnect=8,hard,timeo=600,retrans=3,_netdev
         [Install]
         WantedBy=multi-user.target
     - name: mnt-nfs_media.mount
@@ -62,6 +64,6 @@ systemd:
         What=$NFS_SERVER:/rpool/shared/media
         Where=/mnt/nfs_media
         Type=nfs4
-        Options=rw,fsc,noatime,vers=4.2,proto=tcp,rsize=1048576,wsize=1048576,nconnect=8,soft,timeo=100,retrans=5,_netdev
+        Options=rw,fsc,noatime,vers=4.2,proto=tcp,rsize=1048576,wsize=1048576,nconnect=8,hard,timeo=600,retrans=3,_netdev
         [Install]
         WantedBy=multi-user.target

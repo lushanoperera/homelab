@@ -1,7 +1,7 @@
 variable "proxmox_api_url" {
   description = "Proxmox API URL"
   type        = string
-  default     = "https://10.21.21.99:8006/api2/json"
+  default     = "https://192.168.100.38:8006/api2/json"
 }
 
 variable "proxmox_user" {
@@ -19,13 +19,13 @@ variable "proxmox_password" {
 variable "proxmox_host" {
   description = "Proxmox host IP for SSH operations"
   type        = string
-  default     = "10.21.21.99"
+  default     = "192.168.100.38"
 }
 
 variable "proxmox_node" {
   description = "Proxmox node name"
   type        = string
-  default     = "pve"
+  default     = "winston"
 }
 
 variable "storage_pool" {
@@ -42,8 +42,8 @@ variable "network_config" {
     dns2    = string
   })
   default = {
-    gateway = "10.21.21.1"
-    dns1    = "10.21.21.1"
+    gateway = "192.168.100.1"
+    dns1    = "192.168.100.1"
     dns2    = "8.8.8.8"
   }
 }
@@ -74,7 +74,7 @@ variable "flatcar_vms" {
     "vm1" = {
       id              = 105
       name            = "flatcar-docker-1"
-      ip              = "10.21.21.105"
+      ip              = "192.168.100.105"
       memory          = 4096
       cores           = 2
       enable_portainer = true
@@ -82,7 +82,7 @@ variable "flatcar_vms" {
     "vm2" = {
       id              = 106
       name            = "flatcar-docker-2"
-      ip              = "10.21.21.106"
+      ip              = "192.168.100.106"
       memory          = 4096
       cores           = 2
       enable_portainer = true

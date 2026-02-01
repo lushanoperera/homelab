@@ -1,0 +1,33 @@
+# Terraform variables example for homelab Flatcar VM deployment
+# Copy this file to terraform.tfvars and fill in your values
+
+# Proxmox authentication (required)
+proxmox_password = "your-proxmox-password"
+ssh_public_key   = "ssh-ed25519 AAAA... your-key-comment"
+
+# Optional overrides (defaults are set in variables.tf)
+# proxmox_api_url  = "https://192.168.100.38:8006/api2/json"
+# proxmox_host     = "192.168.100.38"
+# proxmox_node     = "winston"
+# proxmox_user     = "root@pam"
+# storage_pool     = "local-lvm"
+# nfs_server       = "192.168.200.4"
+
+# Network configuration (Infra VLAN)
+# network_config = {
+#   gateway = "192.168.100.1"
+#   dns1    = "192.168.100.1"
+#   dns2    = "8.8.8.8"
+# }
+
+# VM definitions
+# flatcar_vms = {
+#   "media" = {
+#     id               = 100
+#     name             = "flatcar-media"
+#     ip               = "192.168.100.100"
+#     memory           = 8192
+#     cores            = 4
+#     enable_portainer = false
+#   }
+# }
