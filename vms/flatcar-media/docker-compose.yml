@@ -84,6 +84,7 @@ services:
   qbittorrent:
     image: linuxserver/qbittorrent:latest
     container_name: qbittorrent
+    mem_limit: 1g
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
