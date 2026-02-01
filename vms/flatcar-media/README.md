@@ -10,18 +10,18 @@ ssh core@192.168.100.100
 
 ## Services
 
-| Service | Port | Description |
-|---------|------|-------------|
-| NordLynx | - | WireGuard VPN |
-| Prowlarr | 9696 | Indexer manager |
-| qBittorrent | 8080 | Torrent client |
-| SABnzbd | 8080 | Usenet client |
-| Radarr | 7878 | Movie manager |
-| Sonarr | 8989 | TV show manager |
-| Lidarr | 8686 | Music manager |
-| Bazarr | 6767 | Subtitle manager |
-| Overseerr | 5055 | Request management |
-| Tautulli | 8181 | Plex analytics |
+| Service     | Port | Description            |
+| ----------- | ---- | ---------------------- |
+| Gluetun     | -    | VPN client (ProtonVPN) |
+| Prowlarr    | 9696 | Indexer manager        |
+| qBittorrent | 8080 | Torrent client         |
+| SABnzbd     | 8080 | Usenet client          |
+| Radarr      | 7878 | Movie manager          |
+| Sonarr      | 8989 | TV show manager        |
+| Lidarr      | 8686 | Music manager          |
+| Bazarr      | 6767 | Subtitle manager       |
+| Overseerr   | 5055 | Request management     |
+| Tautulli    | 8181 | Plex analytics         |
 
 ## Directory Structure
 
@@ -57,5 +57,5 @@ docker ps --format 'table {{.Names}}\t{{.Status}}'
 cd /srv/docker/media-stack && /opt/bin/docker-compose up -d --remove-orphans
 
 # Check VPN IP
-docker exec nordlynx curl -s https://ipinfo.io/ip
+docker exec gluetun wget -qO- https://ipinfo.io/ip
 ```

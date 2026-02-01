@@ -224,14 +224,14 @@ check_inter_service_communication() {
 
     # Define communication tests with correct endpoints for VPN-protected services
     local communication_tests=(
-        "radarr:nordvpn:9696"    # radarr -> prowlarr (via nordvpn)
-        "radarr:nordvpn:8080"    # radarr -> qbittorrent (via nordvpn)
-        "radarr:nordvpn:8081"    # radarr -> sabnzbd (via nordvpn)
-        "sonarr:nordvpn:9696"    # sonarr -> prowlarr (via nordvpn)
-        "sonarr:nordvpn:8080"    # sonarr -> qbittorrent (via nordvpn)
-        "sonarr:nordvpn:8081"    # sonarr -> sabnzbd (via nordvpn)
-        "lidarr:nordvpn:9696"    # lidarr -> prowlarr (via nordvpn)
-        "lidarr:nordvpn:8080"    # lidarr -> qbittorrent (via nordvpn)
+        "radarr:gluetun:9696"    # radarr -> prowlarr (via gluetun)
+        "radarr:gluetun:8080"    # radarr -> qbittorrent (via gluetun)
+        "radarr:gluetun:8081"    # radarr -> sabnzbd (via gluetun)
+        "sonarr:gluetun:9696"    # sonarr -> prowlarr (via gluetun)
+        "sonarr:gluetun:8080"    # sonarr -> qbittorrent (via gluetun)
+        "sonarr:gluetun:8081"    # sonarr -> sabnzbd (via gluetun)
+        "lidarr:gluetun:9696"    # lidarr -> prowlarr (via gluetun)
+        "lidarr:gluetun:8080"    # lidarr -> qbittorrent (via gluetun)
         "bazarr:radarr:7878"     # bazarr -> radarr (direct)
         "bazarr:sonarr:8989"     # bazarr -> sonarr (direct)
         "overseerr:radarr:7878"  # overseerr -> radarr (direct)
