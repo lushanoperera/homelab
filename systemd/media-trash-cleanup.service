@@ -1,0 +1,10 @@
+[Unit]
+Description=Cleanup old media trash files
+After=mnt-media.mount
+Requires=mnt-media.mount
+
+[Service]
+Type=oneshot
+Environment=TRASH_DIR=/mnt/media/.trash
+Environment=TRASH_RETENTION_DAYS=7
+ExecStart=/bin/bash -c 'find ${TRASH_DIR} -type f -mtime +${TRASH_RETENTION_DAYS} -delete 2>/dev/null || true; find ${TRASH_DIR} -type d -empty -delete 2>/dev/null || true'

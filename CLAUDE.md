@@ -124,6 +124,19 @@ ssh core@192.168.100.100 '/opt/bin/media-audit.sh --no-plex'  # Skip Plex sync c
 ssh core@192.168.100.100 'cat /tmp/media-audit/summary.json'
 ssh core@192.168.100.100 'cat /tmp/media-audit/orphaned_tv.txt'
 ssh core@192.168.100.100 'cat /tmp/media-audit/duplicates.txt'
+
+# Duplicate cleanup (safe deletion with trash + *arr sync)
+ssh core@192.168.100.100 '/opt/bin/media-cleanup.sh --dry-run'      # Preview deletions
+ssh core@192.168.100.100 '/opt/bin/media-cleanup.sh --auto'         # Auto-delete safe duplicates
+ssh core@192.168.100.100 '/opt/bin/media-cleanup.sh --interactive'  # Manual review each
+
+# View cleanup results and trash
+ssh core@192.168.100.100 'cat /tmp/media-cleanup/proposed_deletions.txt'
+ssh core@192.168.100.100 'cat /tmp/media-cleanup/cleanup_log.txt'
+ssh core@192.168.100.100 'ls -la /mnt/media/.trash/'
+
+# Recover from trash (within 7 days)
+ssh core@192.168.100.100 'cat /mnt/media/.trash/deletion_log.txt'  # Find original paths
 ```
 
 ### NFS Operations
