@@ -72,5 +72,9 @@ rclone.conf
 # Restic
 restic-env.sh
 
-# Claude Code
-.claude/
+# Claude Code - track skills, ignore user-specific files
+.claude/*
+!.claude/skills/
+.claude/settings.local.json
+.claude/settings.json
+.claude/plans/
