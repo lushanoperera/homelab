@@ -115,6 +115,15 @@ ssh core@192.168.100.100 '/opt/bin/qbt-port-sync.sh'
 
 # NFS mount status
 ssh core@192.168.100.100 'systemctl status mnt-media.mount'
+
+# Media library audit (find orphans and duplicates)
+ssh core@192.168.100.100 '/opt/bin/media-audit.sh'
+ssh core@192.168.100.100 '/opt/bin/media-audit.sh --no-plex'  # Skip Plex sync check
+
+# View audit results
+ssh core@192.168.100.100 'cat /tmp/media-audit/summary.json'
+ssh core@192.168.100.100 'cat /tmp/media-audit/orphaned_tv.txt'
+ssh core@192.168.100.100 'cat /tmp/media-audit/duplicates.txt'
 ```
 
 ### NFS Operations
