@@ -26,6 +26,14 @@ ssh root@192.168.100.4
 
 Primary NFS server for LXC container data on winston. Storage LAN (192.168.200.0/24) provides dedicated bandwidth for NFS traffic.
 
+## LXC Containers
+
+| VMID | Hostname   | IP              | Service                     |
+| ---- | ---------- | --------------- | --------------------------- |
+| 120  | technitium | 192.168.100.120 | Technitium DNS (secondary)  |
+
+See [lxc-120-technitium.md](lxc-120-technitium.md) for setup details.
+
 ## ZFS Pool
 
 7x SSD in RAIDZ2 configuration.

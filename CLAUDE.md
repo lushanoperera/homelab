@@ -27,9 +27,18 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 **Flatcar VM 100** (`ssh core@192.168.100.100`):
 
 - Media stack: gluetun (ProtonVPN), prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr, overseerr, tautulli
+- Technitium DNS (secondary node, `/srv/docker/dns/`)
 - Traefik (DMZ IP: 192.168.7.119)
 - CrowdSec + Bouncer
 - Cloudflared tunnel
+
+**QNAP NAS** (`192.168.100.254`):
+
+- Technitium DNS (primary node, via Container Station)
+
+**LXC Containers (reginald)**:
+
+- 120: Technitium DNS (secondary node, native install)
 
 **LXC Containers (winston)**:
 
@@ -37,6 +46,24 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 - 103: Immich
 - 104: WireGuard
 - 105: Plex
+
+### DNS Architecture (Technitium Cluster)
+
+3-node Technitium DNS cluster with native zone replication. Replaced Pi-hole + Nebula Sync.
+
+| Node | IP | Role | Deployment |
+|------|-----|------|------------|
+| qnap.dns.disconnesso.home.arpa | 192.168.100.254 | Primary | Docker (Container Station) |
+| flatcar.dns.disconnesso.home.arpa | 192.168.100.100 | Secondary | Docker (`/srv/docker/dns/`) |
+| reginald.dns.disconnesso.home.arpa | 192.168.100.120 | Secondary | Native (Debian 12 LXC) |
+
+- Cluster domain: `dns.disconnesso.home.arpa`
+- Web UI: `http://<node-ip>:5380`
+- Clustering port: 53443/tcp (HTTPS API)
+- Blocklists: StevenBlack/hosts + Hagezi Pro (~265K domains)
+- Local zone: `home.disconnesso.com` with wildcard CNAME → 192.168.100.100
+- DNSSEC: enabled
+- Media containers use `/srv/docker/resolv.conf` pointing to all 3 nodes
 
 ## Directory Structure
 
@@ -46,6 +73,8 @@ homelab/
 │   ├── sr-iov/              # GPU SR-IOV guides
 │   ├── migrations/          # Migration docs (LXC→Docker, MinIO→Garage)
 │   └── guides/              # Deployment guides
+├── dns/
+│   └── technitium/          # Technitium DNS (QNAP primary compose + env)
 ├── hosts/                   # Proxmox host configs (winston, reginald)
 ├── vms/
 │   ├── flatcar-media/       # VM 100 - Media stack
@@ -161,6 +190,37 @@ ssh root@192.168.100.4 'exportfs -ra'
 
 # Remount NFS on Flatcar (if stale)
 ssh core@192.168.100.100 'sudo systemctl restart mnt-media.mount'
+```
+
+### Technitium DNS Operations
+
+```bash
+# Cluster status (from any node)
+ssh core@192.168.100.100 'curl -s "http://localhost:5380/api/admin/cluster/state?token=TOKEN"'
+
+# Test DNS resolution from each node
+dig @192.168.100.254 google.com +short  # QNAP
+dig @192.168.100.100 google.com +short  # Flatcar
+dig @192.168.100.120 google.com +short  # Reginald
+
+# Test local zone
+dig @192.168.100.100 home.disconnesso.com +short
+dig @192.168.100.100 test.home.disconnesso.com +short
+
+# Technitium container on Flatcar
+ssh core@192.168.100.100 'cd /srv/docker/dns && /opt/bin/docker-compose ps'
+ssh core@192.168.100.100 'cd /srv/docker/dns && /opt/bin/docker-compose logs --tail 50'
+
+# Technitium service on Reginald (native install, service=dns)
+ssh root@192.168.100.4 'pct exec 120 -- systemctl status dns'
+
+# Web admin UIs
+# QNAP:     http://192.168.100.254:5380
+# Flatcar:  http://192.168.100.100:5380
+# Reginald: http://192.168.100.120:5380
+
+# Update media container DNS (resolv.conf)
+ssh core@192.168.100.100 'cat /srv/docker/resolv.conf'
 ```
 
 ### Ignition Workflow
@@ -287,6 +347,17 @@ LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
 | Stale data from aggressive caching      | Reduce `actimeo` from 600 to 60 seconds          |
 | Data split between parent/child         | Check `zfs get mountpoint` SOURCE is "inherited" |
 | Partial stale handles (some paths work) | `exportfs -ra` on server, restart containers     |
+
+### Technitium DNS
+
+| Issue                                        | Solution                                                     |
+| -------------------------------------------- | ------------------------------------------------------------ |
+| Docker image has no wget/curl                | Use `bash -c '</dev/tcp/localhost/5380'` for healthcheck      |
+| Cluster join needs domain URL, not IP        | `primaryNodeUrl` must use domain; pass IP via `primaryNodeIpAddress` |
+| Secondary nodes don't see each other         | Normal until primary syncs config to all nodes               |
+| `DNS_SERVER_DOMAIN` becomes node FQDN        | Set to short name (e.g. `flatcar`), cluster appends domain   |
+| Reginald service name is `dns` not `technitium` | Technitium installer creates `dns.service`                |
+| QNAP port 53 conflict with dnsmasq              | Bind to management IP: `192.168.100.254:53:53` instead of `0.0.0.0` |
 
 ### GPU SR-IOV
 

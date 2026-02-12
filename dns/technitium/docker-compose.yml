@@ -1,0 +1,28 @@
+# Technitium DNS Server - QNAP NAS (Primary Node)
+# Part of 3-node Technitium cluster with native zone replication
+# Nodes: QNAP (primary), Flatcar VM 100 (secondary), Reginald LXC 120 (secondary)
+
+services:
+  technitium:
+    image: technitium/dns-server:latest
+    container_name: technitium
+    hostname: technitium-qnap
+    ports:
+      - "192.168.100.254:53:53/udp"
+      - "192.168.100.254:53:53/tcp"
+      - "5380:5380"       # Web admin UI
+      - "53443:53443/tcp" # HTTPS API + clustering
+    environment:
+      - DNS_SERVER_DOMAIN=dns.disconnesso.home.arpa
+      - DNS_SERVER_ADMIN_PASSWORD=${TECHNITIUM_ADMIN_PASSWORD}
+      - DNS_SERVER_PREFER_IPV6=false
+      - DNS_SERVER_LOG_USING_LOCAL_TIME=true
+    volumes:
+      - /share/Data/technitium/config:/etc/dns
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/5380' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

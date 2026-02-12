@@ -8,6 +8,7 @@ This repository contains configurations, scripts, and documentation for:
 
 - **Proxmox VE hosts** (winston, reginald)
 - **Flatcar Container Linux VMs** with Docker stacks
+- **DNS** (Technitium 3-node cluster)
 - **Reverse proxy** (Traefik) with security hardening (CrowdSec)
 - **S3 storage** (MinIO → Garage migration)
 - **Infrastructure automation** (Ansible, Terraform)
@@ -32,12 +33,13 @@ This repository contains configurations, scripts, and documentation for:
 │         │       │  .100.100 │      │           │
 │ LXC:    │       │           │      │ NFS       │
 │ - Nextcloud     │ Docker:   │      │ Server    │
-│ - Immich │      │ - Media   │      └───────────┘
-│ - Plex   │      │ - Traefik │
-│ - WireGuard     │ - CrowdSec│
-└─────────┘       └───────────┘
-     │                  │
-     └────────┬─────────┘
+│ - Immich │      │ - Media   │      │           │
+│ - Plex   │      │ - Traefik │      │ LXC 120:  │
+│ - WireGuard     │ - CrowdSec│      │ - DNS     │
+└─────────┘       │ - DNS     │      └───────────┘
+                  └───────────┘
+     │                  │                  │
+     └────────┬─────────┴──────────────────┘
               │
       ┌───────┴───────┐
       │   QNAP NAS    │
@@ -45,6 +47,7 @@ This repository contains configurations, scripts, and documentation for:
       │               │
       │ - MinIO S3    │
       │ - PBS VM      │
+      │ - DNS (primary)│
       └───────────────┘
 ```
 
@@ -73,6 +76,8 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 ## Directory Structure
 
 ```
+├── dns/
+│   └── technitium/          # DNS cluster (QNAP primary compose)
 ├── docs/                    # Documentation
 │   ├── sr-iov/              # GPU SR-IOV guides
 │   ├── migrations/          # Migration docs
@@ -106,6 +111,16 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 
 ## Services
 
+### DNS (Technitium Cluster)
+
+3-node Technitium DNS cluster with native zone replication.
+
+| Node     | IP              | Role      | Web UI              |
+| -------- | --------------- | --------- | ------------------- |
+| QNAP     | 192.168.100.254 | Primary   | :5380               |
+| Flatcar  | 192.168.100.100 | Secondary | :5380               |
+| Reginald | 192.168.100.120 | Secondary | :5380               |
+
 ### Media Stack (Flatcar VM 100)
 
 - qBittorrent, SABnzbd (downloaders)
@@ -113,7 +128,7 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 - Prowlarr (indexer)
 - Overseerr (requests)
 - Tautulli (Plex analytics)
-- NordLynx (VPN)
+- Gluetun (ProtonVPN)
 
 ### LXC Containers (winston)
 
@@ -150,10 +165,11 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 
 ### QNAP NAS (TS-251+)
 
-| Service | IP              | Description           |
-| ------- | --------------- | --------------------- |
-| PBS VM  | 192.168.100.187 | Proxmox Backup Server |
-| MinIO   | 192.168.200.210 | S3-compatible storage |
+| Service     | IP              | Description              |
+| ----------- | --------------- | ------------------------ |
+| Technitium  | 192.168.100.254 | DNS primary (port 53)    |
+| PBS VM      | 192.168.100.187 | Proxmox Backup Server    |
+| MinIO       | 192.168.200.210 | S3-compatible storage    |
 
 ## Documentation
 

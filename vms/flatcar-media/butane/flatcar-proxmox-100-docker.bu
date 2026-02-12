@@ -20,8 +20,9 @@ storage:
           [Network]
           Address=192.168.100.100/24
           Gateway=192.168.100.1
-          DNS=192.168.100.1
-          DNS=8.8.8.8
+          DNS=192.168.100.254
+          DNS=192.168.100.100
+          DNS=192.168.100.120
 
     # NFS client configuration
     - path: /etc/modules-load.d/nfs.conf

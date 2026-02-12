@@ -22,12 +22,14 @@ ssh core@192.168.100.100
 | Bazarr      | 6767 | Subtitle manager       |
 | Overseerr   | 5055 | Request management     |
 | Tautulli    | 8181 | Plex analytics         |
+| Technitium  | 5380 | DNS server (secondary) |
 
 ## Directory Structure
 
 ```
 ├── butane/           # Butane configuration sources (.bu)
 ├── ignition/         # Compiled Ignition files (.ign) - DO NOT EDIT
+├── dns-compose.yml   # Technitium DNS compose (secondary node)
 └── docker-compose.yml
 ```
 
@@ -45,6 +47,7 @@ cat ignition/config.ign | jq '.'
 
 - Docker Compose: `/opt/bin/docker-compose` (standalone binary)
 - Media stack: `/srv/docker/media-stack/`
+- DNS stack: `/srv/docker/dns/`
 - Media data: `/mnt/media/`
 
 ## Common Operations

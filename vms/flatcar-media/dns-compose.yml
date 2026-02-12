@@ -1,0 +1,28 @@
+# Technitium DNS Server - Flatcar VM 100 (Secondary Node)
+# Deployed to /srv/docker/dns/ on Flatcar
+# Joins cluster via primary at 192.168.100.250:53443
+
+services:
+  technitium:
+    image: technitium/dns-server:latest
+    container_name: technitium
+    hostname: technitium-flatcar
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      - "5380:5380"       # Web admin UI
+      - "53443:53443/tcp" # HTTPS API + clustering
+    environment:
+      - DNS_SERVER_DOMAIN=dns.disconnesso.home.arpa
+      - DNS_SERVER_ADMIN_PASSWORD=${TECHNITIUM_ADMIN_PASSWORD}
+      - DNS_SERVER_PREFER_IPV6=false
+      - DNS_SERVER_LOG_USING_LOCAL_TIME=true
+    volumes:
+      - /srv/docker/dns/config:/etc/dns
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/5380' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
