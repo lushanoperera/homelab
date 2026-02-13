@@ -3,6 +3,9 @@ services:
     image: qmcgaw/gluetun:latest
     container_name: gluetun
     hostname: gluetun
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+      - "com.centurylinklabs.watchtower.scope=weekly"
     cap_add:
       - NET_ADMIN
     devices:
@@ -85,6 +88,9 @@ services:
   qbittorrent:
     image: linuxserver/qbittorrent:latest
     container_name: qbittorrent
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+      - "com.centurylinklabs.watchtower.scope=weekly"
     mem_limit: 1g
     environment:
       - PUID=${PUID}
@@ -317,6 +323,22 @@ services:
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_INCLUDE_RESTARTING=true
       - WATCHTOWER_SCHEDULE=0 0 4 * * * # Daily at 4 AM
+      - WATCHTOWER_NOTIFICATIONS=shoutrrr
+      - WATCHTOWER_NOTIFICATION_URL=${WATCHTOWER_NOTIFICATION_URL:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  watchtower-weekly:
+    image: nickfedor/watchtower:latest
+    container_name: watchtower-weekly
+    hostname: watchtower-weekly
+    environment:
+      - TZ=${TZ}
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+      - WATCHTOWER_SCHEDULE=0 0 4 * * 1 # Weekly on Monday at 4 AM
+      - WATCHTOWER_SCOPE=weekly
       - WATCHTOWER_NOTIFICATIONS=shoutrrr
       - WATCHTOWER_NOTIFICATION_URL=${WATCHTOWER_NOTIFICATION_URL:-}
     volumes:
