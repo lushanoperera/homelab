@@ -1,0 +1,18 @@
+[Unit]
+Description=Traefik Reverse Proxy Stack
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/docker/traefik
+ExecStartPre=-/usr/bin/docker network create -d macvlan --subnet=192.168.7.0/24 --gateway=192.168.7.1 --ip-range=192.168.7.119/32 -o parent=eth1 dmz_macvlan
+ExecStartPre=-/usr/bin/docker network create traefik_internal
+ExecStart=/opt/bin/docker-compose up -d
+ExecStop=/opt/bin/docker-compose down
+TimeoutStartSec=300
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

@@ -23,6 +23,10 @@ ssh core@192.168.100.100
 | Overseerr   | 5055 | Request management     |
 | Tautulli    | 8181 | Plex analytics         |
 | Technitium  | 5380 | DNS server (secondary) |
+| Caddy       | 443  | Internal reverse proxy (`*.home.disconnesso.com`) |
+| Traefik     | 443  | Public reverse proxy (DMZ 192.168.7.119) |
+| CrowdSec    | -    | Security engine (Traefik bouncer) |
+| Portainer   | 9443 | Container management UI |
 
 ## Directory Structure
 
@@ -47,6 +51,8 @@ cat ignition/config.ign | jq '.'
 
 - Docker Compose: `/opt/bin/docker-compose` (standalone binary)
 - Media stack: `/srv/docker/media-stack/`
+- Caddy (internal proxy): `/srv/docker/caddy/`
+- Traefik (public proxy): `/srv/docker/traefik/`
 - DNS stack: `/srv/docker/dns/`
 - Media data: `/mnt/media/`
 
@@ -62,3 +68,5 @@ cd /srv/docker/media-stack && /opt/bin/docker-compose up -d --remove-orphans
 # Check VPN IP
 docker exec gluetun wget -qO- https://ipinfo.io/ip
 ```
+
+> **Note:** Always use `/opt/bin/docker-compose` (standalone binary) for all compose operations. The Docker Compose plugin (`docker compose`) is not available on Flatcar — `/usr/lib` is read-only and the Butane download fails silently.

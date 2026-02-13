@@ -9,7 +9,7 @@ This repository contains configurations, scripts, and documentation for:
 - **Proxmox VE hosts** (winston, reginald)
 - **Flatcar Container Linux VMs** with Docker stacks
 - **DNS** (Technitium 3-node cluster)
-- **Reverse proxy** (Traefik) with security hardening (CrowdSec)
+- **Reverse proxies** — Caddy (internal LAN) + Traefik (public DMZ) with CrowdSec
 - **S3 storage** (MinIO → Garage migration)
 - **Infrastructure automation** (Ansible, Terraform)
 
@@ -34,9 +34,10 @@ This repository contains configurations, scripts, and documentation for:
 │ LXC:    │       │           │      │ NFS       │
 │ - Nextcloud     │ Docker:   │      │ Server    │
 │ - Immich │      │ - Media   │      │           │
-│ - Plex   │      │ - Traefik │      │ LXC 120:  │
-│ - WireGuard     │ - CrowdSec│      │ - DNS     │
-└─────────┘       │ - DNS     │      └───────────┘
+│ - Plex   │      │ - Caddy   │      │ LXC 120:  │
+│ - WireGuard     │ - Traefik │      │ - DNS     │
+└─────────┘       │ - CrowdSec│      └───────────┘
+                  │ - DNS     │
                   └───────────┘
      │                  │                  │
      └────────┬─────────┴──────────────────┘
@@ -87,7 +88,8 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 │   ├── flatcar-media/       # Media stack VM
 │   └── pbs/                 # Backup server
 ├── networking/
-│   ├── traefik/             # Reverse proxy
+│   ├── caddy/               # Internal reverse proxy (*.home.disconnesso.com)
+│   ├── traefik/             # Public reverse proxy + CrowdSec
 │   └── cloudflare-tunnel/   # Tunnel config
 ├── storage/
 │   ├── minio/               # Current S3

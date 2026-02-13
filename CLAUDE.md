@@ -273,8 +273,8 @@ cat vms/flatcar-media/ignition/config.ign | jq '.'
 
 ```bash
 # Caddy stack management
-ssh core@192.168.100.100 'cd /srv/docker/caddy && docker compose ps'
-ssh core@192.168.100.100 'cd /srv/docker/caddy && docker compose logs --tail 50'
+ssh core@192.168.100.100 'cd /srv/docker/caddy && /opt/bin/docker-compose ps'
+ssh core@192.168.100.100 'cd /srv/docker/caddy && /opt/bin/docker-compose logs --tail 50'
 
 # Validate Caddyfile syntax
 ssh core@192.168.100.100 'docker exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile'
@@ -385,6 +385,9 @@ LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
 | Watchtower image           | `nickfedor/watchtower` (containrrr discontinued)  |
 | VPN secrets                | Docker secrets in `./secrets/`, not env vars      |
 | Compose .env missing vars  | All vars must be in `.env`; see `.env.example`    |
+| Compose plugin not installed | Flatcar `/usr/lib` is read-only; Butane download fails silently |
+| Systemd `\|\| true` syntax  | Use `-` prefix: `ExecStartPre=-/usr/bin/docker ...` |
+| SSH heredoc corrupts shebang | Pipe from local heredoc instead of remote heredoc |
 
 ### NFS + ZFS
 
