@@ -17,12 +17,13 @@ services:
     environment:
       - VPN_SERVICE_PROVIDER=protonvpn
       - VPN_TYPE=wireguard
-      - WIREGUARD_PRIVATE_KEY=${PROTON_WIREGUARD_KEY}
-      - WIREGUARD_ADDRESSES=${PROTON_WIREGUARD_ADDRESS}
       - VPN_PORT_FORWARDING=on
       - PORT_FORWARD_ONLY=on
       - SERVER_COUNTRIES=${VPN_COUNTRY:-Netherlands}
       - TZ=${TZ}
+    secrets:
+      - wireguard_private_key
+      - wireguard_addresses
     volumes:
       - ${CONFIG_ROOT}/gluetun:/gluetun
     sysctls:
@@ -308,7 +309,7 @@ services:
       start_period: 60s
 
   watchtower:
-    image: containrrr/watchtower:latest
+    image: nickfedor/watchtower:latest
     container_name: watchtower
     hostname: watchtower
     environment:
@@ -321,6 +322,12 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
+
+secrets:
+  wireguard_private_key:
+    file: ./secrets/wireguard_private_key
+  wireguard_addresses:
+    file: ./secrets/wireguard_addresses
 
 # Using default bridge network - no custom network definition needed
 # Docker will automatically create internal DNS for container-to-container communication

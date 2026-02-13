@@ -43,6 +43,7 @@ venv/
 node_modules/
 
 # Secrets and credentials
+secrets/
 *.pem
 *.key
 *.crt

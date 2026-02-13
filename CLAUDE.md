@@ -26,7 +26,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 
 **Flatcar VM 100** (`ssh core@192.168.100.100`):
 
-- Media stack: gluetun (ProtonVPN), prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr, overseerr, tautulli
+- Media stack: gluetun (ProtonVPN), prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr, overseerr, tautulli, watchtower (nickfedor fork)
 - Technitium DNS (secondary node, `/srv/docker/dns/`)
 - Traefik (DMZ IP: 192.168.7.119)
 - CrowdSec + Bouncer
@@ -334,6 +334,9 @@ LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
 | Network interface naming   | Always use `eth0` (not `ens18`) in Butane configs |
 | Ignition only applies once | Manual fixes needed for post-boot changes         |
 | Docker Compose location    | `/opt/bin/docker-compose` (standalone binary)     |
+| Watchtower image           | `nickfedor/watchtower` (containrrr discontinued)  |
+| VPN secrets                | Docker secrets in `./secrets/`, not env vars      |
+| Compose .env missing vars  | All vars must be in `.env`; see `.env.example`    |
 
 ### NFS + ZFS
 
