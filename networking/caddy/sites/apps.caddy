@@ -1,0 +1,39 @@
+# Application services (remote LAN + local HTTPS backends)
+
+@nextcloud host nextcloud.home.disconnesso.com
+handle @nextcloud {
+	reverse_proxy 192.168.100.101:11000
+}
+
+@homeassistant host homeassistant.home.disconnesso.com
+handle @homeassistant {
+	reverse_proxy 192.168.100.102:8123
+}
+
+@immich host immich.home.disconnesso.com
+handle @immich {
+	reverse_proxy 192.168.100.103:2283
+}
+
+@vaultwarden host vaultwarden.home.disconnesso.com
+handle @vaultwarden {
+	reverse_proxy https://localhost:8200 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+}
+
+@portainer host portainer.home.disconnesso.com
+handle @portainer {
+	reverse_proxy https://localhost:9443 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+}
+
+@wireguard host wireguard.home.disconnesso.com
+handle @wireguard {
+	reverse_proxy 192.168.100.104:10086
+}

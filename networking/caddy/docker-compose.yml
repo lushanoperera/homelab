@@ -1,0 +1,26 @@
+services:
+  caddy:
+    build: .
+    image: caddy-cloudflare:latest
+    container_name: caddy
+    network_mode: host
+    environment:
+      - TZ=${TZ:-Europe/Amsterdam}
+    secrets:
+      - cloudflare_api_token
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./sites:/etc/caddy/sites:ro
+      - /srv/docker/caddy/data:/data
+      - /srv/docker/caddy/config:/config
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:2019/config/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+secrets:
+  cloudflare_api_token:
+    file: ./secrets/cloudflare_api_token

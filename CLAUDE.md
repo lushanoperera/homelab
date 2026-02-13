@@ -27,8 +27,9 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 **Flatcar VM 100** (`ssh core@192.168.100.100`):
 
 - Media stack: gluetun (ProtonVPN), prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr, overseerr, tautulli, watchtower (nickfedor fork)
+- Caddy reverse proxy (`/srv/docker/caddy/`) — internal `*.home.disconnesso.com` routing
 - Technitium DNS (secondary node, `/srv/docker/dns/`)
-- Traefik (DMZ IP: 192.168.7.119)
+- Traefik (DMZ IP: 192.168.7.119) — public services via Cloudflare Tunnel
 - CrowdSec + Bouncer
 - Cloudflared tunnel
 
@@ -65,6 +66,28 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 - DNSSEC: enabled
 - Media containers use `/srv/docker/resolv.conf` pointing to all 3 nodes
 
+### Reverse Proxy Architecture
+
+Two-proxy split: Caddy handles internal LAN routing, Traefik handles public internet traffic.
+
+```
+LAN clients → Caddy (192.168.100.100:443)
+                  │  *.home.disconnesso.com wildcard cert
+                  │  (Let's Encrypt via Cloudflare DNS challenge)
+                  │
+                  ├── localhost ports (media stack, vaultwarden, portainer)
+                  └── remote IPs (LXCs, Proxmox hosts, NAS)
+
+Internet → Cloudflare Tunnel → Traefik (192.168.7.119)
+```
+
+| Proxy   | Scope    | Cert                        | Config Location            |
+| ------- | -------- | --------------------------- | -------------------------- |
+| Caddy   | Internal | `*.home.disconnesso.com`    | `/srv/docker/caddy/`       |
+| Traefik | Public   | Per-service via Cloudflare  | `/srv/docker/traefik/`     |
+
+Caddy proxies 20 services across 3 site files: `media.caddy` (9), `apps.caddy` (6), `infrastructure.caddy` (5).
+
 ## Directory Structure
 
 ```
@@ -83,6 +106,7 @@ homelab/
 │   │   └── docker-compose.yml
 │   └── pbs/                 # Proxmox Backup Server
 ├── networking/
+│   ├── caddy/               # Internal reverse proxy (*.home.disconnesso.com)
 │   ├── traefik/             # External reverse proxy + CrowdSec
 │   └── cloudflare-tunnel/   # Cloudflare tunnel config
 ├── storage/
@@ -245,7 +269,31 @@ cat vms/flatcar-media/ignition/config.ign | jq '.'
   --vm-name docker-node-1 --memory 8192 --cores 4
 ```
 
-### Traefik & CrowdSec
+### Caddy (Internal Reverse Proxy)
+
+```bash
+# Caddy stack management
+ssh core@192.168.100.100 'cd /srv/docker/caddy && docker compose ps'
+ssh core@192.168.100.100 'cd /srv/docker/caddy && docker compose logs --tail 50'
+
+# Validate Caddyfile syntax
+ssh core@192.168.100.100 'docker exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile'
+
+# Reload config without downtime
+ssh core@192.168.100.100 'docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile'
+
+# Check wildcard cert status
+ssh core@192.168.100.100 'docker exec caddy caddy list-modules | grep dns'
+ssh core@192.168.100.100 'docker logs caddy 2>&1 | grep -i certificate'
+
+# Admin API (config inspection)
+ssh core@192.168.100.100 'curl -s http://localhost:2019/config/ | jq .'
+
+# Validate all 20 proxy hosts
+ssh core@192.168.100.100 '/srv/docker/caddy/validate.sh'
+```
+
+### Traefik & CrowdSec (Public Reverse Proxy)
 
 ```bash
 # Check Traefik DMZ IP

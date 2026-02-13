@@ -1,0 +1,46 @@
+# Media stack services (localhost via gluetun or direct)
+
+@overseerr host overseerr.home.disconnesso.com
+handle @overseerr {
+	reverse_proxy localhost:5055
+}
+
+@prowlarr host prowlarr.home.disconnesso.com
+handle @prowlarr {
+	reverse_proxy localhost:9696
+}
+
+@qbittorrent host qbittorrent.home.disconnesso.com
+handle @qbittorrent {
+	reverse_proxy localhost:8080
+}
+
+@sabnzbd host sabnzbd.home.disconnesso.com
+handle @sabnzbd {
+	reverse_proxy localhost:7777
+}
+
+@radarr host radarr.home.disconnesso.com
+handle @radarr {
+	reverse_proxy localhost:7878
+}
+
+@sonarr host sonarr.home.disconnesso.com
+handle @sonarr {
+	reverse_proxy localhost:8989
+}
+
+@lidarr host lidarr.home.disconnesso.com
+handle @lidarr {
+	reverse_proxy localhost:8686
+}
+
+@bazarr host bazarr.home.disconnesso.com
+handle @bazarr {
+	reverse_proxy localhost:6767
+}
+
+@tautulli host tautulli.home.disconnesso.com
+handle @tautulli {
+	reverse_proxy localhost:8181
+}

@@ -1,0 +1,38 @@
+# Infrastructure services (Proxmox hosts, NAS, DNS — all HTTPS backends)
+
+@proxmox host proxmox.home.disconnesso.com
+handle @proxmox {
+	reverse_proxy https://192.168.100.38:8006 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+}
+
+@reginald host reginald.home.disconnesso.com
+handle @reginald {
+	reverse_proxy https://192.168.100.4:8006 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+}
+
+@pbs host pbs.home.disconnesso.com
+handle @pbs {
+	reverse_proxy https://192.168.100.187:8007 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+}
+
+@qnap host qnap.home.disconnesso.com
+handle @qnap {
+	reverse_proxy 192.168.100.254:8080
+}
+
+@technitium host technitium.home.disconnesso.com
+handle @technitium {
+	reverse_proxy 192.168.100.254:5380
+}

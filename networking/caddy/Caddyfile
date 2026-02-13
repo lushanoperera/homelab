@@ -1,0 +1,17 @@
+{
+	email admin@disconnesso.com
+	admin :2019
+}
+
+*.home.disconnesso.com {
+	tls {
+		dns cloudflare {env.CF_API_TOKEN}
+	}
+
+	import sites/*.caddy
+
+	# Catch-all for undefined subdomains
+	handle {
+		respond "Not Found" 404
+	}
+}

@@ -1,0 +1,3 @@
+# Docker secrets (token files)
+secrets/*
+!secrets/.gitkeep
