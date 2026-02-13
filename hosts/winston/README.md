@@ -2,19 +2,19 @@
 
 ## Hardware
 
-| Component | Specification                            |
-| --------- | ---------------------------------------- |
-| Chassis   | Minisforum MS-01                         |
+| Component | Specification                             |
+| --------- | ----------------------------------------- |
+| Chassis   | Minisforum MS-01                          |
 | CPU       | Intel i9-13900H (14C/20T, up to 5.2 GHz) |
-| RAM       | TBD                                      |
-| Network   | 2.5GbE + Storage LAN                     |
+| RAM       | 32 GB                                     |
+| Proxmox   | 9.1.4 (Kernel 6.17.2-2-pve)              |
 
 ## Network
 
-| Interface | IP             | Purpose      |
-| --------- | -------------- | ------------ |
-| Infra     | 192.168.100.38 | Management   |
-| Storage   | 192.168.200.38 | NFS, backups |
+| Interface | Bridge | IP             | Purpose      |
+| --------- | ------ | -------------- | ------------ |
+| Infra     | vmbr0  | 192.168.100.38 | Management   |
+| Storage   | vmbr1  | 192.168.200.38 | NFS, backups |
 
 ## SSH
 
@@ -28,19 +28,29 @@ ssh root@192.168.100.38
 - Quick Sync hardware transcoding
 - Thermal management (powersave governor, thermald)
 
-## LXC Containers
+## Storage
 
-| CTID | Service   |
-| ---- | --------- |
-| 101  | Nextcloud |
-| 103  | Immich    |
-| 104  | WireGuard |
-| 105  | Plex      |
+| Name            | Type | Size    | Purpose                   |
+| --------------- | ---- | ------- | ------------------------- |
+| local           | dir  | —       | ISOs, templates           |
+| local-lvm       | lvm  | —       | Container rootfs, VM disk |
+| pbs-backupnas   | pbs  | —       | PBS backup target         |
+| vmpool          | lvm  | 967 GB  | VM disk images            |
 
 ## VMs
 
-| VMID | Name          | Purpose     |
-| ---- | ------------- | ----------- |
-| 100  | flatcar-media | Media stack |
+| VMID | Name          | IP              | CPU | Memory | Disk    | Purpose          |
+| ---- | ------------- | --------------- | --- | ------ | ------- | ---------------- |
+| 100  | flatcar-media | 192.168.100.100 | 4   | 8 GB   | 41.3 GB | Media stack      |
+| 102  | homeassistant | 192.168.100.102 | 2   | 4 GB   | 34.4 GB | Home Assistant   |
+
+## LXC Containers
+
+| CTID | Service   | IP              | CPU | Memory | Disk    |
+| ---- | --------- | --------------- | --- | ------ | ------- |
+| 101  | Nextcloud | 192.168.100.101 | 4   | 5.4 GB | 53.7 GB |
+| 103  | Immich    | 192.168.100.103 | 4   | 8.6 GB | 21.5 GB |
+| 104  | WireGuard | 192.168.100.104 | 1   | 512 MB | 4.3 GB  |
+| 105  | Plex      | 192.168.100.105 | 4   | 2.1 GB | 12.9 GB |
 
 See `../../docs/thermal-management.md` for thermal configuration.

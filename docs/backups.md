@@ -8,7 +8,6 @@ The homelab uses multiple backup strategies:
 | ------------ | ---------------- | -------- | -------------------------- |
 | VM/Container | PBS              | QNAP NAS | All VMs and LXC containers |
 | Application  | Restic           | MinIO S3 | Nextcloud, Immich data     |
-| Application  | (not configured) | —        | Vaultwarden (manual only)  |
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -111,52 +110,6 @@ PBS provides VM-level backups with deduplication and integrity verification.
 
 ---
 
-## Flatcar VM: Vaultwarden
-
-| Setting   | Value                    |
-| --------- | ------------------------ |
-| VM IP     | 10.21.21.104             |
-| SSH       | `ssh core@10.21.21.104`  |
-| Data Path | `/opt/vaultwarden/data/` |
-| Database  | SQLite (`db.sqlite3`)    |
-
-### Current Backup Status
-
-| Method                     | Status            |
-| -------------------------- | ----------------- |
-| PBS (VM-level)             | ✅ Configured     |
-| File-level (Restic/rclone) | ❌ Not configured |
-
-**PBS** backs up the entire Flatcar VM, which includes Vaultwarden.
-
-**File-level backup** is not currently automated. Only manual tar command exists:
-
-```bash
-ssh core@10.21.21.104 "sudo tar -czf /tmp/vaultwarden-backup.tar.gz -C /opt/vaultwarden data"
-```
-
-### Critical Data to Back Up
-
-| Path                       | Content                 |
-| -------------------------- | ----------------------- |
-| `/opt/vaultwarden/data/`   | Database, attachments   |
-| `/opt/vaultwarden/.env`    | SMTP credentials        |
-| `/opt/infrastructure/.env` | Cloudflare tunnel token |
-| `/opt/crowdsec/.env`       | CrowdSec API key        |
-
-### Other Services on Flatcar
-
-| Service     | Data Location                     |
-| ----------- | --------------------------------- |
-| Traefik     | Volume: `traefik_logs`            |
-| Cloudflared | Token in `.env`                   |
-| CrowdSec    | `/opt/crowdsec/db/`               |
-| n8n         | Named volumes                     |
-| Portainer   | Named volume                      |
-| NPM         | Docker container (internal proxy) |
-
----
-
 ## Manual Operations
 
 ### Restic (LXC containers)
@@ -176,29 +129,15 @@ restic check          # Verify integrity
 restic unlock         # Unlock stuck repo
 ```
 
-### Vaultwarden (Flatcar)
-
-```bash
-# Manual backup
-ssh core@10.21.21.104 "sudo tar -czf /tmp/vaultwarden-backup.tar.gz -C /opt/vaultwarden data"
-
-# Copy backup locally
-scp core@10.21.21.104:/tmp/vaultwarden-backup.tar.gz .
-
-# Check data directory
-ssh core@10.21.21.104 "ls -lah /opt/vaultwarden/data/"
-```
-
 ---
 
 ## Backup Summary
 
-| Service         | PBS     | Restic   | File-level |
-| --------------- | ------- | -------- | ---------- |
-| Nextcloud (101) | ✅      | ✅ Daily | —          |
-| Immich (103)    | ✅      | ✅ Daily | —          |
-| Vaultwarden     | ✅ (VM) | ❌       | ❌ Manual  |
-| WireGuard (104) | ✅      | —        | —          |
-| Plex (105)      | ✅      | —        | —          |
-
-**Recommendation:** Consider adding automated file-level backup for Vaultwarden (Restic to MinIO or rclone to ZFS on reginald) for faster granular recovery.
+| Service              | PBS | Restic   | File-level |
+| -------------------- | --- | -------- | ---------- |
+| flatcar-media (100)  | ✅  | —        | —          |
+| Nextcloud (101)      | ✅  | ✅ Daily | —          |
+| homeassistant (102)  | ✅  | —        | —          |
+| Immich (103)         | ✅  | ✅ Daily | —          |
+| WireGuard (104)      | ✅  | —        | —          |
+| Plex (105)           | ✅  | —        | —          |

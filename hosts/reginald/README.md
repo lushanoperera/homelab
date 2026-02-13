@@ -6,15 +6,17 @@
 | --------- | --------------------------- |
 | Chassis   | Zimaboard 832               |
 | CPU       | Intel Celeron N3450 (4C/4T) |
+| RAM       | 8 GB                        |
 | Expansion | SATA PCIe controller card   |
 | Storage   | 7x SSD in ZFS RAIDZ2 pool   |
+| Proxmox   | 9.1.5 (Kernel 6.17.4-2-pve) |
 
 ## Network
 
-| Interface | IP            | Purpose    |
-| --------- | ------------- | ---------- |
-| Infra     | 192.168.100.4 | Management |
-| Storage   | 192.168.200.4 | NFS server |
+| Interface | Bridge | IP            | Purpose    |
+| --------- | ------ | ------------- | ---------- |
+| Infra     | vmbr0  | 192.168.100.4 | Management |
+| Storage   | vmbr1 (bond0) | 192.168.200.4 | NFS server |
 
 ## SSH
 
@@ -28,12 +30,19 @@ Primary NFS server for LXC container data on winston. Storage LAN (192.168.200.0
 
 ## LXC Containers
 
-| VMID | Hostname   | IP              | Service                     |
-| ---- | ---------- | --------------- | --------------------------- |
-| 120  | technitium | 192.168.100.120 | Technitium DNS (secondary)  |
+| VMID | Hostname   | IP              | CPU | Memory | Disk   | Service                    |
+| ---- | ---------- | --------------- | --- | ------ | ------ | -------------------------- |
+| 120  | technitium | 192.168.100.120 | 2   | 512 MB | 4.1 GB | Technitium DNS (secondary) |
+| 123  | fileserver | 192.168.100.123 | 2   | 512 MB | 8.4 GB | Samba file share           |
 
 See [lxc-120-technitium.md](lxc-120-technitium.md) for setup details.
 
 ## ZFS Pool
 
 7x SSD in RAIDZ2 configuration.
+
+| Metric   | Value  |
+| -------- | ------ |
+| Total    | 10.1 TB |
+| Used     | 8.1 TB |
+| Capacity | 80%    |

@@ -6,21 +6,28 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 
 ### Network Architecture
 
-| Network     | Subnet           | Purpose                                  |
-| ----------- | ---------------- | ---------------------------------------- |
-| Infra VLAN  | 192.168.100.0/24 | Management, services, general traffic    |
-| Storage LAN | 192.168.200.0/24 | Dedicated storage traffic (NFS, backups) |
-| DMZ VLAN    | 192.168.7.0/24   | Internet-facing services (Traefik)       |
+| Network     | Subnet            | VLAN | Purpose                                  |
+| ----------- | ----------------- | ---- | ---------------------------------------- |
+| Management  | 192.168.1.0/24    | 1    | Gateway, APs, default devices            |
+| Trusted     | 192.168.2.0/24    | 2    | Personal devices (phones, laptops)       |
+| Guests      | 192.168.3.0/24    | 3    | Guest WiFi                               |
+| IoT         | 192.168.4.0/24    | 4    | Smart home, Alexa, cameras, sensors      |
+| Multimedia  | 192.168.5.0/24    | 5    | Sonos, Sky Q, media players              |
+| Infra       | 192.168.100.0/20  | 100  | Proxmox hosts, VMs, LXCs, services      |
+| DMZ         | 192.168.7.0/24    | 7    | Internet-facing services (Traefik)       |
+| Storage LAN | 192.168.200.0/24  | —    | Dedicated NFS/backup traffic (not on UFG)|
 
 ### Hosts & VMs
 
-| Host/VM                | IP                         | Role                                      |
-| ---------------------- | -------------------------- | ----------------------------------------- |
-| winston                | 192.168.100.38 / .200.38   | Primary Proxmox VE host                   |
-| reginald               | 192.168.100.4 / .200.4     | Secondary Proxmox VE host (NFS source)    |
-| flatcar-media (VM 100) | 192.168.100.100            | Media stack (Sonarr, Radarr, qBittorrent) |
-| PBS                    | 192.168.100.187            | Proxmox Backup Server (on QNAP)           |
-| QNAP NAS               | 192.168.100.254 / .200.254 | Storage (MinIO S3, NFS)                   |
+| Host/VM                    | IP                         | Role                                      |
+| -------------------------- | -------------------------- | ----------------------------------------- |
+| UniFi Fiber Gateway (UCG-Fiber) | 192.168.1.1           | Router, firewall, UniFi OS 10.1 controller |
+| winston                    | 192.168.100.38 / .200.38   | Primary Proxmox VE 9.1.4 host (32 GB)    |
+| reginald                   | 192.168.100.4 / .200.4     | Secondary Proxmox VE 9.1.5 host (8 GB)   |
+| flatcar-media (VM 100)     | 192.168.100.100            | Media stack (Sonarr, Radarr, qBittorrent) |
+| homeassistant (VM 102)     | 192.168.100.102            | Home Assistant                            |
+| PBS                        | 192.168.100.187            | Proxmox Backup Server (on QNAP)          |
+| QNAP NAS                  | 192.168.100.254 / .200.254 | Storage (MinIO S3, NFS)                   |
 
 ### Services by Location
 
@@ -37,16 +44,22 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 
 - Technitium DNS (primary node, via Container Station)
 
-**LXC Containers (reginald)**:
+**VMs (winston)**:
 
-- 120: Technitium DNS (secondary node, native install)
+- 100: flatcar-media — Media stack (192.168.100.100)
+- 102: homeassistant — Home Assistant (192.168.100.102)
 
 **LXC Containers (winston)**:
 
-- 101: Nextcloud
-- 103: Immich
-- 104: WireGuard
-- 105: Plex
+- 101: Nextcloud (192.168.100.101)
+- 103: Immich (192.168.100.103)
+- 104: WireGuard (192.168.100.104)
+- 105: Plex (192.168.100.105)
+
+**LXC Containers (reginald)**:
+
+- 120: Technitium DNS (secondary node, native install) (192.168.100.120)
+- 123: Samba file share (192.168.100.123)
 
 ### DNS Architecture (Technitium Cluster)
 
@@ -116,6 +129,7 @@ homelab/
 ├── scripts/
 │   ├── hosts/               # Host management scripts
 │   ├── vms/                 # VM deployment scripts
+│   ├── network/             # Network discovery (UniFi inventory)
 │   ├── migrations/          # Migration scripts
 │   └── monitoring/          # GPU monitoring scripts
 ├── automation/
@@ -245,6 +259,25 @@ ssh root@192.168.100.4 'pct exec 120 -- systemctl status dns'
 
 # Update media container DNS (resolv.conf)
 ssh core@192.168.100.100 'cat /srv/docker/resolv.conf'
+```
+
+### UniFi Gateway Inventory
+
+```bash
+# Requires: scripts/network/.env (copy .env.example, fill in credentials)
+
+# Full inventory (clients, devices, networks, health)
+./scripts/network/unifi-inventory.sh
+
+# Specific sections
+./scripts/network/unifi-inventory.sh --health
+./scripts/network/unifi-inventory.sh --clients
+./scripts/network/unifi-inventory.sh --networks
+./scripts/network/unifi-inventory.sh --devices
+
+# Raw JSON output (for piping to jq)
+./scripts/network/unifi-inventory.sh --all --json
+./scripts/network/unifi-inventory.sh --clients --json | jq '.data[] | {ip, hostname, mac}'
 ```
 
 ### Ignition Workflow

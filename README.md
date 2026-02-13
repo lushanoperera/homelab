@@ -20,6 +20,13 @@ This repository contains configurations, scripts, and documentation for:
                         │
                    Cloudflare
                         │
+           ┌────────────┴────────────┐
+           │  UCG-Fiber (Gateway)    │  WiFi: 2x U7-Pro-Wall
+           │  192.168.1.1            │  (.1.77, .1.226)
+           │  UniFi OS 10.1          │
+           │  7 VLANs managed        │
+           └────────────┬────────────┘
+                        │
               ┌─────────┴─────────┐
               │   Traefik (DMZ)   │
               │  192.168.7.119    │
@@ -31,14 +38,15 @@ This repository contains configurations, scripts, and documentation for:
 │ winston │       │  Flatcar  │      │ reginald  │
 │ .100.38 │       │  VM 100   │      │  .100.4   │
 │         │       │  .100.100 │      │           │
-│ LXC:    │       │           │      │ NFS       │
-│ - Nextcloud     │ Docker:   │      │ Server    │
-│ - Immich │      │ - Media   │      │           │
-│ - Plex   │      │ - Caddy   │      │ LXC 120:  │
-│ - WireGuard     │ - Traefik │      │ - DNS     │
-└─────────┘       │ - CrowdSec│      └───────────┘
-                  │ - DNS     │
-                  └───────────┘
+│ VM 102: │       │           │      │ NFS       │
+│ - HA    │       │ Docker:   │      │ Server    │
+│         │       │ - Media   │      │           │
+│ LXC:    │       │ - Caddy   │      │ LXC 120:  │
+│ - Nextcloud     │ - Traefik │      │ - DNS     │
+│ - Immich │      │ - CrowdSec│      │           │
+│ - Plex   │      │ - DNS     │      │ LXC 123:  │
+│ - WireGuard     └───────────┘      │ - Samba   │
+└─────────┘                          └───────────┘
      │                  │                  │
      └────────┬─────────┴──────────────────┘
               │
@@ -95,7 +103,7 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 │   ├── minio/               # Current S3
 │   ├── garage/              # Target S3
 │   └── nfs/                 # NFS config
-├── scripts/                 # Automation scripts
+├── scripts/                 # Automation & network discovery
 ├── automation/
 │   ├── ansible/             # Playbooks
 │   └── terraform/           # IaC
@@ -105,11 +113,16 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 
 ## Networks
 
-| Network     | Subnet           | Purpose              |
-| ----------- | ---------------- | -------------------- |
-| Infra VLAN  | 192.168.100.0/24 | Management, services |
-| Storage LAN | 192.168.200.0/24 | NFS, backups         |
-| DMZ VLAN    | 192.168.7.0/24   | Internet-facing      |
+| Network     | Subnet            | VLAN | Purpose                    |
+| ----------- | ----------------- | ---- | -------------------------- |
+| Management  | 192.168.1.0/24    | 1    | Gateway, APs, defaults     |
+| Trusted     | 192.168.2.0/24    | 2    | Personal devices           |
+| Guests      | 192.168.3.0/24    | 3    | Guest WiFi                 |
+| IoT         | 192.168.4.0/24    | 4    | Smart home, cameras        |
+| Multimedia  | 192.168.5.0/24    | 5    | Sonos, Sky Q, media        |
+| Infra       | 192.168.100.0/20  | 100  | Proxmox, VMs, services     |
+| DMZ         | 192.168.7.0/24    | 7    | Internet-facing (Traefik)  |
+| Storage LAN | 192.168.200.0/24  | —    | NFS, backups (not on UFG)  |
 
 ## Services
 
@@ -132,12 +145,28 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 - Tautulli (Plex analytics)
 - Gluetun (ProtonVPN)
 
+### VMs (winston)
+
+| VMID | Name          | IP              | Purpose        |
+| ---- | ------------- | --------------- | -------------- |
+| 100  | flatcar-media | 192.168.100.100 | Media stack    |
+| 102  | homeassistant | 192.168.100.102 | Home Assistant |
+
 ### LXC Containers (winston)
 
-- Nextcloud (101)
-- Immich (103)
-- WireGuard (104)
-- Plex (105)
+| CTID | Service   | IP              |
+| ---- | --------- | --------------- |
+| 101  | Nextcloud | 192.168.100.101 |
+| 103  | Immich    | 192.168.100.103 |
+| 104  | WireGuard | 192.168.100.104 |
+| 105  | Plex      | 192.168.100.105 |
+
+### LXC Containers (reginald)
+
+| VMID | Service        | IP              |
+| ---- | -------------- | --------------- |
+| 120  | Technitium DNS | 192.168.100.120 |
+| 123  | Samba          | 192.168.100.123 |
 
 ### Storage
 
@@ -153,6 +182,8 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 | --------- | ----------------------------------------------- |
 | Chassis   | Minisforum MS-01                                |
 | CPU       | Intel i9-13900H (14C/20T, up to 5.2 GHz)        |
+| RAM       | 32 GB                                           |
+| Proxmox   | 9.1.4                                           |
 | Features  | SR-IOV GPU passthrough, Quick Sync HW transcode |
 | Thermal   | powersave governor, thermald                    |
 
@@ -162,7 +193,9 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 | --------- | --------------------------------- |
 | Chassis   | Zimaboard 832                     |
 | CPU       | Intel Celeron N3450 (4C/4T)       |
-| Storage   | 7x SSD in ZFS RAIDZ2 pool         |
+| RAM       | 8 GB                              |
+| Proxmox   | 9.1.5                             |
+| Storage   | 7x SSD in ZFS RAIDZ2 (10.1 TB)   |
 | Role      | NFS server for LXC container data |
 
 ### QNAP NAS (TS-251+)
