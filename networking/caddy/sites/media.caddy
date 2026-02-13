@@ -17,7 +17,7 @@ handle @qbittorrent {
 
 @sabnzbd host sabnzbd.home.disconnesso.com
 handle @sabnzbd {
-	reverse_proxy localhost:7777
+	reverse_proxy localhost:8081
 }
 
 @radarr host radarr.home.disconnesso.com

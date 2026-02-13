@@ -17,11 +17,7 @@ handle @immich {
 
 @vaultwarden host vaultwarden.home.disconnesso.com
 handle @vaultwarden {
-	reverse_proxy https://localhost:8200 {
-		transport http {
-			tls_insecure_skip_verify
-		}
-	}
+	reverse_proxy localhost:8200
 }
 
 @portainer host portainer.home.disconnesso.com
