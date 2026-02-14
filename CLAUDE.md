@@ -25,7 +25,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 | winston                    | 192.168.100.38 / .200.38   | Primary Proxmox VE 9.1.4 host (32 GB)    |
 | reginald                   | 192.168.100.4 / .200.4     | Secondary Proxmox VE 9.1.5 host (8 GB)   |
 | flatcar-media (VM 100)     | 192.168.100.100            | Media stack (Sonarr, Radarr, qBittorrent) |
-| homeassistant (VM 102)     | 192.168.100.102            | Home Assistant                            |
+| homeassistant (VM 102)     | .100.102 / .4.102 / .5.102 | Home Assistant (multi-VLAN: Infra+IoT+Multimedia) |
 | PBS                        | 192.168.100.187            | Proxmox Backup Server (on QNAP)          |
 | QNAP NAS                  | 192.168.100.254 / .200.254 | Storage (MinIO S3, NFS)                   |
 
@@ -47,7 +47,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 **VMs (winston)**:
 
 - 100: flatcar-media — Media stack (192.168.100.100)
-- 102: homeassistant — Home Assistant (192.168.100.102)
+- 102: homeassistant — Home Assistant (192.168.100.102, IoT .4.102, Multimedia .5.102)
 
 **LXC Containers (winston)**:
 
@@ -445,6 +445,14 @@ LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
 | `DNS_SERVER_DOMAIN` becomes node FQDN        | Set to short name (e.g. `flatcar`), cluster appends domain   |
 | Reginald service name is `dns` not `technitium` | Technitium installer creates `dns.service`                |
 | QNAP port 53 conflict with dnsmasq              | Bind to management IP: `192.168.100.254:53:53` instead of `0.0.0.0` |
+
+### Proxmox Networking
+
+| Issue                                        | Solution                                                     |
+| -------------------------------------------- | ------------------------------------------------------------ |
+| VM VLAN tag but no traffic (0 rx bytes)      | Check `bridge-vids` on vmbr0 includes that VLAN              |
+| Multicast/mDNS discovery broken in VM        | Remove `firewall=1` from NIC or add multicast allow rules    |
+| DHCP works but discovery doesn't             | DHCP unicast succeeds even when multicast is filtered         |
 
 ### GPU SR-IOV
 

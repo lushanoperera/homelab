@@ -150,7 +150,7 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 | VMID | Name          | IP              | Purpose        |
 | ---- | ------------- | --------------- | -------------- |
 | 100  | flatcar-media | 192.168.100.100 | Media stack    |
-| 102  | homeassistant | 192.168.100.102 | Home Assistant |
+| 102  | homeassistant | .100.102 / .4.102 / .5.102 | Home Assistant (multi-VLAN) |
 
 ### LXC Containers (winston)
 

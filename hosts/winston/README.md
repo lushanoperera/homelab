@@ -13,7 +13,7 @@
 
 | Interface | Bridge | IP             | Purpose      |
 | --------- | ------ | -------------- | ------------ |
-| Infra     | vmbr0  | 192.168.100.38 | Management   |
+| Infra     | vmbr0  | 192.168.100.38 | Management (VLANs 4,5,7,100) |
 | Storage   | vmbr1  | 192.168.200.38 | NFS, backups |
 
 ## SSH
@@ -42,7 +42,7 @@ ssh root@192.168.100.38
 | VMID | Name          | IP              | CPU | Memory | Disk    | Purpose          |
 | ---- | ------------- | --------------- | --- | ------ | ------- | ---------------- |
 | 100  | flatcar-media | 192.168.100.100 | 4   | 8 GB   | 41.3 GB | Media stack      |
-| 102  | homeassistant | 192.168.100.102 | 2   | 4 GB   | 34.4 GB | Home Assistant   |
+| 102  | homeassistant | .100.102 / .4.102 / .5.102 | 2   | 4 GB   | 34.4 GB | Home Assistant (multi-VLAN) |
 
 ## LXC Containers
 
