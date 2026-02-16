@@ -1,0 +1,17 @@
+# Watchtower - QNAP NAS (Container Station)
+# Auto-updates all containers on this host daily at 4 AM
+# Migrated from Container Station UI to compose for version control
+
+services:
+  watchtower:
+    image: nickfedor/watchtower:latest
+    container_name: watchtower
+    hostname: watchtower-qnap
+    environment:
+      - TZ=${TZ:-Europe/London}
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+      - WATCHTOWER_SCHEDULE=0 0 4 * * *
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
