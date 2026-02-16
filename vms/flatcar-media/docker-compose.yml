@@ -265,32 +265,29 @@ services:
       retries: 3
       start_period: 90s
 
-  overseerr:
-    image: linuxserver/overseerr:develop
-    container_name: overseerr
-    hostname: overseerr
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-      - UMASK=${UMASK}
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
+    hostname: seerr
+    init: true
     ports:
-      - "${OVERSEERR_PORT}:5055"
+      - "${SEERR_PORT:-5055}:5055"
     volumes:
-      - ${CONFIG_ROOT}/overseerr:/config
+      - ${CONFIG_ROOT}/seerr:/app/config
       - /srv/docker/resolv.conf:/etc/resolv.conf:ro
-    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
     depends_on:
       radarr:
         condition: service_healthy
       sonarr:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5055/api/v1/status"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5055/api/v1/status"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 90s
+    restart: unless-stopped
 
   tautulli:
     image: linuxserver/tautulli:latest

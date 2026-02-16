@@ -41,7 +41,7 @@ Port forwarding enables incoming torrent connections, improving:
 │  └─────────────┴──────────────┴──────────────┘            │
 │                                                             │
 │  Direct network (host bridge):                             │
-│  radarr, sonarr, lidarr, bazarr, overseerr, tautulli      │
+│  radarr, sonarr, lidarr, bazarr, seerr, tautulli           │
 └─────────────────────────────────────────────────────────────┘
 ```
 

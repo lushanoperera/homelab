@@ -8,7 +8,7 @@
 : "${SONARR_URL:=http://localhost:8989}"
 : "${RADARR_URL:=http://localhost:7878}"
 : "${PLEX_URL:=http://192.168.100.38:32400}"
-: "${OVERSEERR_URL:=http://localhost:5055}"
+: "${SEERR_URL:=http://localhost:5055}"
 : "${MEDIA_ROOT:=/mnt/media}"
 
 # Video file extensions (pipe-separated for regex)
@@ -49,12 +49,12 @@ plex_api() {
     curl -sf -H "X-Plex-Token: $PLEX_TOKEN" -H "Accept: application/json" "$PLEX_URL$endpoint"
 }
 
-# Overseerr API helper
-# Usage: overseerr_api "/request"
-overseerr_api() {
+# Seerr API helper
+# Usage: seerr_api "/request"
+seerr_api() {
     local endpoint=$1
-    [[ -z "${OVERSEERR_API_KEY:-}" ]] && { echo "ERROR: OVERSEERR_API_KEY not set" >&2; return 1; }
-    curl -sf -H "X-Api-Key: $OVERSEERR_API_KEY" "$OVERSEERR_URL/api/v1$endpoint"
+    [[ -z "${SEERR_API_KEY:-}" ]] && { echo "ERROR: SEERR_API_KEY not set" >&2; return 1; }
+    curl -sf -H "X-Api-Key: $SEERR_API_KEY" "$SEERR_URL/api/v1$endpoint"
 }
 
 # Get Plex token from Plex LXC on Proxmox

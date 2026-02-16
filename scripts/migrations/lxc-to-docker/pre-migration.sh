@@ -15,7 +15,7 @@ LOG_FILE="${LOG_FILE:-migration-$(date +%Y%m%d_%H%M%S).log}"
 
 # Container list - adjust as needed
 CONTAINERS=(109 110 111 112 113 114 115 116 117 121)
-CONTAINER_NAMES=(qbittorrent sabnzbd radarr sonarr lidarr bazarr flaresolver prowlarr overseerr tautulli)
+CONTAINER_NAMES=(qbittorrent sabnzbd radarr sonarr lidarr bazarr flaresolver prowlarr seerr tautulli)
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
@@ -158,7 +158,7 @@ backup_container_data() {
             "prowlarr")
                 data_paths="/var/lib/prowlarr /home/*/.config/Prowlarr"
                 ;;
-            "overseerr")
+            "seerr")
                 data_paths="/var/lib/overseerr /opt/overseerr/config"
                 ;;
             "tautulli")

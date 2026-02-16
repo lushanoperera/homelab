@@ -11,7 +11,7 @@ TOTAL=0
 
 declare -A SERVICES=(
     # Media stack (localhost)
-    [overseerr]=5055
+    [seerr]=5055
     [prowlarr]=9696
     [qbittorrent]=8080
     [sabnzbd]=7777

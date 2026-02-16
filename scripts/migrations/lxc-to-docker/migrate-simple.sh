@@ -15,10 +15,10 @@ DRY_RUN="${DRY_RUN:-false}"
 KEEP_LXC_RUNNING="${KEEP_LXC_RUNNING:-false}"
 
 # Service definitions (bash 3.2 compatible)
-SERVICES="qbittorrent:8080 sabnzbd:8081 radarr:7878 sonarr:8989 lidarr:8686 bazarr:6767 flaresolverr:8191 prowlarr:9696 overseerr:5055 tautulli:8181"
+SERVICES="qbittorrent:8080 sabnzbd:8081 radarr:7878 sonarr:8989 lidarr:8686 bazarr:6767 flaresolverr:8191 prowlarr:9696 seerr:5055 tautulli:8181"
 
 # Container mapping (LXC ID:service)
-CONTAINERS="109:qbittorrent 110:sabnzbd 111:radarr 112:sonarr 113:lidarr 114:bazarr 115:flaresolverr 116:prowlarr 117:overseerr 121:tautulli"
+CONTAINERS="109:qbittorrent 110:sabnzbd 111:radarr 112:sonarr 113:lidarr 114:bazarr 115:flaresolverr 116:prowlarr 117:seerr 121:tautulli"
 
 # Helper functions for bash 3.2 compatibility
 get_service_port() {
@@ -67,7 +67,7 @@ MIGRATION_ORDER=(
     "sonarr"
     "lidarr"
     "bazarr"
-    "overseerr"
+    "seerr"
     "tautulli"
 )
 

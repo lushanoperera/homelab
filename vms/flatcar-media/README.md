@@ -20,7 +20,7 @@ ssh core@192.168.100.100
 | Sonarr      | 8989 | TV show manager        |
 | Lidarr      | 8686 | Music manager          |
 | Bazarr      | 6767 | Subtitle manager       |
-| Overseerr   | 5055 | Request management     |
+| Seerr       | 5055 | Request management     |
 | Tautulli    | 8181 | Plex analytics         |
 | Technitium  | 5380 | DNS server (secondary) |
 | Caddy       | 443  | Internal reverse proxy (`*.home.disconnesso.com`) |

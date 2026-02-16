@@ -37,7 +37,7 @@ Complete migration of 10 LXC containers from Proxmox to Docker containers on Fla
 | bazarr      | 114    | 192.168.100.114 | 192.168.100.114 | 6767 | Subtitle automation |
 | flaresolver | 115    | 192.168.100.115 | 192.168.100.115 | 8191 | Anti-bot solver     |
 | prowlarr    | 116    | 192.168.100.116 | 192.168.100.116 | 9696 | Indexer manager     |
-| overseerr   | 117    | 192.168.100.117 | 192.168.100.117 | 5055 | Request portal      |
+| seerr       | 117    | 192.168.100.117 | 192.168.100.117 | 5055 | Request portal      |
 | tautulli    | 121    | 192.168.100.121 | 192.168.100.121 | 8181 | Plex monitoring     |
 
 ### Media Directory Mapping
@@ -118,7 +118,7 @@ LIDARR_PORT=8686
 BAZARR_PORT=6767
 FLARESOLVERR_PORT=8191
 PROWLARR_PORT=9696
-OVERSEERR_PORT=5055
+SEERR_PORT=5055
 TAUTULLI_PORT=8181
 ```
 
@@ -166,7 +166,7 @@ TAUTULLI_PORT=8181
 3. qbittorrent & sabnzbd (downloaders)
 4. radarr, sonarr, lidarr (depend on downloaders and prowlarr)
 5. bazarr (depends on radarr & sonarr)
-6. overseerr (depends on radarr & sonarr)
+6. seerr (depends on radarr & sonarr)
 7. tautulli (independent)
 
 ### Phase 3: Validation (5-10 minutes)

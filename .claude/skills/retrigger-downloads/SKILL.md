@@ -1,17 +1,17 @@
 ---
 name: retrigger-downloads
-description: Retrigger Overseerr requests that are stuck (not downloaded, not in queue)
+description: Retrigger Seerr requests that are stuck (not downloaded, not in queue)
 allowed-tools: Bash, Read
 ---
 
 # Retrigger Missing Downloads
 
-Find and retrigger Overseerr requests that failed to download.
+Find and retrigger Seerr requests that failed to download.
 
 ## When to Use
 
 - After VPN reconnection or port change
-- When Overseerr shows pending but nothing downloading
+- When Seerr shows pending but nothing downloading
 - Periodic cleanup of stuck requests
 - After qBittorrent queue was cleared
 
@@ -19,7 +19,7 @@ Find and retrigger Overseerr requests that failed to download.
 
 Ensure `/srv/docker/media-stack/.env` exists on Flatcar VM with:
 
-- `OVERSEERR_API_KEY`
+- `SEERR_API_KEY`
 - `SONARR_API_KEY`
 - `RADARR_API_KEY`
 
@@ -87,7 +87,7 @@ If no stuck items found:
 
 1. All requests may already be downloaded
 2. Items may be in download queue (check qBittorrent)
-3. Overseerr requests may not be approved yet
+3. Seerr requests may not be approved yet
 
 ## Output Format
 

@@ -141,7 +141,7 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 - qBittorrent, SABnzbd (downloaders)
 - Radarr, Sonarr, Lidarr (media managers)
 - Prowlarr (indexer)
-- Overseerr (requests)
+- Seerr (requests)
 - Tautulli (Plex analytics)
 - Gluetun (ProtonVPN)
 

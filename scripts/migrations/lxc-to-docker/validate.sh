@@ -19,7 +19,7 @@ declare -A CONTAINERS=(
     ["bazarr"]="192.168.100.114:6767"
     ["flaresolver"]="192.168.100.115:8191"
     ["prowlarr"]="192.168.100.116:9696"
-    ["overseerr"]="192.168.100.117:5055"
+    ["seerr"]="192.168.100.117:5055"
     ["tautulli"]="192.168.100.121:8181"
 )
 
@@ -32,7 +32,7 @@ declare -A HEALTH_ENDPOINTS=(
     ["bazarr"]="/"
     ["flaresolver"]="/health"
     ["prowlarr"]="/"
-    ["overseerr"]="/api/v1/status"
+    ["seerr"]="/api/v1/status"
     ["tautulli"]="/status"
 )
 

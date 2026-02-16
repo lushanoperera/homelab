@@ -1,7 +1,7 @@
 # Infrastructure services (Proxmox hosts, NAS, DNS — all HTTPS backends)
 
-@proxmox host proxmox.home.disconnesso.com
-handle @proxmox {
+@winston host winston.home.disconnesso.com
+handle @winston {
 	reverse_proxy https://192.168.100.38:8006 {
 		transport http {
 			tls_insecure_skip_verify

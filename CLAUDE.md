@@ -33,7 +33,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 
 **Flatcar VM 100** (`ssh core@192.168.100.100`):
 
-- Media stack: gluetun (ProtonVPN), prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr, overseerr, tautulli, watchtower (nickfedor fork)
+- Media stack: gluetun (ProtonVPN), prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr, seerr, tautulli, watchtower (nickfedor fork)
 - Caddy reverse proxy (`/srv/docker/caddy/`) — internal `*.home.disconnesso.com` routing
 - Technitium DNS (secondary node, `/srv/docker/dns/`)
 - Traefik (DMZ IP: 192.168.7.119) — public services via Cloudflare Tunnel
@@ -43,6 +43,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 **QNAP NAS** (`192.168.100.254`):
 
 - Technitium DNS (primary node, via Container Station)
+- Watchtower (nickfedor fork, daily 4 AM auto-updates)
 
 **VMs (winston)**:
 
@@ -111,6 +112,8 @@ homelab/
 │   └── guides/              # Deployment guides
 ├── dns/
 │   └── technitium/          # Technitium DNS (QNAP primary compose + env)
+├── qnap/                    # QNAP NAS Container Station services
+│   └── watchtower/          # Auto-update all QNAP containers
 ├── hosts/                   # Proxmox host configs (winston, reginald)
 ├── vms/
 │   ├── flatcar-media/       # VM 100 - Media stack

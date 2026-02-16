@@ -37,7 +37,7 @@
 - **lidarr**: `lidarr:8686`
 - **bazarr**: `bazarr:6767`
 - **flaresolverr**: `flaresolverr:8191`
-- **overseerr**: `overseerr:5055`
+- **seerr**: `seerr:5055`
 - **tautulli**: `tautulli:8181`
 
 ## 📋 Validation Tests Updated
@@ -48,7 +48,7 @@ Updated `scripts/validate-simple.sh` with correct communication tests:
 - ✅ `radarr` → `nordvpn:8081` (sabnzbd)
 - ✅ `radarr` → `nordvpn:9696` (prowlarr)
 - ✅ `bazarr` → `radarr:7878` (direct)
-- ✅ `overseerr` → `sonarr:8989` (direct)
+- ✅ `seerr` → `sonarr:8989` (direct)
 - ✅ HTTP health checks now target auth-free root endpoints to avoid 401/404 noise during warm-up
 
 ## 🎯 Migration Quality Assessment

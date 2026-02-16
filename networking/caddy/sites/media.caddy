@@ -1,7 +1,7 @@
 # Media stack services (localhost via gluetun or direct)
 
-@overseerr host overseerr.home.disconnesso.com
-handle @overseerr {
+@seerr host seerr.home.disconnesso.com
+handle @seerr {
 	reverse_proxy localhost:5055
 }
 

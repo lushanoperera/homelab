@@ -24,7 +24,7 @@ declare -A CONTAINER_MAP=(
     ["114"]="bazarr"
     ["115"]="flaresolver"
     ["116"]="prowlarr"
-    ["117"]="overseerr"
+    ["117"]="seerr"
     ["121"]="tautulli"
 )
 
@@ -38,7 +38,7 @@ declare -A DATA_PATHS=(
     ["bazarr"]="/var/lib/bazarr"
     ["flaresolver"]="/opt/flaresolverr/config"
     ["prowlarr"]="/var/lib/prowlarr"
-    ["overseerr"]="/var/lib/overseerr"
+    ["seerr"]="/var/lib/overseerr"
     ["tautulli"]="/var/lib/tautulli"
 )
 
@@ -230,7 +230,7 @@ validate_container() {
         "bazarr") port="6767" ;;
         "flaresolver") port="8191" ;;
         "prowlarr") port="9696" ;;
-        "overseerr") port="5055" ;;
+        "seerr") port="5055" ;;
         "tautulli") port="8181" ;;
     esac
 

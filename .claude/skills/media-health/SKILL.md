@@ -27,7 +27,7 @@ Comprehensive health check for the Flatcar media VM (192.168.100.100).
 | Radarr      | 7878 | Movies      |
 | Lidarr      | 8686 | Music       |
 | Bazarr      | 6767 | Subtitles   |
-| Overseerr   | 5055 | Requests    |
+| Seerr       | 5055 | Requests    |
 | Tautulli    | 8181 | Plex stats  |
 
 ## Instructions
@@ -37,7 +37,7 @@ Comprehensive health check for the Flatcar media VM (192.168.100.100).
 Check all containers are running:
 
 ```bash
-ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "gluetun|qbittorrent|sabnzbd|prowlarr|sonarr|radarr|lidarr|bazarr|overseerr|tautulli|traefik|crowdsec"'
+ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "gluetun|qbittorrent|sabnzbd|prowlarr|sonarr|radarr|lidarr|bazarr|seerr|tautulli|traefik|crowdsec"'
 ```
 
 Look for:
@@ -109,7 +109,7 @@ ssh core@192.168.100.100 'curl -s -o /dev/null -w "%{http_code}" http://localhos
 # Test Radarr
 ssh core@192.168.100.100 'curl -s -o /dev/null -w "%{http_code}" http://localhost:7878/api/v3/system/status -H "X-Api-Key: $(grep RADARR_API_KEY /srv/docker/media-stack/.env | cut -d= -f2)"'
 
-# Test Overseerr
+# Test Seerr
 ssh core@192.168.100.100 'curl -s -o /dev/null -w "%{http_code}" http://localhost:5055/api/v1/status'
 ```
 

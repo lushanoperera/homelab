@@ -21,7 +21,7 @@ Manage Docker containers on Flatcar media VM.
 
 - gluetun, qbittorrent, sabnzbd
 - prowlarr, sonarr, radarr, lidarr, bazarr
-- overseerr, tautulli
+- seerr, tautulli
 
 ### Traefik Stack (`/srv/docker/traefik`)
 

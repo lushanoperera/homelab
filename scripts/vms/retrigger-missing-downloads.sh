@@ -1,5 +1,5 @@
 #!/bin/bash
-# retrigger-missing-downloads.sh - Find stuck Overseerr requests and retrigger searches
+# retrigger-missing-downloads.sh - Find stuck Seerr requests and retrigger searches
 # Deploy to Flatcar VM at /opt/bin/retrigger-missing-downloads.sh
 #
 # Usage: ./retrigger-missing-downloads.sh [--dry-run]
@@ -7,10 +7,10 @@
 # Requires:
 # - .env file with API keys (see .env.example)
 # - jq installed (available in Flatcar)
-# - All services running (Overseerr, Sonarr, Radarr, qBittorrent)
+# - All services running (Seerr, Sonarr, Radarr, qBittorrent)
 #
 # What it does:
-# 1. Gets pending/processing requests from Overseerr
+# 1. Gets pending/processing requests from Seerr
 # 2. Checks if content exists in Sonarr/Radarr
 # 3. Checks if content is currently downloading in qBittorrent
 # 4. For items NOT downloaded AND NOT in queue → triggers search
@@ -60,13 +60,13 @@ else
 fi
 
 # Defaults
-OVERSEERR_URL="${OVERSEERR_URL:-http://localhost:5055}"
+SEERR_URL="${SEERR_URL:-http://localhost:5055}"
 SONARR_URL="${SONARR_URL:-http://localhost:8989}"
 RADARR_URL="${RADARR_URL:-http://localhost:7878}"
 QBITTORRENT_URL="${QBITTORRENT_URL:-http://localhost:8080}"
 
 # Validate required keys
-[[ -z "${OVERSEERR_API_KEY:-}" ]] && { echo "ERROR: OVERSEERR_API_KEY not set"; exit 1; }
+[[ -z "${SEERR_API_KEY:-}" ]] && { echo "ERROR: SEERR_API_KEY not set"; exit 1; }
 [[ -z "${SONARR_API_KEY:-}" ]] && { echo "ERROR: SONARR_API_KEY not set"; exit 1; }
 [[ -z "${RADARR_API_KEY:-}" ]] && { echo "ERROR: RADARR_API_KEY not set"; exit 1; }
 
@@ -92,9 +92,9 @@ die() {
 }
 
 # API helpers
-overseerr_api() {
+seerr_api() {
     local endpoint=$1
-    curl -s -H "X-Api-Key: $OVERSEERR_API_KEY" "$OVERSEERR_URL/api/v1$endpoint"
+    curl -s -H "X-Api-Key: $SEERR_API_KEY" "$SEERR_URL/api/v1$endpoint"
 }
 
 sonarr_api() {
@@ -147,7 +147,7 @@ is_in_queue() {
     echo "$queue" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9\n]//g' | grep -q "$normalized" 2>/dev/null
 }
 
-# Process movie requests - uses Radarr ID directly from Overseerr's externalServiceId
+# Process movie requests - uses Radarr ID directly from Seerr's externalServiceId
 process_movie() {
     local radarr_id=$1
     local queue=$2
@@ -193,7 +193,7 @@ process_movie() {
     fi
 }
 
-# Process TV series requests - uses Sonarr ID directly from Overseerr's externalServiceId
+# Process TV series requests - uses Sonarr ID directly from Seerr's externalServiceId
 process_series() {
     local sonarr_id=$1
     local queue=$2
@@ -261,18 +261,18 @@ main() {
     queue_count=$(echo "$queue" | grep -c . 2>/dev/null || echo "0")
     log_info "Found $queue_count active torrents"
 
-    # Get all Overseerr requests
-    log_info "Fetching Overseerr requests..."
+    # Get all Seerr requests
+    log_info "Fetching Seerr requests..."
     local requests
-    requests=$(overseerr_api "/request?take=500&skip=0&filter=all")
+    requests=$(seerr_api "/request?take=500&skip=0&filter=all")
 
     if [[ -z "$requests" ]]; then
-        die "Failed to fetch Overseerr requests"
+        die "Failed to fetch Seerr requests"
     fi
 
     local total
     total=$(echo "$requests" | jq '.pageInfo.results // 0')
-    log_info "Processing $total Overseerr requests..."
+    log_info "Processing $total Seerr requests..."
 
     # Extract approved but not available requests
     # Status codes: 1=PENDING, 2=APPROVED, 3=DECLINED

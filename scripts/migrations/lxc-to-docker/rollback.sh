@@ -23,7 +23,7 @@ declare -A CONTAINER_MAP=(
     ["114"]="bazarr"
     ["115"]="flaresolver"
     ["116"]="prowlarr"
-    ["117"]="overseerr"
+    ["117"]="seerr"
     ["121"]="tautulli"
 )
 
@@ -50,7 +50,7 @@ stop_docker_containers() {
     ssh -o StrictHostKeyChecking=no "$FLATCAR_USER@$FLATCAR_HOST" "
         cd /srv/docker/media-stack 2>/dev/null && docker compose down || {
             echo 'Compose stack not found, stopping individual containers...'
-            for container in qbittorrent sabnzbd radarr sonarr lidarr bazarr flaresolver prowlarr overseerr tautulli; do
+            for container in qbittorrent sabnzbd radarr sonarr lidarr bazarr flaresolver prowlarr seerr tautulli; do
                 docker stop \$container 2>/dev/null || true
                 docker rm \$container 2>/dev/null || true
             done

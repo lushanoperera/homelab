@@ -19,7 +19,7 @@ declare -A SERVICES=(
     ["bazarr"]="6767"
     ["flaresolverr"]="8191"
     ["prowlarr"]="9696"
-    ["overseerr"]="5055"
+    ["seerr"]="5055"
     ["tautulli"]="8181"
 )
 
@@ -33,7 +33,7 @@ declare -A HEALTH_ENDPOINTS=(
     ["bazarr"]="/"
     ["flaresolverr"]="/health"
     ["prowlarr"]="/"
-    ["overseerr"]="/api/v1/status"
+    ["seerr"]="/api/v1/status"
     ["tautulli"]="/status"
 )
 
@@ -234,8 +234,8 @@ check_inter_service_communication() {
         "lidarr:gluetun:8080"    # lidarr -> qbittorrent (via gluetun)
         "bazarr:radarr:7878"     # bazarr -> radarr (direct)
         "bazarr:sonarr:8989"     # bazarr -> sonarr (direct)
-        "overseerr:radarr:7878"  # overseerr -> radarr (direct)
-        "overseerr:sonarr:8989"  # overseerr -> sonarr (direct)
+        "seerr:radarr:7878"  # seerr -> radarr (direct)
+        "seerr:sonarr:8989"  # seerr -> sonarr (direct)
     )
 
     local failed_communication=()
