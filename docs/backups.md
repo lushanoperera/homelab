@@ -8,24 +8,33 @@ The homelab uses multiple backup strategies:
 | ------------ | ---------------- | -------- | -------------------------- |
 | VM/Container | PBS              | QNAP NAS | All VMs and LXC containers |
 | Application  | Restic           | MinIO S3 | Nextcloud, Immich data     |
+| Cross-site   | PBS sync (push)  | nwlab PBS | Offsite copy to nwlab      |
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Backup Architecture                      │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  winston / reginald                                          │
-│  ┌──────────────┐    PBS     ┌─────────────────────────┐    │
-│  │ VMs & LXCs   │ ─────────→ │ PBS (192.168.100.187)   │    │
-│  └──────────────┘            │ on QNAP TS-251+         │    │
-│                              └─────────────────────────┘    │
-│                                                              │
-│  LXC 101, 103                                               │
-│  ┌──────────────┐   Restic   ┌─────────────────────────┐    │
-│  │ App Data     │ ─────────→ │ MinIO (192.168.200.210) │    │
-│  └──────────────┘            │ on QNAP TS-251+         │    │
-│                              └─────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                        Backup Architecture                            │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│  winston / reginald            PBS (192.168.100.187)                   │
+│  ┌──────────────┐    vzdump   ┌──────────────────────┐                │
+│  │ VMs & LXCs   │ ─────────→ │ pbs-backups          │                │
+│  └──────────────┘             │ (homelab backups)    │                │
+│                               ├──────────────────────┤   push (WG)    │
+│                               │ nwlab-backup (NEW)   │ ←──────────── │
+│                               │ (nwlab offsite copy) │   from nwlab   │
+│                               └──────┬───────────────┘                │
+│                                      │ push (WG)                       │
+│                                      ▼                                 │
+│                               nwlab PBS (10.0.0.6)                     │
+│                               homelab-sync datastore                   │
+│                               (receives homelab push)                  │
+│                                                                        │
+│  LXC 101, 103                                                          │
+│  ┌──────────────┐   Restic   ┌─────────────────────────┐              │
+│  │ App Data     │ ─────────→ │ MinIO (192.168.200.210) │              │
+│  └──────────────┘            │ on QNAP TS-251+         │              │
+│                              └─────────────────────────┘              │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -39,6 +48,31 @@ The homelab uses multiple backup strategies:
 | Scope    | All VMs and LXC containers |
 
 PBS provides VM-level backups with deduplication and integrity verification.
+
+### PBS Datastores
+
+| Datastore | Purpose | Content |
+| --------- | ------- | ------- |
+| `pbs-backups` | Homelab local backups | All local VMs and LXC containers |
+| `nwlab-backup` | nwlab offsite copies (incoming) | nwlab ct/100, ct/101, ct/102, vm/104 |
+
+### Cross-Site Sync (nwlab ↔ homelab)
+
+Both sites push backups to each other for offsite redundancy:
+
+| Direction | Source | Target | Schedule | Via |
+| --------- | ------ | ------ | -------- | --- |
+| nwlab → homelab | nwlab `home-backup` | homelab `nwlab-backup` | 04:00 | WireGuard (10.0.0.6) |
+| homelab → nwlab | homelab `pbs-backups` | nwlab `homelab-sync` | 21:00 | WireGuard (10.21.21.101) |
+
+**Sync job details**:
+- Homelab push job ID: `s-24a0eca7-78f5`
+- Remote: `pbs-nwdesigns` (10.21.21.101)
+- Direction: push, remove-vanished: false
+
+**WireGuard connectivity**: Homelab PBS reaches nwlab via WG overlay. nwlab PBS LXC at `10.21.21.101`, reachable as `10.0.0.6` sees it through the WG tunnel.
+
+**Storage**: `nwlab-backup` datastore on QNAP NFS share `PBS-nwlab` (`192.168.200.254:/PBS-nwlab` → `/mnt/nwlab-backup`).
 
 ---
 

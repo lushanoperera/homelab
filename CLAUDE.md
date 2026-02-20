@@ -27,6 +27,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 | flatcar-media (VM 100)     | 192.168.100.100            | Media stack (Sonarr, Radarr, qBittorrent) |
 | homeassistant (VM 102)     | .100.102 / .4.102 / .5.102 | Home Assistant (multi-VLAN: Infra+IoT+Multimedia) |
 | PBS                        | 192.168.100.187            | Proxmox Backup Server (on QNAP)          |
+| PDM (LXC 106)             | 192.168.100.106            | Proxmox Datacenter Manager                |
 | QNAP NAS                  | 192.168.100.254 / .200.254 | Storage (MinIO S3, NFS)                   |
 
 ### Services by Location
@@ -56,6 +57,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 - 103: Immich (192.168.100.103)
 - 104: WireGuard (192.168.100.104)
 - 105: Plex (192.168.100.105)
+- 106: PDM — Proxmox Datacenter Manager (192.168.100.106)
 
 **LXC Containers (reginald)**:
 
@@ -399,6 +401,10 @@ pvesm status        # Check storage
 ### Backup Flow
 
 ```
+VM/LXC backups → PBS (192.168.100.187) → pbs-backups datastore
+                                        → nwlab-backup datastore (nwlab offsite copies)
+                  PBS push job ──WG──→ nwlab PBS homelab-sync datastore
+
 LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
                                                            ↓
                                                      (migrating to Garage)
