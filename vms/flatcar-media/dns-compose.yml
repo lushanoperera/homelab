@@ -1,6 +1,6 @@
 # Technitium DNS Server - Flatcar VM 100 (Secondary Node)
 # Deployed to /srv/docker/dns/ on Flatcar
-# Joins cluster via primary at 192.168.100.250:53443
+# Joins cluster via primary at 192.168.100.254:53443
 
 services:
   technitium:

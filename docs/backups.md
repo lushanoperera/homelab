@@ -175,3 +175,4 @@ restic unlock         # Unlock stuck repo
 | Immich (103)         | ✅  | ✅ Daily | —          |
 | WireGuard (104)      | ✅  | —        | —          |
 | Plex (105)           | ✅  | —        | —          |
+| PDM (106)            | ✅  | —        | —          |

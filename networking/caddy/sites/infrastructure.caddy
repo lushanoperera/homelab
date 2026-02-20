@@ -36,3 +36,12 @@ handle @qnap {
 handle @technitium {
 	reverse_proxy 192.168.100.254:5380
 }
+
+@pdm host pdm.home.disconnesso.com
+handle @pdm {
+	reverse_proxy https://192.168.100.106:8443 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+}

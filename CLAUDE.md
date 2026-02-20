@@ -40,6 +40,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 - Traefik (DMZ IP: 192.168.7.119) — public services via Cloudflare Tunnel
 - CrowdSec + Bouncer
 - Cloudflared tunnel
+- Kido (Docker app, `kido.giulyart.it`)
 
 **QNAP NAS** (`192.168.100.254`):
 
@@ -102,7 +103,7 @@ Internet → Cloudflare Tunnel → Traefik (192.168.7.119)
 | Caddy   | Internal | `*.home.disconnesso.com`    | `/srv/docker/caddy/`       |
 | Traefik | Public   | Per-service via Cloudflare  | `/srv/docker/traefik/`     |
 
-Caddy proxies 20 services across 3 site files: `media.caddy` (9), `apps.caddy` (6), `infrastructure.caddy` (5).
+Caddy proxies 21 services across 3 site files: `media.caddy` (9), `apps.caddy` (6), `infrastructure.caddy` (6).
 
 ## Directory Structure
 
@@ -327,7 +328,7 @@ ssh core@192.168.100.100 'docker logs caddy 2>&1 | grep -i certificate'
 # Admin API (config inspection)
 ssh core@192.168.100.100 'curl -s http://localhost:2019/config/ | jq .'
 
-# Validate all 20 proxy hosts
+# Validate all 21 proxy hosts
 ssh core@192.168.100.100 '/srv/docker/caddy/validate.sh'
 ```
 
@@ -374,6 +375,7 @@ pvesm status        # Check storage
 | Nextcloud          | nextcloud.lushanoperera.com | 192.168.100.101:11000  |
 | Traefik Dashboard  | traefik.lushanoperera.com   | 192.168.7.119:8080     |
 | CrowdSec Dashboard | crowdsec.lushanoperera.com  | crowdsec-metabase:3001 |
+| Kido               | kido.giulyart.it            | 192.168.100.122:3000/3001 |
 
 ## Storage Architecture
 

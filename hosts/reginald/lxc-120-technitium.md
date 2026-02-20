@@ -45,7 +45,7 @@ http://192.168.100.120:5380
 
 ## Cluster Role
 
-Secondary node in 3-node Technitium cluster (domain: `dns.disconnesso.home.arpa`). Joins primary at `https://192.168.100.250:53443`.
+Secondary node in 3-node Technitium cluster (domain: `dns.disconnesso.home.arpa`). Joins primary at `https://192.168.100.254:53443`.
 
 ## Rollback
 

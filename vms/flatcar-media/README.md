@@ -15,7 +15,7 @@ ssh core@192.168.100.100
 | Gluetun     | -    | VPN client (ProtonVPN) |
 | Prowlarr    | 9696 | Indexer manager        |
 | qBittorrent | 8080 | Torrent client         |
-| SABnzbd     | 8080 | Usenet client          |
+| SABnzbd     | 8081 | Usenet client          |
 | Radarr      | 7878 | Movie manager          |
 | Sonarr      | 8989 | TV show manager        |
 | Lidarr      | 8686 | Music manager          |

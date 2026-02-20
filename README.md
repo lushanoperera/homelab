@@ -144,6 +144,7 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 - Seerr (requests)
 - Tautulli (Plex analytics)
 - Gluetun (ProtonVPN)
+- Kido (Docker app, `kido.giulyart.it`)
 
 ### VMs (winston)
 
@@ -160,6 +161,7 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 | 103  | Immich    | 192.168.100.103 |
 | 104  | WireGuard | 192.168.100.104 |
 | 105  | Plex      | 192.168.100.105 |
+| 106  | PDM       | 192.168.100.106 |
 
 ### LXC Containers (reginald)
 
