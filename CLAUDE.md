@@ -24,7 +24,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 | UniFi Fiber Gateway (UCG-Fiber) | 192.168.1.1           | Router, firewall, UniFi OS 10.1 controller |
 | winston                    | 192.168.100.38 / .200.38   | Primary Proxmox VE 9.1.4 host (32 GB)    |
 | reginald                   | 192.168.100.4 / .200.4     | Secondary Proxmox VE 9.1.5 host (8 GB)   |
-| flatcar-media (VM 100)     | 192.168.100.100            | Media stack (Sonarr, Radarr, qBittorrent) |
+| flatcar-media (VM 100)     | .100.100 / .7.119 / .200.100 | Media stack (Sonarr, Radarr, qBittorrent) |
 | homeassistant (VM 102)     | .100.102 / .4.102 / .5.102 | Home Assistant (multi-VLAN: Infra+IoT+Multimedia) |
 | PBS                        | 192.168.100.187            | Proxmox Backup Server (on QNAP)          |
 | PDM (LXC 106)             | 192.168.100.106            | Proxmox Datacenter Manager                |
@@ -49,7 +49,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 
 **VMs (winston)**:
 
-- 100: flatcar-media — Media stack (192.168.100.100)
+- 100: flatcar-media — Media stack (Infra .100.100, DMZ .7.119, Storage .200.100)
 - 102: homeassistant — Home Assistant (192.168.100.102, IoT .4.102, Multimedia .5.102)
 
 **LXC Containers (winston)**:
@@ -216,15 +216,23 @@ ssh core@192.168.100.100 'cat /mnt/media/.trash/deletion_log.txt'  # Find origin
 
 ```bash
 # Check NFS exports on Reginald
-ssh root@192.168.100.4 'exportfs -v | grep media'
+ssh root@192.168.100.4 'exportfs -v'
 
 # Check ZFS mountpoints (ensure all inherited)
 ssh root@192.168.100.4 'zfs list -o name,mountpoint,mounted | grep media'
 
+# Check movies bind mount
+ssh root@192.168.100.4 'systemctl status media-movies.mount'
+
 # Verify data consistency across all hosts
-ssh root@192.168.100.4 'ls /media/tv | wc -l'      # Reginald
+ssh root@192.168.100.4 'ls /media/tv | wc -l'           # Reginald
 ssh root@192.168.100.38 'ls /mnt/nfs_media/tv | wc -l'  # Winston
 ssh core@192.168.100.100 'ls /mnt/media/tv | wc -l'     # Flatcar
+
+# Verify movies visible on all hosts
+ssh root@192.168.100.4 'ls /media/movies | wc -l'           # Reginald
+ssh root@192.168.100.38 'ls /mnt/nfs_media/movies | wc -l'  # Winston
+ssh core@192.168.100.100 'ls /mnt/media/movies | wc -l'     # Flatcar
 
 # Write test through full chain
 ssh core@192.168.100.100 'docker exec sonarr touch /tv/test && docker exec sonarr rm /tv/test'
@@ -234,6 +242,10 @@ ssh root@192.168.100.4 'exportfs -ra'
 
 # Remount NFS on Flatcar (if stale)
 ssh core@192.168.100.100 'sudo systemctl restart mnt-media.mount'
+ssh core@192.168.100.100 'sudo systemctl restart mnt-media-movies.mount'
+
+# Check all NFS mounts on Flatcar (all via Storage LAN 192.168.200.x)
+ssh core@192.168.100.100 'mount -t nfs4'
 ```
 
 ### Technitium DNS Operations
@@ -383,22 +395,37 @@ pvesm status        # Check storage
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ REGINALD (ZFS Source)                                       │
+│ REGINALD (ZFS Source — 192.168.200.4)                       │
+│                                                             │
 │ rpool/shared/media → /media                                 │
 │   ├─ /media/downloads  (ZFS child dataset)                  │
-│   ├─ /media/movies     (bind mount from /rpool/shared/...)  │
+│   ├─ /media/movies     (systemd bind mount from             │
+│   │                     /rpool/shared/media/movies)          │
+│   │                     After=zfs-mount, Before=nfs-server   │
 │   ├─ /media/music      (ZFS child dataset)                  │
 │   └─ /media/tv         (ZFS child dataset)                  │
 │                                                             │
-│ NFS Export: /media (crossmnt for ZFS child datasets)        │
+│ NFS Exports (Storage LAN 192.168.200.0/24 only):            │
+│   /rpool/shared        (crossmnt, fsid=7) — NFSv4 pseudo-root│
+│   /rpool/shared/media  (crossmnt)         — child datasets  │
+│   /rpool/shared/media/movies (fsid=6)     — bind mount      │
+│   /rpool/shared/vaultwarden               — app data        │
 └─────────────────────────┬───────────────────────────────────┘
-                          │ NFSv4.2
+                          │ NFSv4.2 (Storage LAN only)
           ┌───────────────┼───────────────┐
           ▼               ▼               ▼
     Flatcar VM 100   Winston          Plex LXC 105
-    (direct mount)   (Storage VLAN)   (via Winston)
+    (192.168.200.100)(192.168.200.38) (via Winston)
     /mnt/media       /mnt/nfs_media   /mnt/media
+    /mnt/media/movies (separate mount for bind-mount subpath)
 ```
+
+**Movies architecture note:** Movies live in the parent ZFS dataset `rpool/shared` at
+path `media/movies/`, NOT as a ZFS child dataset. A systemd mount unit
+(`media-movies.mount`) on Reginald bind mounts `/rpool/shared/media/movies` to
+`/media/movies` with ordering deps (`After=zfs-mount.service`,
+`Before=nfs-server.service`). NFS clients mount it separately because `crossmnt`
+does not traverse non-ZFS (bind) mounts -- an explicit export with its own `fsid` is required.
 
 ### Backup Flow
 
@@ -445,6 +472,12 @@ LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
 | Stale data from aggressive caching      | Reduce `actimeo` from 600 to 60 seconds          |
 | Data split between parent/child         | Check `zfs get mountpoint` SOURCE is "inherited" |
 | Partial stale handles (some paths work) | `exportfs -ra` on server, restart containers     |
+| Movies in parent ZFS dataset, not child | Bind mount `/rpool/shared/media/movies` → `/media/movies` via systemd unit with `After=zfs-mount.service` |
+| `crossmnt` doesn't traverse bind mounts | Explicit NFS export with own `fsid` required for bind-mounted paths |
+| NFSv4 pseudofilesystem child traversal  | Parent export needs `crossmnt,fsid=N`; `/rpool/shared` with `crossmnt,fsid=7` |
+| NFSv4 stale sessions on old IPs         | Clients with sessions on now-unauthorized IPs poison new mounts; stop containers, remount clean |
+| `fsid=0` reserved for NFSv4 pseudo-root | Never use `fsid=0` for regular exports; start at `fsid=1` or higher |
+| fstab bind mount orphaned by ZFS order  | Use systemd mount unit with `After=zfs-mount.service` instead of fstab |
 
 ### Technitium DNS
 
