@@ -1,7 +1,7 @@
 ---
 name: vpn-status
 description: VPN and port forwarding verification for gluetun/ProtonVPN
-allowed-tools: Bash, Read
+tools: Bash, Read
 ---
 
 # VPN Status Check

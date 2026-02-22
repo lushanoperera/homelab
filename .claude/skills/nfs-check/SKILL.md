@@ -1,7 +1,7 @@
 ---
 name: nfs-check
 description: NFS mount verification across Flatcar, Winston, and Reginald
-allowed-tools: Bash, Read
+tools: Bash, Read
 ---
 
 # NFS Mount Check

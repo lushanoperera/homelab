@@ -1,7 +1,7 @@
 ---
 name: backup-status
 description: Backup verification - PBS snapshots, Restic repos, S3 connectivity
-allowed-tools: Bash, Read
+tools: Bash, Read
 ---
 
 # Backup Status Check

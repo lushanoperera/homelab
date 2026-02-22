@@ -1,7 +1,7 @@
 ---
 name: retrigger-downloads
 description: Retrigger Seerr requests that are stuck (not downloaded, not in queue)
-allowed-tools: Bash, Read
+tools: Bash, Read
 ---
 
 # Retrigger Missing Downloads

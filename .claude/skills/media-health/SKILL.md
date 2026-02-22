@@ -1,7 +1,7 @@
 ---
 name: media-health
 description: Check health of entire media stack - containers, VPN, ports, NFS, disk space
-allowed-tools: Bash, Read
+tools: Bash, Read
 ---
 
 # Media Health Check

@@ -1,7 +1,7 @@
 ---
 name: traefik-crowdsec
 description: Traefik reverse proxy and CrowdSec security management
-allowed-tools: Bash, Read
+tools: Bash, Read
 ---
 
 # Traefik & CrowdSec Management

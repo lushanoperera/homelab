@@ -1,7 +1,7 @@
 ---
 name: proxmox-manage
 description: Proxmox VM/LXC management - list, start, stop, snapshots, migrations
-allowed-tools: Bash, Read
+tools: Bash, Read
 ---
 
 # Proxmox Management

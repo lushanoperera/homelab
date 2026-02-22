@@ -1,7 +1,7 @@
 ---
 name: quality-manage
 description: Quality profile management for Sonarr/Radarr - create, view, apply profiles
-allowed-tools: Bash, Read
+tools: Bash, Read
 ---
 
 # Quality Profile Management

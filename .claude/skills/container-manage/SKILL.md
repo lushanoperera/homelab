@@ -1,7 +1,7 @@
 ---
 name: container-manage
 description: Container lifecycle management - restart, logs, updates, stack operations
-allowed-tools: Bash, Read
+tools: Bash, Read
 ---
 
 # Container Management
