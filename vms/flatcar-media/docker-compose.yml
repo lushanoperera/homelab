@@ -100,8 +100,16 @@ services:
       - WEBUI_PORT=8080
     volumes:
       - ${CONFIG_ROOT}/qbittorrent:/config
-      - ${DOWNLOADS_ROOT}:/downloads
-      - ${MEDIA_ROOT}:/media
+      - type: bind
+        source: ${DOWNLOADS_ROOT}
+        target: /downloads
+        bind:
+          propagation: rslave
+      - type: bind
+        source: ${MEDIA_ROOT}
+        target: /media
+        bind:
+          propagation: rslave
     restart: unless-stopped
     network_mode: "service:gluetun"
     depends_on:
@@ -124,8 +132,16 @@ services:
       - UMASK=${UMASK}
     volumes:
       - ${CONFIG_ROOT}/sabnzbd:/config
-      - ${DOWNLOADS_ROOT}:/downloads
-      - ${MEDIA_ROOT}:/media
+      - type: bind
+        source: ${DOWNLOADS_ROOT}
+        target: /downloads
+        bind:
+          propagation: rslave
+      - type: bind
+        source: ${MEDIA_ROOT}
+        target: /media
+        bind:
+          propagation: rslave
     restart: unless-stopped
     network_mode: "service:gluetun"
     depends_on:
@@ -151,9 +167,21 @@ services:
       - "${RADARR_PORT}:7878"
     volumes:
       - ${CONFIG_ROOT}/radarr:/config
-      - ${DOWNLOADS_ROOT}:/downloads
-      - ${MEDIA_ROOT}/movies:/movies
-      - ${MEDIA_ROOT}:/media
+      - type: bind
+        source: ${DOWNLOADS_ROOT}
+        target: /downloads
+        bind:
+          propagation: rslave
+      - type: bind
+        source: ${MEDIA_ROOT}/movies
+        target: /movies
+        bind:
+          propagation: rslave
+      - type: bind
+        source: ${MEDIA_ROOT}
+        target: /media
+        bind:
+          propagation: rslave
       - /srv/docker/resolv.conf:/etc/resolv.conf:ro
     restart: unless-stopped
     depends_on:
@@ -184,9 +212,21 @@ services:
       - "${SONARR_PORT}:8989"
     volumes:
       - ${CONFIG_ROOT}/sonarr:/config
-      - ${DOWNLOADS_ROOT}:/downloads
-      - ${MEDIA_ROOT}/tv:/tv
-      - ${MEDIA_ROOT}:/media
+      - type: bind
+        source: ${DOWNLOADS_ROOT}
+        target: /downloads
+        bind:
+          propagation: rslave
+      - type: bind
+        source: ${MEDIA_ROOT}/tv
+        target: /tv
+        bind:
+          propagation: rslave
+      - type: bind
+        source: ${MEDIA_ROOT}
+        target: /media
+        bind:
+          propagation: rslave
       - /srv/docker/resolv.conf:/etc/resolv.conf:ro
     restart: unless-stopped
     depends_on:
@@ -216,9 +256,21 @@ services:
       - "${LIDARR_PORT}:8686"
     volumes:
       - ${CONFIG_ROOT}/lidarr:/config
-      - ${DOWNLOADS_ROOT}:/downloads
-      - ${MEDIA_ROOT}/music:/music
-      - ${MEDIA_ROOT}:/media
+      - type: bind
+        source: ${DOWNLOADS_ROOT}
+        target: /downloads
+        bind:
+          propagation: rslave
+      - type: bind
+        source: ${MEDIA_ROOT}/music
+        target: /music
+        bind:
+          propagation: rslave
+      - type: bind
+        source: ${MEDIA_ROOT}
+        target: /media
+        bind:
+          propagation: rslave
       - /srv/docker/resolv.conf:/etc/resolv.conf:ro
     restart: unless-stopped
     depends_on:
@@ -248,9 +300,21 @@ services:
       - "${BAZARR_PORT}:6767"
     volumes:
       - ${CONFIG_ROOT}/bazarr:/config
-      - ${MEDIA_ROOT}/movies:/movies
-      - ${MEDIA_ROOT}/tv:/tv
-      - ${MEDIA_ROOT}:/media
+      - type: bind
+        source: ${MEDIA_ROOT}/movies
+        target: /movies
+        bind:
+          propagation: rslave
+      - type: bind
+        source: ${MEDIA_ROOT}/tv
+        target: /tv
+        bind:
+          propagation: rslave
+      - type: bind
+        source: ${MEDIA_ROOT}
+        target: /media
+        bind:
+          propagation: rslave
       - /srv/docker/resolv.conf:/etc/resolv.conf:ro
     restart: unless-stopped
     depends_on:
