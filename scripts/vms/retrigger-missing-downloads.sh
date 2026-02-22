@@ -309,10 +309,8 @@ main() {
     done > "$output_file"
 
     # Parse results from output
-    movies_checked=$(grep -c "^RETRIGGER:movie:" "$output_file" 2>/dev/null || echo "0")
-    series_checked=$(grep -c "^RETRIGGER:tv:" "$output_file" 2>/dev/null || echo "0")
-    movies_retriggered=$movies_checked
-    series_retriggered=$series_checked
+    movies_retriggered=$(grep -c "^RETRIGGER:movie:" "$output_file" 2>/dev/null) || movies_retriggered=0
+    series_retriggered=$(grep -c "^RETRIGGER:tv:" "$output_file" 2>/dev/null) || series_retriggered=0
 
     # Show what was retriggered
     if [[ -s "$output_file" ]]; then
