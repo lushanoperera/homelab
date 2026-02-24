@@ -457,68 +457,14 @@ LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
 
 ## Lessons Learned
 
-### Flatcar-Specific
+Moved to conditional rules (loaded on-demand by file pattern):
 
-| Issue                      | Solution                                          |
-| -------------------------- | ------------------------------------------------- |
-| Network interface naming   | Always use `eth0` (not `ens18`) in Butane configs |
-| Ignition only applies once | Manual fixes needed for post-boot changes         |
-| Docker Compose location    | `/opt/bin/docker-compose` (standalone binary)     |
-| Watchtower image           | `nickfedor/watchtower` (containrrr discontinued)  |
-| VPN secrets                | Docker secrets in `./secrets/`, not env vars      |
-| Compose .env missing vars  | All vars must be in `.env`; see `.env.example`    |
-| Compose plugin not installed | Flatcar `/usr/lib` is read-only; Butane download fails silently |
-| Systemd `\|\| true` syntax  | Use `-` prefix: `ExecStartPre=-/usr/bin/docker ...` |
-| SSH heredoc corrupts shebang | Pipe from local heredoc instead of remote heredoc |
-
-### NFS + ZFS
-
-| Issue                                   | Solution                                         |
-| --------------------------------------- | ------------------------------------------------ |
-| Child datasets invisible via NFS        | Add `crossmnt` to NFS export options             |
-| ZFS child dataset wrong mountpoint      | Use `zfs inherit mountpoint <dataset>`           |
-| Empty ZFS child shadowing real data     | Destroy empty dataset, bind mount real dir       |
-| NFS re-export fails for child mounts    | Mount directly from source, not via relay        |
-| `soft` mount causes silent failures     | Use `hard` mount option for production data      |
-| Stale data from aggressive caching      | Reduce `actimeo` from 600 to 60 seconds          |
-| Data split between parent/child         | Check `zfs get mountpoint` SOURCE is "inherited" |
-| Partial stale handles (some paths work) | `exportfs -ra` on server, restart containers     |
-| Movies in parent ZFS dataset, not child | Bind mount `/rpool/shared/media/movies` → `/media/movies` via systemd unit with `After=zfs-mount.service` |
-| `crossmnt` doesn't traverse bind mounts | Explicit NFS export with own `fsid` required for bind-mounted paths |
-| NFSv4 pseudofilesystem child traversal  | Parent export needs `crossmnt,fsid=N`; `/rpool/shared` with `crossmnt,fsid=7` |
-| NFSv4 stale sessions on old IPs         | Clients with sessions on now-unauthorized IPs poison new mounts; stop containers, remount clean |
-| `fsid=0` reserved for NFSv4 pseudo-root | Never use `fsid=0` for regular exports; start at `fsid=1` or higher |
-| fstab bind mount orphaned by ZFS order  | Use systemd mount unit with `After=zfs-mount.service` instead of fstab |
-
-### Technitium DNS
-
-| Issue                                        | Solution                                                     |
-| -------------------------------------------- | ------------------------------------------------------------ |
-| Docker image has no wget/curl                | Use `bash -c '</dev/tcp/localhost/5380'` for healthcheck      |
-| Cluster join needs domain URL, not IP        | `primaryNodeUrl` must use domain; pass IP via `primaryNodeIpAddress` |
-| Secondary nodes don't see each other         | Normal until primary syncs config to all nodes               |
-| `DNS_SERVER_DOMAIN` becomes node FQDN        | Set to short name (e.g. `flatcar`), cluster appends domain   |
-| Reginald service name is `dns` not `technitium` | Technitium installer creates `dns.service`                |
-| QNAP port 53 conflict with dnsmasq              | Bind to management IP: `192.168.100.254:53:53` instead of `0.0.0.0` |
-
-### Proxmox Networking
-
-| Issue                                        | Solution                                                     |
-| -------------------------------------------- | ------------------------------------------------------------ |
-| VM VLAN tag but no traffic (0 rx bytes)      | Check `bridge-vids` on vmbr0 includes that VLAN              |
-| Multicast/mDNS discovery broken in VM        | Remove `firewall=1` from NIC or add multicast allow rules    |
-| DHCP works but discovery doesn't             | DHCP unicast succeeds even when multicast is filtered         |
-
-### GPU SR-IOV
-
-Intel iGPU SR-IOV passthrough to Flatcar **not working** - guest requires patched `i915-sriov-dkms` driver. See `docs/sr-iov/` for details.
-
-### AWS SDK (Garage)
-
-```bash
-export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
-export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
-```
+| Rule File | Topics | Triggers |
+|-----------|--------|----------|
+| `.claude/rules/flatcar-lessons.md` | Flatcar, Butane, Ignition, Compose | `vms/flatcar-media/**`, `systemd/**` |
+| `.claude/rules/nfs-zfs-lessons.md` | NFS, ZFS, mounts, exports | `storage/nfs/**`, `systemd/*.mount` |
+| `.claude/rules/dns-lessons.md` | Technitium DNS cluster | `dns/**`, `**/dns-compose*` |
+| `.claude/rules/infra-lessons.md` | Proxmox networking, GPU SR-IOV, Garage | `hosts/**`, `networking/**`, `storage/garage/**` |
 
 ## Verification
 
