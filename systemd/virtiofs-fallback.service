@@ -1,0 +1,12 @@
+[Unit]
+Description=Enable NFS mount if VirtioFS fails
+After=mnt-nfs_shared.mount
+BindsTo=mnt-nfs_shared.mount
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/bin/bash -c 'if ! mountpoint -q /mnt/nfs_shared; then echo "VirtioFS mount failed, enabling NFS fallback"; systemctl disable mnt-nfs_shared.mount; systemctl enable mnt-nfs_shared-nfs.mount; systemctl start mnt-nfs_shared-nfs.mount; else echo "VirtioFS mount successful"; fi'
+
+[Install]
+WantedBy=multi-user.target

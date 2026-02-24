@@ -1,0 +1,18 @@
+[Unit]
+Description=Technitium DNS Server (Secondary Node)
+Requires=docker.service
+After=docker.service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+WorkingDirectory=/srv/docker/dns
+ExecStartPre=/bin/sleep 5
+ExecStart=/opt/bin/docker-compose up -d --remove-orphans
+ExecStop=/opt/bin/docker-compose down
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

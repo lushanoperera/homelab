@@ -9,7 +9,7 @@ passwd:
 
 storage:
   files:
-    # Static network configuration for VM
+    # Static network configuration for VM (Infra VLAN)
     - path: /etc/systemd/network/10-static.network
       mode: 0644
       contents:
@@ -23,6 +23,28 @@ storage:
           DNS=192.168.100.254
           DNS=192.168.100.100
           DNS=192.168.100.120
+
+    # DMZ network configuration (Traefik macvlan)
+    - path: /etc/systemd/network/20-eth1-dmz.network
+      mode: 0644
+      contents:
+        inline: |
+          [Match]
+          Name=eth1
+
+          [Network]
+          Address=192.168.7.119/24
+
+    # Storage LAN network configuration (NFS traffic)
+    - path: /etc/systemd/network/30-eth2-storage.network
+      mode: 0644
+      contents:
+        inline: |
+          [Match]
+          Name=eth2
+
+          [Network]
+          Address=192.168.200.100/24
 
     # NFS client configuration
     - path: /etc/modules-load.d/nfs.conf
@@ -84,25 +106,6 @@ storage:
 
           echo "nano wrapper installed successfully at /home/core/nano"
 
-    # NFS mount configuration (working configuration)
-    - path: /etc/systemd/system/mnt-nfs_shared.mount
-      mode: 0644
-      contents:
-        inline: |
-          [Unit]
-          Description=NFS mount for shared storage
-          After=network-online.target
-          Wants=network-online.target
-
-          [Mount]
-          What=192.168.100.38:/
-          Where=/mnt/nfs_shared
-          Type=nfs4
-          Options=rw,relatime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,_netdev
-
-          [Install]
-          WantedBy=multi-user.target
-
     # Hostname fix service (fallback for timeout issues)
     - path: /etc/systemd/system/hostname-fix.service
       mode: 0644
@@ -121,13 +124,15 @@ storage:
           [Install]
           WantedBy=multi-user.target
 
-    # Mount point creation
+    # Mount point creation via tmpfiles
     - path: /etc/tmpfiles.d/nfs-mounts.conf
       mode: 0644
       contents:
         inline: |
           d /mnt/nfs_shared 0755 core core -
           d /mnt/media 0755 core core -
+          d /mnt/media/movies 0755 core core -
+          d /mnt/nfs_vaultwarden 0755 core core -
 
 systemd:
   units:
@@ -139,46 +144,129 @@ systemd:
     - name: qemu-guest-agent.service
       enabled: true
 
-    # Create mount point directory
+    # Create mount point directories
     - name: create-mount-dirs.service
       enabled: true
       contents: |
         [Unit]
         Description=Create mount directories
-        Before=mnt-nfs_shared.mount mnt-media.mount portainer-compose.service
+        Before=mnt-nfs_shared.mount mnt-media.mount mnt-media-movies.mount mnt-nfs_vaultwarden.mount portainer-compose.service
 
         [Service]
         Type=oneshot
-        ExecStart=/usr/bin/mkdir -p /mnt/nfs_shared /mnt/media /opt/portainer /opt/bin
+        ExecStart=/usr/bin/mkdir -p /mnt/nfs_shared /mnt/media /mnt/media/movies /mnt/nfs_vaultwarden /opt/portainer /opt/bin /opt/vaultwarden /srv/docker/couchdb /srv/docker/dns
         RemainAfterExit=true
 
         [Install]
         WantedBy=multi-user.target
 
-    # NFS mount for shared storage
+    # VirtioFS mount for shared storage
     - name: mnt-nfs_shared.mount
       enabled: true
+      contents: |
+        [Unit]
+        Description=VirtioFS mount for shared storage
+        After=local-fs.target
+        ConditionPathExists=/dev/tag-nfs_shared
 
-    # NFS mount for media storage from winston
-    # Mounts shared media directory (includes downloads, movies, tv, music)
-    # Docker containers access downloads via /mnt/media/downloads
-    # incomplete-downloads accessible at /mnt/media/downloads/incomplete-downloads
-    # IMPORTANT: Extended timeout (300s) to prevent boot-time mount failures
+        [Mount]
+        What=nfs_shared
+        Where=/mnt/nfs_shared
+        Type=virtiofs
+        Options=defaults
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # NFS fallback for shared storage (activated by virtiofs-fallback.service)
+    - name: mnt-nfs_shared-nfs.mount
+      enabled: false
+      contents: |
+        [Unit]
+        Description=NFS mount for shared storage (fallback)
+        After=network-online.target
+        Wants=network-online.target
+
+        [Mount]
+        What=192.168.100.38:/mnt/nfs_shared
+        Where=/mnt/nfs_shared
+        Type=nfs4
+        Options=rw,fsc,noatime,vers=4.2,proto=tcp,rsize=1048576,wsize=1048576,soft,timeo=100,retrans=5,_netdev
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # VirtioFS fallback — enables NFS mount if VirtioFS fails
+    - name: virtiofs-fallback.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Enable NFS mount if VirtioFS fails
+        After=mnt-nfs_shared.mount
+        BindsTo=mnt-nfs_shared.mount
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=true
+        ExecStart=/bin/bash -c 'if ! mountpoint -q /mnt/nfs_shared; then echo "VirtioFS mount failed, enabling NFS fallback"; systemctl disable mnt-nfs_shared.mount; systemctl enable mnt-nfs_shared-nfs.mount; systemctl start mnt-nfs_shared-nfs.mount; else echo "VirtioFS mount successful"; fi'
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # NFS mount for media storage from reginald (Storage LAN)
     - name: mnt-media.mount
       enabled: true
       contents: |
         [Unit]
-        Description=NFS mount for media storage from winston
+        Description=NFS mount for media storage from reginald
         Requires=network-online.target
         After=network-online.target
         Before=docker.service media-stack-compose.service
 
         [Mount]
-        What=192.168.100.38:/mnt/nfs_media
+        What=192.168.200.4:/media
         Where=/mnt/media
         Type=nfs4
         Options=rw,relatime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,_netdev
         TimeoutSec=300
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # NFS mount for movies from rpool/shared on reginald
+    - name: mnt-media-movies.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=NFS mount for movies from rpool/shared on reginald
+        Requires=network-online.target mnt-media.mount
+        After=network-online.target mnt-media.mount
+        Before=docker.service media-stack-compose.service
+
+        [Mount]
+        What=192.168.200.4:/rpool/shared/media/movies
+        Where=/mnt/media/movies
+        Type=nfs4
+        Options=rw,relatime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,_netdev
+        TimeoutSec=300
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # NFS mount for Vaultwarden data from reginald
+    - name: mnt-nfs_vaultwarden.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=NFS mount for Vaultwarden
+        After=network-online.target
+        Wants=network-online.target
+
+        [Mount]
+        What=192.168.200.4:/rpool/shared/vaultwarden
+        Where=/mnt/nfs_vaultwarden
+        Type=nfs4
+        Options=nofail,_netdev,soft,timeo=10,retrans=2,rw,noatime
 
         [Install]
         WantedBy=multi-user.target
@@ -300,6 +388,52 @@ systemd:
         [Install]
         WantedBy=multi-user.target
 
+    # CouchDB stack (Obsidian LiveSync)
+    - name: couchdb-stack.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=CouchDB Stack (Obsidian LiveSync)
+        Requires=docker.service
+        After=docker.service
+        Wants=network-online.target
+        After=network-online.target
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=true
+        WorkingDirectory=/srv/docker/couchdb
+        ExecStartPre=/bin/sleep 5
+        ExecStart=/opt/bin/docker-compose up -d --remove-orphans
+        ExecStop=/opt/bin/docker-compose down
+        TimeoutStartSec=120
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # Technitium DNS server (secondary node)
+    - name: dns-compose.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Technitium DNS Server (Secondary Node)
+        Requires=docker.service
+        After=docker.service
+        Wants=network-online.target
+        After=network-online.target
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=true
+        WorkingDirectory=/srv/docker/dns
+        ExecStartPre=/bin/sleep 5
+        ExecStart=/opt/bin/docker-compose up -d --remove-orphans
+        ExecStop=/opt/bin/docker-compose down
+        TimeoutStartSec=120
+
+        [Install]
+        WantedBy=multi-user.target
+
     # Set hostname
     - name: set-hostname.service
       enabled: true
@@ -316,3 +450,94 @@ systemd:
         [Install]
         WantedBy=multi-user.target
 
+    # qBittorrent port sync with gluetun
+    - name: qbt-port-sync.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Sync gluetun forwarded port to qBittorrent
+        After=docker.service
+        Requires=docker.service
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        Type=oneshot
+        ExecStart=/opt/bin/qbt-port-sync.sh
+        StandardOutput=journal
+        StandardError=journal
+        Restart=on-failure
+        RestartSec=30
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: qbt-port-sync.timer
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Run qBittorrent port sync every 5 minutes
+
+        [Timer]
+        OnBootSec=2min
+        OnUnitActiveSec=5min
+        Persistent=true
+
+        [Install]
+        WantedBy=timers.target
+
+    # Media trash cleanup
+    - name: media-trash-cleanup.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Cleanup old media trash files
+        After=mnt-media.mount
+        Requires=mnt-media.mount
+
+        [Service]
+        Type=oneshot
+        Environment=TRASH_DIR=/mnt/media/.trash
+        Environment=TRASH_RETENTION_DAYS=7
+        ExecStart=/bin/bash -c 'find ${TRASH_DIR} -type f -mtime +${TRASH_RETENTION_DAYS} -delete 2>/dev/null || true; find ${TRASH_DIR} -type d -empty -delete 2>/dev/null || true'
+
+    - name: media-trash-cleanup.timer
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Run media trash cleanup daily
+
+        [Timer]
+        OnCalendar=daily
+        RandomizedDelaySec=3600
+        Persistent=true
+
+        [Install]
+        WantedBy=timers.target
+
+    # Vaultwarden backup to NFS
+    - name: vaultwarden-backup.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Vaultwarden backup to NFS
+        Requires=docker.service mnt-nfs_vaultwarden.mount
+        After=docker.service mnt-nfs_vaultwarden.mount
+
+        [Service]
+        Type=oneshot
+        ExecStart=/opt/vaultwarden/backup.sh
+
+    - name: vaultwarden-backup.timer
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Daily Vaultwarden backup
+
+        [Timer]
+        OnCalendar=*-*-* 03:00:00
+        Persistent=true
+        RandomizedDelaySec=300
+
+        [Install]
+        WantedBy=timers.target

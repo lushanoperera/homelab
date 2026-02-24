@@ -1,0 +1,13 @@
+[Unit]
+Description=NFS mount for Vaultwarden
+After=network-online.target
+Wants=network-online.target
+
+[Mount]
+What=192.168.200.4:/rpool/shared/vaultwarden
+Where=/mnt/nfs_vaultwarden
+Type=nfs4
+Options=nofail,_netdev,soft,timeo=10,retrans=2,rw,noatime
+
+[Install]
+WantedBy=multi-user.target

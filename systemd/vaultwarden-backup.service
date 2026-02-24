@@ -1,0 +1,8 @@
+[Unit]
+Description=Vaultwarden backup to NFS
+Requires=docker.service mnt-nfs_vaultwarden.mount
+After=docker.service mnt-nfs_vaultwarden.mount
+
+[Service]
+Type=oneshot
+ExecStart=/opt/vaultwarden/backup.sh
