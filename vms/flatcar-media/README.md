@@ -22,6 +22,7 @@ ssh core@192.168.100.100
 | Bazarr      | 6767 | Subtitle manager       |
 | Seerr       | 5055 | Request management     |
 | Tautulli    | 8181 | Plex analytics         |
+| Flaresolverr| 8191 | CAPTCHA solving for Prowlarr |
 | Technitium  | 5380 | DNS server (secondary) |
 | Caddy       | 443  | Internal reverse proxy (`*.home.disconnesso.com`) |
 | Traefik     | 443  | Public reverse proxy (DMZ 192.168.7.119) |

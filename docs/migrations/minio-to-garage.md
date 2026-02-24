@@ -153,14 +153,14 @@ type = s3
 provider = Minio
 access_key_id = admin
 secret_access_key = <your-minio-password>
-endpoint = http://192.168.100.210:9000
+endpoint = http://192.168.200.210:9000
 
 [garage]
 type = s3
 provider = Other
 access_key_id = <garage-key-id>
 secret_access_key = <garage-secret>
-endpoint = http://192.168.100.211:3900
+endpoint = http://192.168.200.211:3900
 region = garage
 ```
 
@@ -193,7 +193,7 @@ export AWS_SECRET_ACCESS_KEY=<garage-secret>
 export AWS_DEFAULT_REGION=garage
 export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
 export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
-export RESTIC_REPOSITORY="s3:http://192.168.100.211:3900/restic-backups"
+export RESTIC_REPOSITORY="s3:http://192.168.200.211:3900/restic-backups"
 export RESTIC_PASSWORD="<your-existing-password>"
 
 # Verify repository integrity

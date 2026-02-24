@@ -137,11 +137,11 @@ http:
     kido-frontend-service:
       loadBalancer:
         servers:
-          - url: "http://192.168.100.122:3000"
+          - url: "http://192.168.100.100:3000"
     kido-backend-service:
       loadBalancer:
         servers:
-          - url: "http://192.168.100.122:3001"
+          - url: "http://192.168.100.100:3001"
     metabase-service:
       loadBalancer:
         servers:

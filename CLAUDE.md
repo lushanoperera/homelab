@@ -351,8 +351,8 @@ ssh core@192.168.100.100 'docker logs caddy 2>&1 | grep -i certificate'
 # Admin API (config inspection)
 ssh core@192.168.100.100 'curl -s http://localhost:2019/config/ | jq .'
 
-# Validate all 21 proxy hosts
-ssh core@192.168.100.100 '/srv/docker/caddy/validate.sh'
+# Validate Caddyfile (syntax + reachability)
+ssh core@192.168.100.100 'docker exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile'
 ```
 
 ### Traefik & CrowdSec (Public Reverse Proxy)
@@ -398,7 +398,7 @@ pvesm status        # Check storage
 | Nextcloud          | nextcloud.lushanoperera.com | 192.168.100.101:11000  |
 | Traefik Dashboard  | traefik.lushanoperera.com   | 192.168.7.119:8080     |
 | CrowdSec Dashboard | crowdsec.lushanoperera.com  | crowdsec-metabase:3001 |
-| Kido               | kido.giulyart.it            | 192.168.100.122:3000/3001 |
+| Kido               | kido.giulyart.it            | 192.168.100.100:3000/3001 |
 
 ## Storage Architecture
 

@@ -88,11 +88,11 @@ docker-compose -f qnap-minio_docker-compose.yml down
 
 | Service | IP              | Port | Purpose            |
 | ------- | --------------- | ---- | ------------------ |
-| MinIO   | 192.168.100.210 | 9000 | S3 API (existing)  |
-| MinIO   | 192.168.100.210 | 9001 | Console (existing) |
-| Garage  | 192.168.100.211 | 3900 | S3 API (new)       |
-| Garage  | 192.168.100.211 | 3902 | Web hosting        |
-| Garage  | 192.168.100.211 | 3903 | Admin API          |
+| MinIO   | 192.168.200.210 | 9000 | S3 API (existing)  |
+| MinIO   | 192.168.200.210 | 9001 | Console (existing) |
+| Garage  | 192.168.200.211 | 3900 | S3 API (new)       |
+| Garage  | 192.168.200.211 | 3902 | Web hosting        |
+| Garage  | 192.168.200.211 | 3903 | Admin API          |
 
 ## Important Notes
 
