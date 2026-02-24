@@ -34,9 +34,9 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 
 **Flatcar VM 100** (`ssh core@192.168.100.100`):
 
-- Media stack: gluetun (ProtonVPN), prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr, seerr, tautulli, watchtower (nickfedor fork)
+- Media stack: gluetun (ProtonVPN), prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr, seerr, tautulli, flaresolverr, watchtower (nickfedor fork)
 - Caddy reverse proxy (`/srv/docker/caddy/`) — internal `*.home.disconnesso.com` routing
-- Technitium DNS (secondary node, `/srv/docker/dns/`)
+- Technitium DNS (secondary node, `/srv/docker/dns/`, separate `dns-compose.yml`)
 - Traefik (DMZ IP: 192.168.7.119) — public services via Cloudflare Tunnel
 - CrowdSec + Bouncer
 - Cloudflared tunnel
@@ -145,6 +145,17 @@ homelab/
 └── tools/
     └── bitwarden-manager/   # Credential management UI
 ```
+
+### Repo → VM Path Mapping
+
+| Repo Path | Deployed Path (Flatcar) | Deploy Method |
+|-----------|------------------------|---------------|
+| `vms/flatcar-media/docker-compose.yml` | `/srv/docker/media-stack/docker-compose.yml` | rsync/scp |
+| `networking/caddy/` | `/srv/docker/caddy/` | rsync/scp |
+| `networking/traefik/` | `/srv/docker/traefik/` | rsync/scp |
+| `networking/cloudflare-tunnel/` | `/srv/docker/cloudflare-tunnel/` | rsync/scp |
+| `scripts/vms/*.sh` | `/opt/bin/` | deploy-media-scripts.sh |
+| `systemd/*.mount` | `/etc/systemd/system/` | Ignition or manual |
 
 ## Quick Reference
 
@@ -508,6 +519,14 @@ Intel iGPU SR-IOV passthrough to Flatcar **not working** - guest requires patche
 export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
 export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
 ```
+
+## Verification
+
+This is an infrastructure repo — no build/lint/test toolchain. Verify changes by:
+1. Validate config syntax (Caddyfile, docker-compose, Butane)
+2. `shellcheck` on modified shell scripts
+3. SSH to target host and test the change
+4. Check service health after deployment
 
 ## Safety Rules
 
