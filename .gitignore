@@ -73,6 +73,9 @@ rclone.conf
 # Restic
 restic-env.sh
 
+# AIM Knowledge Graph observations (auto-generated)
+.aim/
+
 # Claude Code - track skills and rules, ignore user-specific files
 .claude/*
 !.claude/skills/

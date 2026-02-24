@@ -33,3 +33,8 @@ handle @portainer {
 handle @wireguard {
 	reverse_proxy 192.168.100.104:10086
 }
+
+@obsidian-sync host obsidian-sync.home.disconnesso.com
+handle @obsidian-sync {
+	reverse_proxy localhost:5984
+}

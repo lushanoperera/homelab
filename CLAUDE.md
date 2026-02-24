@@ -41,6 +41,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 - CrowdSec + Bouncer
 - Cloudflared tunnel
 - Kido (Docker app, `kido.giulyart.it`)
+- CouchDB (`/srv/docker/couchdb/`) — Obsidian LiveSync backend
 
 **QNAP NAS** (`192.168.100.254`):
 
@@ -155,6 +156,7 @@ homelab/
 | `networking/traefik/` | `/srv/docker/traefik/` | rsync/scp |
 | `networking/cloudflare-tunnel/` | `/srv/docker/cloudflare-tunnel/` | rsync/scp |
 | `scripts/vms/*.sh` | `/opt/bin/` | deploy-media-scripts.sh |
+| `apps/couchdb/` | `/srv/docker/couchdb/` | rsync/scp |
 | `systemd/*.mount` | `/etc/systemd/system/` | Ignition or manual |
 
 ## Quick Reference
@@ -221,6 +223,14 @@ ssh core@192.168.100.100 'ls -la /mnt/media/.trash/'
 
 # Recover from trash (within 7 days)
 ssh core@192.168.100.100 'cat /mnt/media/.trash/deletion_log.txt'  # Find original paths
+```
+
+### CouchDB (Obsidian LiveSync)
+
+```bash
+ssh core@192.168.100.100 'cd /srv/docker/couchdb && /opt/bin/docker-compose ps'
+ssh core@192.168.100.100 'curl -s http://localhost:5984/_up'
+ssh core@192.168.100.100 'curl -s http://localhost:5984/obsidian-livesync | jq .doc_count'
 ```
 
 ### NFS Operations
@@ -399,6 +409,7 @@ pvesm status        # Check storage
 | Traefik Dashboard  | traefik.lushanoperera.com   | 192.168.7.119:8080     |
 | CrowdSec Dashboard | crowdsec.lushanoperera.com  | crowdsec-metabase:3001 |
 | Kido               | kido.giulyart.it            | 192.168.100.100:3000/3001 |
+| Obsidian Sync      | obsidian-sync.home.disconnesso.com | localhost:5984 |
 
 ## Storage Architecture
 

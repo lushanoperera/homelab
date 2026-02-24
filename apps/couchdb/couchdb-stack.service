@@ -1,0 +1,15 @@
+[Unit]
+Description=CouchDB Stack (Obsidian LiveSync)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/srv/docker/couchdb
+ExecStart=/opt/bin/docker-compose up -d --remove-orphans
+ExecStop=/opt/bin/docker-compose down
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target
