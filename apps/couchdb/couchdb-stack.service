@@ -1,12 +1,15 @@
 [Unit]
 Description=CouchDB Stack (Obsidian LiveSync)
-After=docker.service
 Requires=docker.service
+After=docker.service
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=oneshot
-RemainAfterExit=yes
+RemainAfterExit=true
 WorkingDirectory=/srv/docker/couchdb
+ExecStartPre=/bin/sleep 5
 ExecStart=/opt/bin/docker-compose up -d --remove-orphans
 ExecStop=/opt/bin/docker-compose down
 TimeoutStartSec=120
