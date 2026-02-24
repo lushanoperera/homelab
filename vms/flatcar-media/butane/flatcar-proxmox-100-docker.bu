@@ -84,7 +84,7 @@ storage:
     - path: /usr/lib/docker/cli-plugins/docker-compose
       mode: 0755
       contents:
-        source: https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64
+        source: https://github.com/docker/compose/releases/download/v2.40.3/docker-compose-linux-x86_64
 
     # Nano Docker wrapper installation script
     - path: /opt/bin/install-nano.sh
