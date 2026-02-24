@@ -157,6 +157,7 @@ homelab/
 | `networking/cloudflare-tunnel/` | `/srv/docker/cloudflare-tunnel/` | rsync/scp |
 | `scripts/vms/*.sh` | `/opt/bin/` | deploy-media-scripts.sh |
 | `apps/couchdb/` | `/srv/docker/couchdb/` | rsync/scp |
+| `apps/couchdb/couchdb-stack.service` | `/etc/systemd/system/couchdb-stack.service` | scp + systemctl enable |
 | `systemd/*.mount` | `/etc/systemd/system/` | Ignition or manual |
 
 ## Quick Reference
