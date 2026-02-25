@@ -76,19 +76,16 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: kido-frontend
-    mem_limit: 64m
+    mem_limit: 128m
     environment:
       VITE_API_URL: http://localhost:3001/api
     ports:
       - "3000:3000"
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     networks:
       - kido-network
-    command: bun run dev --host
+    restart: unless-stopped
 
 volumes:
   postgres_data:
