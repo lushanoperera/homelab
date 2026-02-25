@@ -6,6 +6,7 @@ services:
   technitium:
     image: technitium/dns-server:latest
     container_name: technitium
+    mem_limit: 512m
     hostname: technitium-flatcar
     ports:
       - "53:53/udp"

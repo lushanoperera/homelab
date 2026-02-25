@@ -65,6 +65,7 @@ storage:
             portainer:
               image: portainer/portainer-ce:latest
               container_name: portainer
+              mem_limit: 128m
               restart: unless-stopped
               ports:
                 - "8000:8000"
@@ -124,6 +125,13 @@ storage:
           [Install]
           WantedBy=multi-user.target
 
+    # VM memory tuning: swappiness for zram
+    - path: /etc/sysctl.d/90-vm-tuning.conf
+      mode: 0644
+      contents:
+        inline: |
+          vm.swappiness=60
+
     # Mount point creation via tmpfiles
     - path: /etc/tmpfiles.d/nfs-mounts.conf
       mode: 0644
@@ -136,6 +144,30 @@ storage:
 
 systemd:
   units:
+    # Zram swap — compressed RAM swap for OOM protection (29 containers, no disk swap)
+    - name: zram-swap.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Configure zram swap device
+        After=systemd-modules-load.service
+        Before=docker.service
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=true
+        ExecStart=/bin/bash -c '\
+          modprobe zram && \
+          echo 2G > /sys/block/zram0/disksize && \
+          mkswap /dev/zram0 && \
+          swapon -p 100 /dev/zram0'
+        ExecStop=/bin/bash -c '\
+          swapoff /dev/zram0 || true; \
+          echo 1 > /sys/block/zram0/reset || true'
+
+        [Install]
+        WantedBy=multi-user.target
+
     # Enable Docker service
     - name: docker.service
       enabled: true

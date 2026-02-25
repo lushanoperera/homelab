@@ -1,0 +1,16 @@
+services:
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    mem_limit: 192m
+    restart: unless-stopped
+    ports:
+      - "8200:80"
+    environment:
+      TZ: Europe/Amsterdam
+      ADMIN_TOKEN: '${ADMIN_TOKEN}'
+      DOMAIN: 'https://vaultwarden.home.disconnesso.com'
+      SIGNUPS_ALLOWED: 'false'
+      WEBSOCKET_ENABLED: 'true'
+    volumes:
+      - /opt/vaultwarden/data:/data

@@ -2,6 +2,7 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
+    mem_limit: 128m
     restart: unless-stopped
     network_mode: "host"
     command: tunnel run

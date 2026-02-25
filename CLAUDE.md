@@ -41,6 +41,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 - CrowdSec + Bouncer
 - Cloudflared tunnel
 - Kido (Docker app, `kido.giulyart.it`)
+- Vaultwarden (`/opt/vaultwarden/`) — password manager
 - CouchDB (`/srv/docker/couchdb/`) — Obsidian LiveSync backend
 
 **QNAP NAS** (`192.168.100.254`):
@@ -142,6 +143,10 @@ homelab/
 ├── automation/
 │   ├── ansible/             # Ansible playbooks
 │   └── terraform/           # Terraform IaC
+├── apps/
+│   ├── couchdb/             # CouchDB (Obsidian LiveSync)
+│   ├── kido/                # Kido web app
+│   └── vaultwarden/         # Vaultwarden password manager
 ├── systemd/                 # Systemd units
 └── tools/
     └── bitwarden-manager/   # Credential management UI
@@ -158,6 +163,9 @@ homelab/
 | `scripts/vms/*.sh` | `/opt/bin/` | deploy-media-scripts.sh |
 | `apps/couchdb/` | `/srv/docker/couchdb/` | rsync/scp |
 | `apps/couchdb/couchdb-stack.service` | `/etc/systemd/system/couchdb-stack.service` | scp + systemctl enable |
+| `apps/kido/` | `/srv/docker/kido/` | rsync/scp |
+| `apps/vaultwarden/docker-compose.yml` | `/opt/vaultwarden/docker-compose.yml` | scp |
+| `apps/vaultwarden/backup.sh` | `/opt/vaultwarden/backup.sh` | scp + chmod +x |
 | `systemd/*.mount` | `/etc/systemd/system/` | Ignition or manual |
 
 ## Quick Reference

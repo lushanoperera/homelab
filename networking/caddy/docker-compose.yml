@@ -3,6 +3,7 @@ services:
     build: .
     image: caddy-cloudflare:latest
     container_name: caddy
+    mem_limit: 192m
     network_mode: host
     environment:
       - TZ=${TZ:-Europe/Amsterdam}

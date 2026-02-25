@@ -2,6 +2,7 @@ services:
   couchdb:
     image: couchdb:3
     container_name: couchdb
+    mem_limit: 384m
     environment:
       - COUCHDB_USER=${COUCHDB_USER}
       - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}

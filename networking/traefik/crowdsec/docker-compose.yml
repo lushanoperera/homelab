@@ -2,6 +2,7 @@ services:
   crowdsec:
     image: crowdsecurity/crowdsec:latest
     container_name: crowdsec
+    mem_limit: 256m
     network_mode: "host"
     environment:
       - GID=1000
@@ -22,6 +23,7 @@ services:
   crowdsec-bouncer:
     image: ghcr.io/thespad/traefik-crowdsec-bouncer:latest
     container_name: crowdsec-bouncer
+    mem_limit: 64m
     network_mode: "host"
     environment:
       - CROWDSEC_BOUNCER_API_KEY=${CROWDSEC_BOUNCER_API_KEY}
@@ -37,6 +39,7 @@ services:
   metabase:
     image: metabase/metabase:latest
     container_name: crowdsec-metabase
+    mem_limit: 2g
     network_mode: "host"
     environment:
       - MB_DB_FILE=/metabase-data/metabase.db

@@ -48,10 +48,10 @@ ssh root@192.168.100.38
 
 | CTID | Service   | IP              | CPU | Memory | Disk    |
 | ---- | --------- | --------------- | --- | ------ | ------- |
-| 101  | Nextcloud | 192.168.100.101 | 4   | 5.4 GB | 53.7 GB |
-| 103  | Immich    | 192.168.100.103 | 4   | 8.6 GB | 21.5 GB |
+| 101  | Nextcloud | 192.168.100.101 | 4   | 4 GB   | 53.7 GB |
+| 103  | Immich    | 192.168.100.103 | 4   | 4 GB   | 21.5 GB |
 | 104  | WireGuard | 192.168.100.104 | 1   | 512 MB | 4.3 GB  |
-| 105  | Plex      | 192.168.100.105 | 4   | 2.1 GB | 12.9 GB |
-| 106  | PDM       | 192.168.100.106 | 1   | 2 GB   | 10 GB   |
+| 105  | Plex      | 192.168.100.105 | 4   | 3 GB   | 12.9 GB |
+| 106  | PDM       | 192.168.100.106 | 1   | 512 MB | 10 GB   |
 
 See `../../docs/thermal-management.md` for thermal configuration.

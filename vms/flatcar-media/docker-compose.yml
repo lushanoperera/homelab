@@ -3,6 +3,7 @@ services:
     image: qmcgaw/gluetun:latest
     container_name: gluetun
     hostname: gluetun
+    mem_limit: 512m
     labels:
       - "com.centurylinklabs.watchtower.enable=false"
       - "com.centurylinklabs.watchtower.scope=weekly"
@@ -43,6 +44,7 @@ services:
     image: flaresolverr/flaresolverr:latest
     container_name: flaresolverr
     hostname: flaresolverr
+    mem_limit: 512m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -63,6 +65,7 @@ services:
   prowlarr:
     image: linuxserver/prowlarr:latest
     container_name: prowlarr
+    mem_limit: 512m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -125,6 +128,7 @@ services:
   sabnzbd:
     image: linuxserver/sabnzbd:latest
     container_name: sabnzbd
+    mem_limit: 256m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -158,6 +162,7 @@ services:
     image: linuxserver/radarr:latest
     container_name: radarr
     hostname: radarr
+    mem_limit: 512m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -203,6 +208,7 @@ services:
     image: linuxserver/sonarr:latest
     container_name: sonarr
     hostname: sonarr
+    mem_limit: 1g
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -247,6 +253,7 @@ services:
     image: linuxserver/lidarr:latest
     container_name: lidarr
     hostname: lidarr
+    mem_limit: 512m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -291,6 +298,7 @@ services:
     image: linuxserver/bazarr:latest
     container_name: bazarr
     hostname: bazarr
+    mem_limit: 512m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -333,6 +341,7 @@ services:
     image: ghcr.io/seerr-team/seerr:latest
     container_name: seerr
     hostname: seerr
+    mem_limit: 384m
     init: true
     ports:
       - "${SEERR_PORT:-5055}:5055"
@@ -357,6 +366,7 @@ services:
     image: linuxserver/tautulli:latest
     container_name: tautulli
     hostname: tautulli
+    mem_limit: 256m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -379,6 +389,7 @@ services:
     image: nickfedor/watchtower:latest
     container_name: watchtower
     hostname: watchtower
+    mem_limit: 64m
     environment:
       - TZ=${TZ}
       - WATCHTOWER_CLEANUP=true
@@ -394,6 +405,7 @@ services:
     image: nickfedor/watchtower:latest
     container_name: watchtower-weekly
     hostname: watchtower-weekly
+    mem_limit: 64m
     environment:
       - TZ=${TZ}
       - WATCHTOWER_CLEANUP=true
