@@ -167,6 +167,7 @@ homelab/
 | `apps/vaultwarden/docker-compose.yml` | `/opt/vaultwarden/docker-compose.yml` | scp |
 | `apps/vaultwarden/backup.sh` | `/opt/vaultwarden/backup.sh` | scp + chmod +x |
 | `systemd/*.mount` | `/etc/systemd/system/` | Ignition or manual |
+| `hosts/winston/ksm-enable.service` | `/etc/systemd/system/ksm-enable.service` | scp + systemctl enable |
 
 ## Quick Reference
 

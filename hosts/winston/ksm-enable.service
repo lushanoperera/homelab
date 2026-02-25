@@ -1,0 +1,15 @@
+[Unit]
+Description=Enable Kernel Samepage Merging (KSM)
+After=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/bin/bash -c '\
+  echo 1000 > /sys/kernel/mm/ksm/pages_to_scan && \
+  echo 20 > /sys/kernel/mm/ksm/sleep_millisecs && \
+  echo 1 > /sys/kernel/mm/ksm/run'
+ExecStop=/bin/bash -c 'echo 0 > /sys/kernel/mm/ksm/run'
+
+[Install]
+WantedBy=multi-user.target

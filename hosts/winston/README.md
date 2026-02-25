@@ -27,6 +27,8 @@ ssh root@192.168.100.38
 - SR-IOV GPU passthrough (7 VFs available)
 - Quick Sync hardware transcoding
 - Thermal management (powersave governor, thermald)
+- KSM enabled (`ksm-enable.service`) — deduplicates shared pages across LXCs
+- Zram swap: 8 GB with zstd, swappiness=60
 
 ## Storage
 
@@ -41,8 +43,8 @@ ssh root@192.168.100.38
 
 | VMID | Name          | IP              | CPU | Memory | Disk    | Purpose          |
 | ---- | ------------- | --------------- | --- | ------ | ------- | ---------------- |
-| 100  | flatcar-media | 192.168.100.100 | 4   | 8 GB   | 41.3 GB | Media stack      |
-| 102  | homeassistant | .100.102 / .4.102 / .5.102 | 2   | 4 GB   | 34.4 GB | Home Assistant (multi-VLAN) |
+| 100  | flatcar-media | 192.168.100.100 | 4   | 8 GB (balloon: 2 GB) | 41.3 GB | Media stack      |
+| 102  | homeassistant | .100.102 / .4.102 / .5.102 | 2   | 4 GB (balloon: 1 GB) | 34.4 GB | Home Assistant (multi-VLAN) |
 
 ## LXC Containers
 
