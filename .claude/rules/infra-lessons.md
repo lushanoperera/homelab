@@ -16,6 +16,9 @@ paths:
 | VM VLAN tag but no traffic (0 rx bytes)      | Check `bridge-vids` on vmbr0 includes that VLAN              |
 | Multicast/mDNS discovery broken in VM        | Remove `firewall=1` from NIC or add multicast allow rules    |
 | DHCP works but discovery doesn't             | DHCP unicast succeeds even when multicast is filtered         |
+| KSM persistence via sysctl                   | PVE kernel has no /proc/sys/kernel/ksm/ — use systemd unit writing to /sys/kernel/mm/ksm/ |
+| ksmtuned disables custom KSM                 | ksmtuned only monitors QEMU, not LXCs — disable it if KSM always-on needed |
+| Balloon config via `qm set`                  | Persists immediately but takes effect on next VM reboot (no live disruption) |
 
 ## GPU SR-IOV
 

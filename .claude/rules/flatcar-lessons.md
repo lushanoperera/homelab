@@ -20,3 +20,4 @@ paths:
 | Compose plugin not installed | Flatcar `/usr/lib` is read-only; Butane download fails silently |
 | Systemd `\|\| true` syntax   | Use `-` prefix: `ExecStartPre=-/usr/bin/docker ...`           |
 | SSH heredoc corrupts shebang | Pipe from local heredoc instead of remote heredoc              |
+| Butane → Ignition recompile  | Requires Docker: `docker run --rm -i quay.io/coreos/butane:latest --strict` |
