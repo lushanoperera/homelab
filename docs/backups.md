@@ -70,7 +70,7 @@ Both sites push backups to each other for offsite redundancy:
 - Remote: `pbs-nwdesigns` (10.21.21.101)
 - Direction: push, remove-vanished: false
 
-**WireGuard connectivity**: Homelab PBS reaches nwlab via WG overlay. nwlab PBS LXC at `10.21.21.101`, reachable as `10.0.0.6` sees it through the WG tunnel.
+**WireGuard connectivity**: Homelab PBS reaches nwlab via WG overlay. nwlab PBS LXC at `10.21.21.101`, reachable as `10.0.0.6` sees it through the WG tunnel. The same WG tunnel (`wg-nwlab` on winston) also carries PDM management traffic to nwlab-thinkpad (10.21.21.99).
 
 **Storage**: `nwlab-backup` datastore on QNAP NFS share `PBS-nwlab` (`192.168.200.254:/PBS-nwlab` → `/mnt/nwlab-backup`).
 

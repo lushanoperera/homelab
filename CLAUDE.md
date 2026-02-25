@@ -27,8 +27,9 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 | flatcar-media (VM 100)     | .100.100 / .7.119 / .200.100 | Media stack (Sonarr, Radarr, qBittorrent) |
 | homeassistant (VM 102)     | .100.102 / .4.102 / .5.102 | Home Assistant (multi-VLAN: Infra+IoT+Multimedia) |
 | PBS                        | 192.168.100.187            | Proxmox Backup Server (on QNAP)          |
-| PDM (LXC 106)             | 192.168.100.106            | Proxmox Datacenter Manager                |
+| PDM (LXC 106)             | 192.168.100.106            | Proxmox Datacenter Manager (manages winston, reginald, nwlab-thinkpad) |
 | QNAP NAS                  | 192.168.100.254 / .200.254 | Storage (MinIO S3, NFS)                   |
+| nwlab-thinkpad (remote)   | 10.21.21.99                | nwlab Proxmox VE 9.1.5 host (managed via WG tunnel) |
 
 ### Services by Location
 
@@ -106,6 +107,29 @@ Internet → Cloudflare Tunnel → Traefik (192.168.7.119)
 | Traefik | Public   | Per-service via Cloudflare  | `/srv/docker/traefik/`     |
 
 Caddy proxies 21 services across 3 site files: `media.caddy` (9), `apps.caddy` (6), `infrastructure.caddy` (6).
+
+### Cross-Site WireGuard Routing (winston ↔ nwlab)
+
+Winston runs a WireGuard client (`wg-nwlab`) connecting to the nwlab office wg-easy server, enabling PDM to manage the remote nwlab-thinkpad Proxmox host.
+
+```
+PDM (LXC 106, .100.106)
+  → static route: 10.21.21.0/24 via 192.168.100.38
+    → winston MASQUERADE (src → 10.0.0.5)
+      → wg-nwlab tunnel (Endpoint: 80.210.114.192:51820)
+        → nwlab wg-easy (LXC 100, 10.21.21.100) MASQUERADE
+          → thinkpad (10.21.21.99:8006)
+```
+
+| Component | Config | Notes |
+|-----------|--------|-------|
+| WG interface | `/etc/wireguard/wg-nwlab.conf` | Overlay IP: 10.0.0.5/32, MTU 1420 |
+| WG service | `wg-quick@wg-nwlab` | Enabled on boot |
+| IP forwarding | `/etc/sysctl.d/99-wg-forward.conf` | `net.ipv4.ip_forward=1` |
+| PDM route | LXC 106 `/etc/network/interfaces` | `up ip route add 10.21.21.0/24 via 192.168.100.38` |
+| Routed subnets | AllowedIPs | `10.0.0.0/24` (overlay), `10.21.21.0/24` (nwlab LAN) |
+
+**Note**: LXC 104 on winston is the personal homelab WG **server** (wg-easy for remote access) — completely separate from `wg-nwlab`.
 
 ## Directory Structure
 
@@ -241,6 +265,22 @@ ssh core@192.168.100.100 'cat /mnt/media/.trash/deletion_log.txt'  # Find origin
 ssh core@192.168.100.100 'cd /srv/docker/couchdb && /opt/bin/docker-compose ps'
 ssh core@192.168.100.100 'curl -s http://localhost:5984/_up'
 ssh core@192.168.100.100 'curl -s http://localhost:5984/obsidian-livesync | jq .doc_count'
+```
+
+### nwlab WireGuard Tunnel
+
+```bash
+# Tunnel status
+ssh root@192.168.100.38 'wg show wg-nwlab'
+
+# Test connectivity to nwlab
+ssh root@192.168.100.38 'ping -c 2 10.21.21.99'
+
+# Test PDM → thinkpad (full chain)
+ssh root@192.168.100.38 'pct exec 106 -- curl -sk https://10.21.21.99:8006/api2/json/version'
+
+# Restart tunnel
+ssh root@192.168.100.38 'systemctl restart wg-quick@wg-nwlab'
 ```
 
 ### NFS Operations

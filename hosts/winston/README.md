@@ -11,10 +11,11 @@
 
 ## Network
 
-| Interface | Bridge | IP             | Purpose      |
-| --------- | ------ | -------------- | ------------ |
-| Infra     | vmbr0  | 192.168.100.38 | Management (VLANs 4,5,7,100) |
-| Storage   | vmbr1  | 192.168.200.38 | NFS, backups |
+| Interface | Bridge/Dev | IP             | Purpose      |
+| --------- | ---------- | -------------- | ------------ |
+| Infra     | vmbr0      | 192.168.100.38 | Management (VLANs 4,5,7,100) |
+| Storage   | vmbr1      | 192.168.200.38 | NFS, backups |
+| wg-nwlab  | WireGuard  | 10.0.0.5       | nwlab site-to-site tunnel (routes 10.0.0.0/24, 10.21.21.0/24) |
 
 ## SSH
 
