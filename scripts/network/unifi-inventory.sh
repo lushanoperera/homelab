@@ -406,7 +406,7 @@ print_wifi() {
                 (if $cfg.radio == "ng" then "2.4GHz" elif $cfg.radio == "na" then "5GHz" elif $cfg.radio == "6e" then "6GHz" else $cfg.radio end),
                 ($st.channel // $cfg.channel | tostring),
                 ($cfg.ht | tostring),
-                (if $cfg.tx_power == null then "auto" else (($cfg.tx_power | tostring) + "dBm") end),
+                (if $cfg.tx_power_mode == "auto" or $cfg.tx_power_mode == null then "auto" elif $cfg.tx_power_mode == "custom" then (($cfg.tx_power | tostring) + "dBm") else $cfg.tx_power_mode end),
                 ($st.num_sta // 0 | tostring),
                 (($st.cu_total // 0 | tostring) + "%"),
                 (if ($st.satisfaction // -1) < 0 then "N/A" else ($st.satisfaction | tostring) end)
@@ -479,9 +479,11 @@ print_wifi() {
             "$(echo "$dup_24" | tr '\n' ',' | sed 's/,$//')"
     fi
 
-    # Check DFS channels on 5 GHz (120, 124, 128)
+    # Check DFS channels on 5 GHz
+    # UNII-2: 52-64, UNII-2 Extended: 100-144 — all require Dynamic Frequency Selection
+    # Non-DFS: UNII-1 (36-48), UNII-3 (149-177)
     while IFS= read -r ch; do
-        if [[ "$ch" == "120" || "$ch" == "124" || "$ch" == "128" ]]; then
+        if [[ -n "$ch" ]] && (( ch >= 52 && ch <= 144 )); then
             printf '\033[1;33m[WARN]\033[0m 5 GHz channel %s is DFS — radar events may cause channel switches\n' "$ch"
         fi
     done <<< "$(echo "$channels_5" | sort -n | uniq)"
