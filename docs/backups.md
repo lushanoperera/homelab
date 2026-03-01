@@ -66,6 +66,17 @@ PBS provides VM-level backups with deduplication and integrity verification.
 
 All jobs: storage `pbs-backupnas`, compress `zstd`, mode `snapshot`, mail on failure.
 
+**Backup gap (Oct 2025 – Mar 2026):** Winston vzdump jobs were lost during the
+October 2025 bare-metal rebuild (`/etc/pve/jobs.cfg` not preserved in pmxcfs).
+Jobs were recreated on 2026-03-01. All VMIDs now have fresh backups.
+
+### Known Issues
+
+**PBS Storage LAN intermittent timeouts**: pvestatd logs frequent `read timeout`
+errors to `192.168.200.187:8007`. Vzdump transfers complete successfully despite
+this. Suspected cause: QNAP PBS VM high memory/load (902 MB RSS, load avg ~3).
+Not a data integrity risk — pvestatd polling is separate from backup data transfer.
+
 ### Cross-Site Sync (nwlab ↔ homelab)
 
 Both sites push backups to each other for offsite redundancy:
@@ -91,12 +102,13 @@ Both sites push backups to each other for offsite redundancy:
 
 ### Container 101: Nextcloud
 
-| Setting    | Value                                             |
-| ---------- | ------------------------------------------------- |
-| Repository | `s3:http://192.168.200.210:9000/restic-nextcloud` |
-| Schedule   | Daily at 00:00 (cron)                             |
-| Script     | `/root/backup-nextcloud.sh`                       |
-| Config     | `/root/.restic-env`                               |
+| Setting    | Value                                                  |
+| ---------- | ------------------------------------------------------ |
+| Repository | `s3:http://192.168.200.210:9000/restic-nextcloud`      |
+| Schedule   | Daily at 00:00 (systemd timer)                         |
+| Script     | `/root/backup-nextcloud.sh`                            |
+| Config     | `/root/.restic-env`                                    |
+| Units      | `/etc/systemd/system/nextcloud-backup.{service,timer}` |
 
 **Backup Scope:**
 
@@ -115,12 +127,13 @@ Both sites push backups to each other for offsite redundancy:
 
 ### Container 103: Immich
 
-| Setting    | Value                                          |
-| ---------- | ---------------------------------------------- |
-| Repository | `s3:http://192.168.200.210:9000/restic-immich` |
-| Schedule   | Daily at 00:00 (cron)                          |
-| Script     | `/root/backup-immich.sh`                       |
-| Config     | `/root/.restic-env`                            |
+| Setting    | Value                                               |
+| ---------- | --------------------------------------------------- |
+| Repository | `s3:http://192.168.200.210:9000/restic-immich`      |
+| Schedule   | Daily at 00:00 (systemd timer)                      |
+| Script     | `/root/backup-immich.sh`                            |
+| Config     | `/root/.restic-env`                                 |
+| Units      | `/etc/systemd/system/immich-backup.{service,timer}` |
 
 **Backup Scope:**
 

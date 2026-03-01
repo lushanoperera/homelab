@@ -24,6 +24,14 @@ paths:
 | pvesh storage content path              | `/nodes/<node>/storage/<id>/content` not `/storage/<id>/content`                                                                                          |
 | No scheduled backups                    | Fixed 2026-03-01: 2 vzdump jobs on winston (A: 103-106 at 04:00, B: 100-102 at 05:00) + 1 on reginald (120 at 08:00). Verify: `pvesh get /cluster/backup` |
 
+## PBS / Vzdump
+
+- `/etc/pve/jobs.cfg` lives in pmxcfs (cluster filesystem) — **lost on bare-metal reinstall**. After any Proxmox rebuild, verify vzdump jobs exist: `cat /etc/pve/jobs.cfg`
+- Backup gap Oct 2025 – Mar 2026: jobs.cfg not preserved during winston rebuild, no scheduled backups ran for ~5 months. Recreated 2026-03-01.
+- Manual backup verification: `pvesh get /nodes/{node}/tasks --typefilter vzdump --limit 5`
+- PBS storage on Storage LAN (192.168.200.x) — check connectivity separately from Infra LAN (192.168.100.x)
+- PBS on QNAP intermittently slow (high memory/load) — causes `read timeout` in pvestatd, but vzdump transfers complete fine
+
 ## GPU SR-IOV
 
 Intel iGPU SR-IOV passthrough to Flatcar **not working** - guest requires patched `i915-sriov-dkms` driver. See `docs/sr-iov/` for details.

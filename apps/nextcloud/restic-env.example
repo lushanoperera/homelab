@@ -1,0 +1,7 @@
+export AWS_ACCESS_KEY_ID="your-minio-access-key"
+export AWS_SECRET_ACCESS_KEY="your-minio-secret-key"
+export RESTIC_REPOSITORY="s3:http://192.168.200.210:9000/restic-nextcloud"
+export RESTIC_PASSWORD="your-restic-password"
+
+# Opzioni aggiuntive per la compressione
+export RESTIC_COMPRESSION="max"

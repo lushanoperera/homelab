@@ -72,6 +72,7 @@ rclone.conf
 
 # Restic
 restic-env.sh
+.restic-env
 
 # AIM Knowledge Graph observations (auto-generated)
 .aim/

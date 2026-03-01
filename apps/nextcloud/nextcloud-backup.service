@@ -1,0 +1,10 @@
+[Unit]
+Description=Nextcloud Restic backup to MinIO S3
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/root/backup-nextcloud.sh
+Environment=HOME=/root
+TimeoutStartSec=6h

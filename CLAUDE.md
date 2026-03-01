@@ -178,20 +178,24 @@ homelab/
 
 ### Repo → VM Path Mapping
 
-| Repo Path                              | Deployed Path (Flatcar)                      | Deploy Method           |
-| -------------------------------------- | -------------------------------------------- | ----------------------- |
-| `vms/flatcar-media/docker-compose.yml` | `/srv/docker/media-stack/docker-compose.yml` | rsync/scp               |
-| `networking/caddy/`                    | `/srv/docker/caddy/`                         | rsync/scp               |
-| `networking/traefik/`                  | `/srv/docker/traefik/`                       | rsync/scp               |
-| `networking/cloudflare-tunnel/`        | `/srv/docker/cloudflare-tunnel/`             | rsync/scp               |
-| `scripts/vms/*.sh`                     | `/opt/bin/`                                  | deploy-media-scripts.sh |
-| `apps/couchdb/`                        | `/srv/docker/couchdb/`                       | rsync/scp               |
-| `apps/couchdb/couchdb-stack.service`   | `/etc/systemd/system/couchdb-stack.service`  | scp + systemctl enable  |
-| `apps/kido/`                           | `/srv/docker/kido/`                          | rsync/scp               |
-| `apps/vaultwarden/docker-compose.yml`  | `/opt/vaultwarden/docker-compose.yml`        | scp                     |
-| `apps/vaultwarden/backup.sh`           | `/opt/vaultwarden/backup.sh`                 | scp + chmod +x          |
-| `systemd/*.mount`                      | `/etc/systemd/system/`                       | Ignition or manual      |
-| `hosts/winston/ksm-enable.service`     | `/etc/systemd/system/ksm-enable.service`     | scp + systemctl enable  |
+| Repo Path                                         | Deployed Path (Flatcar)                      | Deploy Method                 |
+| ------------------------------------------------- | -------------------------------------------- | ----------------------------- |
+| `vms/flatcar-media/docker-compose.yml`            | `/srv/docker/media-stack/docker-compose.yml` | rsync/scp                     |
+| `networking/caddy/`                               | `/srv/docker/caddy/`                         | rsync/scp                     |
+| `networking/traefik/`                             | `/srv/docker/traefik/`                       | rsync/scp                     |
+| `networking/cloudflare-tunnel/`                   | `/srv/docker/cloudflare-tunnel/`             | rsync/scp                     |
+| `scripts/vms/*.sh`                                | `/opt/bin/`                                  | deploy-media-scripts.sh       |
+| `apps/couchdb/`                                   | `/srv/docker/couchdb/`                       | rsync/scp                     |
+| `apps/couchdb/couchdb-stack.service`              | `/etc/systemd/system/couchdb-stack.service`  | scp + systemctl enable        |
+| `apps/kido/`                                      | `/srv/docker/kido/`                          | rsync/scp                     |
+| `apps/vaultwarden/docker-compose.yml`             | `/opt/vaultwarden/docker-compose.yml`        | scp                           |
+| `apps/vaultwarden/backup.sh`                      | `/opt/vaultwarden/backup.sh`                 | scp + chmod +x                |
+| `systemd/*.mount`                                 | `/etc/systemd/system/`                       | Ignition or manual            |
+| `hosts/winston/ksm-enable.service`                | `/etc/systemd/system/ksm-enable.service`     | scp + systemctl enable        |
+| `apps/nextcloud/backup-nextcloud.sh`              | LXC 101 `/root/backup-nextcloud.sh`          | `pct push`                    |
+| `apps/nextcloud/nextcloud-backup.{service,timer}` | LXC 101 `/etc/systemd/system/`               | `pct push` + systemctl enable |
+| `apps/immich/backup-immich.sh`                    | LXC 103 `/root/backup-immich.sh`             | `pct push`                    |
+| `apps/immich/immich-backup.{service,timer}`       | LXC 103 `/etc/systemd/system/`               | `pct push` + systemctl enable |
 
 ## Quick Reference
 

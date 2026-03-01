@@ -65,7 +65,23 @@ Check garbage collection status:
 ssh root@192.168.200.187 'proxmox-backup-manager gc-status'
 ```
 
-### Phase 3: Restic Backups
+### Phase 3: Restic Backup Timers
+
+Check systemd timer status on LXC containers:
+
+```bash
+# Nextcloud timer (LXC 101)
+ssh root@192.168.100.38 'pct exec 101 -- systemctl status nextcloud-backup.timer'
+ssh root@192.168.100.38 'pct exec 101 -- systemctl list-timers nextcloud-backup.timer'
+ssh root@192.168.100.38 'pct exec 101 -- journalctl -u nextcloud-backup.service --no-pager -n 20'
+
+# Immich timer (LXC 103)
+ssh root@192.168.100.38 'pct exec 103 -- systemctl status immich-backup.timer'
+ssh root@192.168.100.38 'pct exec 103 -- systemctl list-timers immich-backup.timer'
+ssh root@192.168.100.38 'pct exec 103 -- journalctl -u immich-backup.service --no-pager -n 20'
+```
+
+### Phase 4: Restic Snapshots
 
 Check latest Restic snapshots (from host running restic):
 
@@ -85,7 +101,7 @@ Check repository health:
 restic check --read-data-subset=1%
 ```
 
-### Phase 4: MinIO S3 Health
+### Phase 5: MinIO S3 Health
 
 Check MinIO is accessible:
 
@@ -106,7 +122,7 @@ mc du minio/restic
 mc du minio/nextcloud
 ```
 
-### Phase 5: Garage S3 (if migrated)
+### Phase 6: Garage S3 (if migrated)
 
 Check Garage status:
 
@@ -120,7 +136,7 @@ Check bucket info:
 ssh root@192.168.100.254 'docker exec garage garage bucket info restic'
 ```
 
-### Phase 6: LXC Container Backups
+### Phase 7: LXC Container Backups
 
 List backups for specific container:
 
