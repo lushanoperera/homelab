@@ -554,12 +554,13 @@ LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
 
 Moved to conditional rules (loaded on-demand by file pattern):
 
-| Rule File                          | Topics                                 | Triggers                                         |
-| ---------------------------------- | -------------------------------------- | ------------------------------------------------ |
-| `.claude/rules/flatcar-lessons.md` | Flatcar, Butane, Ignition, Compose     | `vms/flatcar-media/**`, `systemd/**`             |
-| `.claude/rules/nfs-zfs-lessons.md` | NFS, ZFS, mounts, exports              | `storage/nfs/**`, `systemd/*.mount`              |
-| `.claude/rules/dns-lessons.md`     | Technitium DNS cluster                 | `dns/**`, `**/dns-compose*`                      |
-| `.claude/rules/infra-lessons.md`   | Proxmox networking, GPU SR-IOV, Garage | `hosts/**`, `networking/**`, `storage/garage/**` |
+| Rule File                             | Topics                                 | Triggers                                         |
+| ------------------------------------- | -------------------------------------- | ------------------------------------------------ |
+| `.claude/rules/flatcar-lessons.md`    | Flatcar, Butane, Ignition, Compose     | `vms/flatcar-media/**`, `systemd/**`             |
+| `.claude/rules/nfs-zfs-lessons.md`    | NFS, ZFS, mounts, exports              | `storage/nfs/**`, `systemd/*.mount`              |
+| `.claude/rules/dns-lessons.md`        | Technitium DNS cluster                 | `dns/**`, `**/dns-compose*`                      |
+| `.claude/rules/infra-lessons.md`      | Proxmox networking, GPU SR-IOV, Garage | `hosts/**`, `networking/**`, `storage/garage/**` |
+| `.claude/rules/networking-lessons.md` | UniFi API, WiFi, mesh, Radio AI        | `scripts/network/**`, `networking/**`            |
 
 ## Verification
 
