@@ -32,13 +32,13 @@ NFS Data → Restic → MinIO S3 (192.168.200.210)
 Check PBS is accessible:
 
 ```bash
-ssh root@192.168.100.187 'proxmox-backup-manager datastore list'
+ssh root@192.168.200.187 'proxmox-backup-manager datastore list'
 ```
 
 Check recent backups:
 
 ```bash
-ssh root@192.168.100.187 'proxmox-backup-client list --repository local'
+ssh root@192.168.200.187 'proxmox-backup-client list --repository local'
 ```
 
 From Proxmox host, check backup schedule:
@@ -56,13 +56,13 @@ ssh root@192.168.100.38 'tail -50 /var/log/vzdump/*.log | tail -30'
 ### Phase 2: PBS Storage Usage
 
 ```bash
-ssh root@192.168.100.187 'proxmox-backup-manager datastore status'
+ssh root@192.168.200.187 'proxmox-backup-manager datastore status'
 ```
 
 Check garbage collection status:
 
 ```bash
-ssh root@192.168.100.187 'proxmox-backup-manager gc-status'
+ssh root@192.168.200.187 'proxmox-backup-manager gc-status'
 ```
 
 ### Phase 3: Restic Backups
@@ -125,15 +125,21 @@ ssh root@192.168.100.254 'docker exec garage garage bucket info restic'
 List backups for specific container:
 
 ```bash
-# From Proxmox host
-ssh root@192.168.100.38 'pvesh get /nodes/winston/storage/pbs/content --vmid 101'
+# From Proxmox host (note: storage is pbs-backupnas, not pbs)
+ssh root@192.168.100.38 'pvesh get /nodes/winston/storage/pbs-backupnas/content --vmid 101 --output-format json-pretty'
 ```
 
-Check backup schedule:
+Check backup schedule (expected: 2 winston jobs + 1 reginald job):
 
 ```bash
-ssh root@192.168.100.38 'pvesh get /cluster/backup'
+ssh root@192.168.100.38 'pvesh get /cluster/backup --output-format json-pretty'
 ```
+
+Expected output includes:
+
+- Job A: VMIDs 103,104,105,106 at 04:00 (winston)
+- Job B: VMIDs 100,101,102 at 05:00 (winston)
+- Reginald job: VMID 120 at 08:00
 
 ## Backup Freshness Thresholds
 
@@ -150,7 +156,7 @@ ssh root@192.168.100.38 'pvesh get /cluster/backup'
 Check PBS service:
 
 ```bash
-ssh root@192.168.100.187 'systemctl status proxmox-backup.service'
+ssh root@192.168.200.187 'systemctl status proxmox-backup.service'
 ```
 
 ### Restic Errors

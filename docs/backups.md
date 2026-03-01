@@ -4,11 +4,11 @@
 
 The homelab uses multiple backup strategies:
 
-| Layer        | Tool             | Target   | Scope                      |
-| ------------ | ---------------- | -------- | -------------------------- |
-| VM/Container | PBS              | QNAP NAS | All VMs and LXC containers |
-| Application  | Restic           | MinIO S3 | Nextcloud, Immich data     |
-| Cross-site   | PBS sync (push)  | nwlab PBS | Offsite copy to nwlab      |
+| Layer        | Tool            | Target    | Scope                      |
+| ------------ | --------------- | --------- | -------------------------- |
+| VM/Container | PBS             | QNAP NAS  | All VMs and LXC containers |
+| Application  | Restic          | MinIO S3  | Nextcloud, Immich data     |
+| Cross-site   | PBS sync (push) | nwlab PBS | Offsite copy to nwlab      |
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -51,21 +51,32 @@ PBS provides VM-level backups with deduplication and integrity verification.
 
 ### PBS Datastores
 
-| Datastore | Purpose | Content |
-| --------- | ------- | ------- |
-| `pbs-backups` | Homelab local backups | All local VMs and LXC containers |
+| Datastore      | Purpose                         | Content                              |
+| -------------- | ------------------------------- | ------------------------------------ |
+| `pbs-backups`  | Homelab local backups           | All local VMs and LXC containers     |
 | `nwlab-backup` | nwlab offsite copies (incoming) | nwlab ct/100, ct/101, ct/102, vm/104 |
+
+### Scheduled Backup Jobs
+
+| Job ID               | Node     | VMIDs              | Schedule | Retention                                 |
+| -------------------- | -------- | ------------------ | -------- | ----------------------------------------- |
+| dd9d470e             | winston  | 103, 104, 105, 106 | 04:00    | keep-last=3, daily=7, weekly=4, monthly=2 |
+| 92d5a969             | winston  | 100, 101, 102      | 05:00    | (same)                                    |
+| backup-631cad5e-fea6 | reginald | 120                | 08:00    | (same)                                    |
+
+All jobs: storage `pbs-backupnas`, compress `zstd`, mode `snapshot`, mail on failure.
 
 ### Cross-Site Sync (nwlab ↔ homelab)
 
 Both sites push backups to each other for offsite redundancy:
 
-| Direction | Source | Target | Schedule | Via |
-| --------- | ------ | ------ | -------- | --- |
-| nwlab → homelab | nwlab `home-backup` | homelab `nwlab-backup` | 04:00 | WireGuard (10.0.0.6) |
-| homelab → nwlab | homelab `pbs-backups` | nwlab `homelab-sync` | 21:00 | WireGuard (10.21.21.101) |
+| Direction       | Source                | Target                 | Schedule | Via                      |
+| --------------- | --------------------- | ---------------------- | -------- | ------------------------ |
+| nwlab → homelab | nwlab `home-backup`   | homelab `nwlab-backup` | 04:00    | WireGuard (10.0.0.6)     |
+| homelab → nwlab | homelab `pbs-backups` | nwlab `homelab-sync`   | 21:00    | WireGuard (10.21.21.101) |
 
 **Sync job details**:
+
 - Homelab push job ID: `s-24a0eca7-78f5`
 - Remote: `pbs-nwdesigns` (10.21.21.101)
 - Direction: push, remove-vanished: false
@@ -124,6 +135,10 @@ Both sites push backups to each other for offsite redundancy:
 - Two-phase backup (DB first, then media)
 - Weekly full integrity check (Sundays)
 
+**NFS scope note:** vzdump backs up LXC rootfs only. NFS-mounted data (`/mnt/database`, `/mnt/upload`) is covered by Restic, not vzdump. This is by design.
+
+**Historical gap:** Restic backups had an ~11-month gap (2025-03-16 to 2026-02-27) due to a failed backup approach transition (per-PG-subdirectory → pg_dump). The backup script was redesigned and re-enabled in February 2026. Current approach is healthy.
+
 ---
 
 ### MinIO S3 Backend
@@ -167,12 +182,12 @@ restic unlock         # Unlock stuck repo
 
 ## Backup Summary
 
-| Service              | PBS | Restic   | File-level |
-| -------------------- | --- | -------- | ---------- |
-| flatcar-media (100)  | ✅  | —        | —          |
-| Nextcloud (101)      | ✅  | ✅ Daily | —          |
-| homeassistant (102)  | ✅  | —        | —          |
-| Immich (103)         | ✅  | ✅ Daily | —          |
-| WireGuard (104)      | ✅  | —        | —          |
-| Plex (105)           | ✅  | —        | —          |
-| PDM (106)            | ✅  | —        | —          |
+| Service             | PBS | Restic   | File-level |
+| ------------------- | --- | -------- | ---------- |
+| flatcar-media (100) | ✅  | —        | —          |
+| Nextcloud (101)     | ✅  | ✅ Daily | —          |
+| homeassistant (102) | ✅  | —        | —          |
+| Immich (103)        | ✅  | ✅ Daily | —          |
+| WireGuard (104)     | ✅  | —        | —          |
+| Plex (105)          | ✅  | —        | —          |
+| PDM (106)           | ✅  | —        | —          |
