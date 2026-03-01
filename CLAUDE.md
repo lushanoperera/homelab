@@ -6,30 +6,30 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 
 ### Network Architecture
 
-| Network     | Subnet            | VLAN | Purpose                                  |
-| ----------- | ----------------- | ---- | ---------------------------------------- |
-| Management  | 192.168.1.0/24    | 1    | Gateway, APs, default devices            |
-| Trusted     | 192.168.2.0/24    | 2    | Personal devices (phones, laptops)       |
-| Guests      | 192.168.3.0/24    | 3    | Guest WiFi                               |
-| IoT         | 192.168.4.0/24    | 4    | Smart home, Alexa, cameras, sensors      |
-| Multimedia  | 192.168.5.0/24    | 5    | Sonos, Sky Q, media players              |
-| Infra       | 192.168.100.0/20  | 100  | Proxmox hosts, VMs, LXCs, services      |
-| DMZ         | 192.168.7.0/24    | 7    | Internet-facing services (Traefik)       |
-| Storage LAN | 192.168.200.0/24  | —    | Dedicated NFS/backup traffic (not on UFG)|
+| Network     | Subnet           | VLAN | Purpose                                   |
+| ----------- | ---------------- | ---- | ----------------------------------------- |
+| Management  | 192.168.1.0/24   | 1    | Gateway, APs, default devices             |
+| Trusted     | 192.168.2.0/24   | 2    | Personal devices (phones, laptops)        |
+| Guests      | 192.168.3.0/24   | 3    | Guest WiFi                                |
+| IoT         | 192.168.4.0/24   | 4    | Smart home, Alexa, cameras, sensors       |
+| Multimedia  | 192.168.5.0/24   | 5    | Sonos, Sky Q, media players               |
+| Infra       | 192.168.100.0/20 | 100  | Proxmox hosts, VMs, LXCs, services        |
+| DMZ         | 192.168.7.0/24   | 7    | Internet-facing services (Traefik)        |
+| Storage LAN | 192.168.200.0/24 | —    | Dedicated NFS/backup traffic (not on UFG) |
 
 ### Hosts & VMs
 
-| Host/VM                    | IP                         | Role                                      |
-| -------------------------- | -------------------------- | ----------------------------------------- |
-| UniFi Fiber Gateway (UCG-Fiber) | 192.168.1.1           | Router, firewall, UniFi OS 10.1 controller |
-| winston                    | 192.168.100.38 / .200.38   | Primary Proxmox VE 9.1.4 host (32 GB)    |
-| reginald                   | 192.168.100.4 / .200.4     | Secondary Proxmox VE 9.1.5 host (8 GB)   |
-| flatcar-media (VM 100)     | .100.100 / .7.119 / .200.100 | Media stack (Sonarr, Radarr, qBittorrent) |
-| homeassistant (VM 102)     | .100.102 / .4.102 / .5.102 | Home Assistant (multi-VLAN: Infra+IoT+Multimedia) |
-| PBS                        | 192.168.100.187            | Proxmox Backup Server (on QNAP)          |
-| PDM (LXC 106)             | 192.168.100.106            | Proxmox Datacenter Manager (manages winston, reginald, nwlab-thinkpad) |
-| QNAP NAS                  | 192.168.100.254 / .200.254 | Storage (MinIO S3, NFS)                   |
-| nwlab-thinkpad (remote)   | 10.21.21.99                | nwlab Proxmox VE 9.1.5 host (managed via WG tunnel) |
+| Host/VM                         | IP                           | Role                                                                   |
+| ------------------------------- | ---------------------------- | ---------------------------------------------------------------------- |
+| UniFi Fiber Gateway (UCG-Fiber) | 192.168.1.1                  | Router, firewall, UniFi OS 10.1 controller                             |
+| winston                         | 192.168.100.38 / .200.38     | Primary Proxmox VE 9.1.4 host (32 GB)                                  |
+| reginald                        | 192.168.100.4 / .200.4       | Secondary Proxmox VE 9.1.5 host (8 GB)                                 |
+| flatcar-media (VM 100)          | .100.100 / .7.119 / .200.100 | Media stack (Sonarr, Radarr, qBittorrent)                              |
+| homeassistant (VM 102)          | .100.102 / .4.102 / .5.102   | Home Assistant (multi-VLAN: Infra+IoT+Multimedia)                      |
+| PBS                             | 192.168.100.187              | Proxmox Backup Server (on QNAP)                                        |
+| PDM (LXC 106)                   | 192.168.100.106              | Proxmox Datacenter Manager (manages winston, reginald, nwlab-thinkpad) |
+| QNAP NAS                        | 192.168.100.254 / .200.254   | Storage (MinIO S3, NFS)                                                |
+| nwlab-thinkpad (remote)         | 10.21.21.99                  | nwlab Proxmox VE 9.1.5 host (managed via WG tunnel)                    |
 
 ### Services by Location
 
@@ -72,11 +72,11 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 
 3-node Technitium DNS cluster with native zone replication. Replaced Pi-hole + Nebula Sync.
 
-| Node | IP | Role | Deployment |
-|------|-----|------|------------|
-| qnap.dns.disconnesso.home.arpa | 192.168.100.254 | Primary | Docker (Container Station) |
-| flatcar.dns.disconnesso.home.arpa | 192.168.100.100 | Secondary | Docker (`/srv/docker/dns/`) |
-| reginald.dns.disconnesso.home.arpa | 192.168.100.120 | Secondary | Native (Debian 12 LXC) |
+| Node                               | IP              | Role      | Deployment                  |
+| ---------------------------------- | --------------- | --------- | --------------------------- |
+| qnap.dns.disconnesso.home.arpa     | 192.168.100.254 | Primary   | Docker (Container Station)  |
+| flatcar.dns.disconnesso.home.arpa  | 192.168.100.100 | Secondary | Docker (`/srv/docker/dns/`) |
+| reginald.dns.disconnesso.home.arpa | 192.168.100.120 | Secondary | Native (Debian 12 LXC)      |
 
 - Cluster domain: `dns.disconnesso.home.arpa`
 - Web UI: `http://<node-ip>:5380`
@@ -101,10 +101,10 @@ LAN clients → Caddy (192.168.100.100:443)
 Internet → Cloudflare Tunnel → Traefik (192.168.7.119)
 ```
 
-| Proxy   | Scope    | Cert                        | Config Location            |
-| ------- | -------- | --------------------------- | -------------------------- |
-| Caddy   | Internal | `*.home.disconnesso.com`    | `/srv/docker/caddy/`       |
-| Traefik | Public   | Per-service via Cloudflare  | `/srv/docker/traefik/`     |
+| Proxy   | Scope    | Cert                       | Config Location        |
+| ------- | -------- | -------------------------- | ---------------------- |
+| Caddy   | Internal | `*.home.disconnesso.com`   | `/srv/docker/caddy/`   |
+| Traefik | Public   | Per-service via Cloudflare | `/srv/docker/traefik/` |
 
 Caddy proxies 21 services across 3 site files: `media.caddy` (9), `apps.caddy` (6), `infrastructure.caddy` (6).
 
@@ -121,13 +121,13 @@ PDM (LXC 106, .100.106)
           → thinkpad (10.21.21.99:8006)
 ```
 
-| Component | Config | Notes |
-|-----------|--------|-------|
-| WG interface | `/etc/wireguard/wg-nwlab.conf` | Overlay IP: 10.0.0.5/32, MTU 1420 |
-| WG service | `wg-quick@wg-nwlab` | Enabled on boot |
-| IP forwarding | `/etc/sysctl.d/99-wg-forward.conf` | `net.ipv4.ip_forward=1` |
-| PDM route | LXC 106 `/etc/network/interfaces` | `up ip route add 10.21.21.0/24 via 192.168.100.38` |
-| Routed subnets | AllowedIPs | `10.0.0.0/24` (overlay), `10.21.21.0/24` (nwlab LAN) |
+| Component      | Config                             | Notes                                                |
+| -------------- | ---------------------------------- | ---------------------------------------------------- |
+| WG interface   | `/etc/wireguard/wg-nwlab.conf`     | Overlay IP: 10.0.0.5/32, MTU 1420                    |
+| WG service     | `wg-quick@wg-nwlab`                | Enabled on boot                                      |
+| IP forwarding  | `/etc/sysctl.d/99-wg-forward.conf` | `net.ipv4.ip_forward=1`                              |
+| PDM route      | LXC 106 `/etc/network/interfaces`  | `up ip route add 10.21.21.0/24 via 192.168.100.38`   |
+| Routed subnets | AllowedIPs                         | `10.0.0.0/24` (overlay), `10.21.21.0/24` (nwlab LAN) |
 
 **Note**: LXC 104 on winston is the personal homelab WG **server** (wg-easy for remote access) — completely separate from `wg-nwlab`.
 
@@ -178,20 +178,20 @@ homelab/
 
 ### Repo → VM Path Mapping
 
-| Repo Path | Deployed Path (Flatcar) | Deploy Method |
-|-----------|------------------------|---------------|
-| `vms/flatcar-media/docker-compose.yml` | `/srv/docker/media-stack/docker-compose.yml` | rsync/scp |
-| `networking/caddy/` | `/srv/docker/caddy/` | rsync/scp |
-| `networking/traefik/` | `/srv/docker/traefik/` | rsync/scp |
-| `networking/cloudflare-tunnel/` | `/srv/docker/cloudflare-tunnel/` | rsync/scp |
-| `scripts/vms/*.sh` | `/opt/bin/` | deploy-media-scripts.sh |
-| `apps/couchdb/` | `/srv/docker/couchdb/` | rsync/scp |
-| `apps/couchdb/couchdb-stack.service` | `/etc/systemd/system/couchdb-stack.service` | scp + systemctl enable |
-| `apps/kido/` | `/srv/docker/kido/` | rsync/scp |
-| `apps/vaultwarden/docker-compose.yml` | `/opt/vaultwarden/docker-compose.yml` | scp |
-| `apps/vaultwarden/backup.sh` | `/opt/vaultwarden/backup.sh` | scp + chmod +x |
-| `systemd/*.mount` | `/etc/systemd/system/` | Ignition or manual |
-| `hosts/winston/ksm-enable.service` | `/etc/systemd/system/ksm-enable.service` | scp + systemctl enable |
+| Repo Path                              | Deployed Path (Flatcar)                      | Deploy Method           |
+| -------------------------------------- | -------------------------------------------- | ----------------------- |
+| `vms/flatcar-media/docker-compose.yml` | `/srv/docker/media-stack/docker-compose.yml` | rsync/scp               |
+| `networking/caddy/`                    | `/srv/docker/caddy/`                         | rsync/scp               |
+| `networking/traefik/`                  | `/srv/docker/traefik/`                       | rsync/scp               |
+| `networking/cloudflare-tunnel/`        | `/srv/docker/cloudflare-tunnel/`             | rsync/scp               |
+| `scripts/vms/*.sh`                     | `/opt/bin/`                                  | deploy-media-scripts.sh |
+| `apps/couchdb/`                        | `/srv/docker/couchdb/`                       | rsync/scp               |
+| `apps/couchdb/couchdb-stack.service`   | `/etc/systemd/system/couchdb-stack.service`  | scp + systemctl enable  |
+| `apps/kido/`                           | `/srv/docker/kido/`                          | rsync/scp               |
+| `apps/vaultwarden/docker-compose.yml`  | `/opt/vaultwarden/docker-compose.yml`        | scp                     |
+| `apps/vaultwarden/backup.sh`           | `/opt/vaultwarden/backup.sh`                 | scp + chmod +x          |
+| `systemd/*.mount`                      | `/etc/systemd/system/`                       | Ignition or manual      |
+| `hosts/winston/ksm-enable.service`     | `/etc/systemd/system/ksm-enable.service`     | scp + systemctl enable  |
 
 ## Quick Reference
 
@@ -266,6 +266,32 @@ ssh core@192.168.100.100 'cd /srv/docker/couchdb && /opt/bin/docker-compose ps'
 ssh core@192.168.100.100 'curl -s http://localhost:5984/_up'
 ssh core@192.168.100.100 'curl -s http://localhost:5984/obsidian-livesync | jq .doc_count'
 ```
+
+### Immich (LXC 103)
+
+```bash
+# Access
+ssh root@192.168.100.38 'pct exec 103 -- bash'
+
+# Container status
+ssh root@192.168.100.38 'pct exec 103 -- docker ps --format "table {{.Names}}\t{{.Status}}"'
+
+# Check version (public endpoint, no auth needed)
+ssh root@192.168.100.38 'pct exec 103 -- curl -s http://localhost:2283/api/server/version'
+
+# Update (uses :release rolling tag, not pinned)
+ssh root@192.168.100.38 'pct exec 103 -- bash -c "cd /home && docker compose pull && docker compose up -d"'
+
+# Cleanup old images
+ssh root@192.168.100.38 'pct exec 103 -- docker image prune -f'
+```
+
+Key paths inside LXC 103:
+
+- Compose + .env: `/home/`
+- Database: `/mnt/database` (NFS from reginald)
+- Photo library: `/mnt/upload` (NFS from reginald)
+- GPU: Intel iGPU VFs (dev0/dev1) for hardware transcoding
 
 ### nwlab WireGuard Tunnel
 
@@ -452,14 +478,14 @@ pvesm status        # Check storage
 
 ## Network Services Map
 
-| Service            | Hostname                    | Backend                |
-| ------------------ | --------------------------- | ---------------------- |
-| Immich             | immich.lushanoperera.com    | 192.168.100.103:2283   |
-| Nextcloud          | nextcloud.lushanoperera.com | 192.168.100.101:11000  |
-| Traefik Dashboard  | traefik.lushanoperera.com   | 192.168.7.119:8080     |
-| CrowdSec Dashboard | crowdsec.lushanoperera.com  | crowdsec-metabase:3001 |
-| Kido               | kido.giulyart.it            | 192.168.100.100:3000/3001 |
-| Obsidian Sync      | obsidian-sync.home.disconnesso.com | localhost:5984 |
+| Service            | Hostname                           | Backend                   |
+| ------------------ | ---------------------------------- | ------------------------- |
+| Immich             | immich.lushanoperera.com           | 192.168.100.103:2283      |
+| Nextcloud          | nextcloud.lushanoperera.com        | 192.168.100.101:11000     |
+| Traefik Dashboard  | traefik.lushanoperera.com          | 192.168.7.119:8080        |
+| CrowdSec Dashboard | crowdsec.lushanoperera.com         | crowdsec-metabase:3001    |
+| Kido               | kido.giulyart.it                   | 192.168.100.100:3000/3001 |
+| Obsidian Sync      | obsidian-sync.home.disconnesso.com | localhost:5984            |
 
 ## Storage Architecture
 
@@ -520,16 +546,17 @@ LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
 
 Moved to conditional rules (loaded on-demand by file pattern):
 
-| Rule File | Topics | Triggers |
-|-----------|--------|----------|
-| `.claude/rules/flatcar-lessons.md` | Flatcar, Butane, Ignition, Compose | `vms/flatcar-media/**`, `systemd/**` |
-| `.claude/rules/nfs-zfs-lessons.md` | NFS, ZFS, mounts, exports | `storage/nfs/**`, `systemd/*.mount` |
-| `.claude/rules/dns-lessons.md` | Technitium DNS cluster | `dns/**`, `**/dns-compose*` |
-| `.claude/rules/infra-lessons.md` | Proxmox networking, GPU SR-IOV, Garage | `hosts/**`, `networking/**`, `storage/garage/**` |
+| Rule File                          | Topics                                 | Triggers                                         |
+| ---------------------------------- | -------------------------------------- | ------------------------------------------------ |
+| `.claude/rules/flatcar-lessons.md` | Flatcar, Butane, Ignition, Compose     | `vms/flatcar-media/**`, `systemd/**`             |
+| `.claude/rules/nfs-zfs-lessons.md` | NFS, ZFS, mounts, exports              | `storage/nfs/**`, `systemd/*.mount`              |
+| `.claude/rules/dns-lessons.md`     | Technitium DNS cluster                 | `dns/**`, `**/dns-compose*`                      |
+| `.claude/rules/infra-lessons.md`   | Proxmox networking, GPU SR-IOV, Garage | `hosts/**`, `networking/**`, `storage/garage/**` |
 
 ## Verification
 
 This is an infrastructure repo — no build/lint/test toolchain. Verify changes by:
+
 1. Validate config syntax (Caddyfile, docker-compose, Butane)
 2. `shellcheck` on modified shell scripts
 3. SSH to target host and test the change
