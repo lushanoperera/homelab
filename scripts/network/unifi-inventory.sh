@@ -33,6 +33,7 @@ FETCH_CLIENTS=false
 FETCH_DEVICES=false
 FETCH_NETWORKS=false
 FETCH_HEALTH=false
+FETCH_WIFI=false
 FETCH_ALL=false
 
 # ---------------------------------------------------------------------------
@@ -51,6 +52,7 @@ Options:
   --devices    Show UniFi devices
   --networks   Show network/VLAN configuration
   --health     Show site health summary
+  --wifi       Show WiFi radio details and channel assessment
   --all        Show everything (default if no section flags)
   --json       Output raw JSON instead of tables
   --site SITE  UniFi site name (default: "default")
@@ -339,6 +341,182 @@ print_devices() {
 }
 
 # ---------------------------------------------------------------------------
+# Section: WiFi Radios & Channel Assessment
+# ---------------------------------------------------------------------------
+print_wifi() {
+    local data
+    data=$(api_get "stat/device")
+
+    # Filter to APs only (type == "uap")
+    local ap_data
+    ap_data=$(echo "$data" | jq '{data: [.data[] | select(.type == "uap")]}')
+
+    local ap_count
+    ap_count=$(echo "$ap_data" | jq '.data | length')
+
+    if (( ap_count == 0 )); then
+        if ! $OUTPUT_JSON; then
+            separator "WiFi Radios"
+            echo "No access points found."
+        else
+            echo '{"data":[]}'
+        fi
+        return
+    fi
+
+    if $OUTPUT_JSON; then
+        echo "$ap_data" | jq '[.data[] | {
+            name: (.name // .hostname // "-"),
+            mac: .mac,
+            model: .model,
+            radios: [
+                (.radio_table // [])[] as $cfg |
+                (.radio_table_stats // [])[] as $stats |
+                select($cfg.radio == $stats.radio) |
+                {
+                    radio: $cfg.radio,
+                    channel: $cfg.channel,
+                    ht: $cfg.ht,
+                    tx_power: $cfg.tx_power,
+                    tx_power_mode: $cfg.tx_power_mode,
+                    channel_width: $stats.channel,
+                    cu_total: $stats.cu_total,
+                    cu_self_rx: $stats.cu_self_rx,
+                    cu_self_tx: $stats.cu_self_tx,
+                    satisfaction: $stats.satisfaction,
+                    num_sta: $stats.num_sta,
+                    guest_num_sta: $stats.guest_num_sta
+                }
+            ]
+        }]'
+        return
+    fi
+
+    # Build the radio rows: AP name, band, channel, width, txpower, clients, CU%, satisfaction
+    # Join radio_table (config) with radio_table_stats (runtime) by .radio field
+    local radio_rows
+    radio_rows=$(echo "$ap_data" | jq -r '.data[] |
+        .name as $name |
+        (.radio_table // []) as $cfgs |
+        (.radio_table_stats // []) as $stats |
+        ($cfgs[] | . as $cfg |
+            ($stats[] | select(.radio == $cfg.radio)) as $st |
+            [
+                $name,
+                (if $cfg.radio == "ng" then "2.4GHz" elif $cfg.radio == "na" then "5GHz" elif $cfg.radio == "6e" then "6GHz" else $cfg.radio end),
+                ($st.channel // $cfg.channel | tostring),
+                ($cfg.ht | tostring),
+                (if $cfg.tx_power == null then "auto" else (($cfg.tx_power | tostring) + "dBm") end),
+                ($st.num_sta // 0 | tostring),
+                (($st.cu_total // 0 | tostring) + "%"),
+                (if ($st.satisfaction // -1) < 0 then "N/A" else ($st.satisfaction | tostring) end)
+            ] | @tsv
+        )')
+
+    separator "WiFi Radios"
+    printf '%-22s %-7s %-5s %-7s %-7s %-8s %-5s %s\n' \
+        "AP" "Band" "Chan" "Width" "TxPow" "Clients" "CU%" "Satisfaction"
+    printf '%-22s %-7s %-5s %-7s %-7s %-8s %-5s %s\n' \
+        "--" "----" "----" "-----" "-----" "-------" "---" "------------"
+
+    echo "$radio_rows" | while IFS=$'\t' read -r ap_name band chan width txpow clients cu sat; do
+        printf '%-22s %-7s %-5s %-7s %-7s %-8s %-5s %s\n' \
+            "${ap_name:0:21}" "$band" "$chan" "$width" "$txpow" "$clients" "$cu" "$sat"
+    done
+
+    # --- Channel Assessment ---
+    separator "Channel Assessment"
+
+    # Collect 2.4 GHz channels
+    local channels_24
+    channels_24=$(echo "$radio_rows" | awk -F'\t' '$2 == "2.4GHz" {print $3}' | sort -n | uniq)
+    local channels_24_display
+    channels_24_display=$(echo "$channels_24" | tr '\n' ',' | sed 's/,$//' | sed 's/,/, /g')
+
+    # Check 2.4 GHz channels are from {1, 6, 11}
+    local bad_24_channels=""
+    while IFS= read -r ch; do
+        if [[ -n "$ch" ]] && [[ "$ch" != "1" && "$ch" != "6" && "$ch" != "11" ]]; then
+            bad_24_channels="${bad_24_channels} ${ch}"
+        fi
+    done <<< "$channels_24"
+
+    if [[ -n "$bad_24_channels" ]]; then
+        printf '\033[1;31m[FAIL]\033[0m 2.4 GHz channels: {%s} — channels %s not in {1,6,11}\n' "$channels_24_display" "$bad_24_channels"
+    else
+        printf '\033[1;32m[OK]\033[0m   2.4 GHz channels: {%s} — non-overlapping\n' "$channels_24_display"
+    fi
+
+    # Check 2.4 GHz width is HT20
+    local bad_24_widths=""
+    bad_24_widths=$(echo "$radio_rows" | awk -F'\t' '$2 == "2.4GHz" && $4 != "20" {print $1 "=" $4}')
+    if [[ -n "$bad_24_widths" ]]; then
+        printf '\033[1;33m[WARN]\033[0m 2.4 GHz width: not all HT20 — %s\n' "$bad_24_widths"
+    else
+        printf '\033[1;32m[OK]\033[0m   2.4 GHz width: all HT20\n'
+    fi
+
+    # Check 5 GHz co-channel interference
+    local channels_5
+    channels_5=$(echo "$radio_rows" | awk -F'\t' '$2 == "5GHz" {print $3}' | sort -n)
+    local channels_5_display
+    channels_5_display=$(echo "$channels_5" | sort -n | uniq | tr '\n' ',' | sed 's/,$//' | sed 's/,/, /g')
+    local dup_5
+    dup_5=$(echo "$channels_5" | uniq -d)
+
+    if [[ -n "$dup_5" ]]; then
+        printf '\033[1;33m[WARN]\033[0m 5 GHz channels: {%s} — co-channel interference on channel(s) %s\n' \
+            "$channels_5_display" "$(echo "$dup_5" | tr '\n' ',' | sed 's/,$//')"
+    else
+        printf '\033[1;32m[OK]\033[0m   5 GHz channels: {%s} — no co-channel interference\n' "$channels_5_display"
+    fi
+
+    # Check 2.4 GHz co-channel interference
+    local dup_24
+    dup_24=$(echo "$channels_24" | sort | uniq -d)
+    if [[ -n "$dup_24" ]]; then
+        printf '\033[1;33m[WARN]\033[0m 2.4 GHz co-channel: APs sharing channel(s) %s\n' \
+            "$(echo "$dup_24" | tr '\n' ',' | sed 's/,$//')"
+    fi
+
+    # Check DFS channels on 5 GHz (120, 124, 128)
+    while IFS= read -r ch; do
+        if [[ "$ch" == "120" || "$ch" == "124" || "$ch" == "128" ]]; then
+            printf '\033[1;33m[WARN]\033[0m 5 GHz channel %s is DFS — radar events may cause channel switches\n' "$ch"
+        fi
+    done <<< "$(echo "$channels_5" | sort -n | uniq)"
+
+    # Check channel utilization per radio
+    local cu_issues=0
+    while IFS=$'\t' read -r ap_name band chan width txpow clients cu sat; do
+        local cu_val="${cu%%%}"
+        if (( cu_val > 75 )); then
+            printf '\033[1;31m[FAIL]\033[0m %s %s CU %s — high channel utilization (>75%%)\n' "$ap_name" "$band" "$cu"
+            cu_issues=$((cu_issues + 1))
+        elif (( cu_val >= 50 )); then
+            printf '\033[1;33m[WARN]\033[0m %s %s CU %s — moderate channel utilization (50-75%%)\n' "$ap_name" "$band" "$cu"
+            cu_issues=$((cu_issues + 1))
+        fi
+    done <<< "$radio_rows"
+
+    if (( cu_issues == 0 )); then
+        printf '\033[1;32m[OK]\033[0m   Channel utilization: all < 50%%\n'
+    fi
+
+    # Check satisfaction per radio (skip N/A — reported as -1 when too few clients)
+    while IFS=$'\t' read -r ap_name band chan width txpow clients cu sat; do
+        if [[ "$sat" == "N/A" ]]; then
+            continue
+        fi
+        if (( sat < 60 )); then
+            printf '\033[1;31m[FAIL]\033[0m %s %s satisfaction %s — poor (<60)\n' "$ap_name" "$band" "$sat"
+        elif (( sat <= 80 )); then
+            printf '\033[1;33m[WARN]\033[0m %s %s satisfaction %s — monitor if drops below 60\n' "$ap_name" "$band" "$sat"
+        fi
+    done <<< "$radio_rows"
+}
+
+# ---------------------------------------------------------------------------
 # Section: Port Forwards
 # ---------------------------------------------------------------------------
 print_portforwards() {
@@ -387,6 +565,7 @@ main() {
             --devices)  FETCH_DEVICES=true ;;
             --networks) FETCH_NETWORKS=true ;;
             --health)   FETCH_HEALTH=true ;;
+            --wifi)     FETCH_WIFI=true ;;
             --all)      FETCH_ALL=true ;;
             --json)     OUTPUT_JSON=true ;;
             --site)     SITE="${2:?--site requires a value}"; shift ;;
@@ -397,7 +576,7 @@ main() {
     done
 
     # Default to --all if no section specified
-    if ! $FETCH_CLIENTS && ! $FETCH_DEVICES && ! $FETCH_NETWORKS && ! $FETCH_HEALTH; then
+    if ! $FETCH_CLIENTS && ! $FETCH_DEVICES && ! $FETCH_NETWORKS && ! $FETCH_HEALTH && ! $FETCH_WIFI; then
         FETCH_ALL=true
     fi
 
@@ -413,6 +592,7 @@ main() {
     if $FETCH_ALL || $FETCH_CLIENTS;  then print_clients; fi
     if $FETCH_ALL || $FETCH_NETWORKS; then print_networks; fi
     if $FETCH_ALL || $FETCH_DEVICES;  then print_devices; fi
+    if $FETCH_ALL || $FETCH_WIFI;     then print_wifi; fi
     if $FETCH_ALL; then print_portforwards; fi
 
     api_logout

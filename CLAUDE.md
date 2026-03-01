@@ -394,6 +394,10 @@ ssh core@192.168.100.100 'cat /srv/docker/resolv.conf'
 ./scripts/network/unifi-inventory.sh --networks
 ./scripts/network/unifi-inventory.sh --devices
 
+# WiFi radio details and channel assessment
+./scripts/network/unifi-inventory.sh --wifi
+./scripts/network/unifi-inventory.sh --wifi --json | jq '.[].radios'
+
 # Raw JSON output (for piping to jq)
 ./scripts/network/unifi-inventory.sh --all --json
 ./scripts/network/unifi-inventory.sh --clients --json | jq '.data[] | {ip, hostname, mac}'
