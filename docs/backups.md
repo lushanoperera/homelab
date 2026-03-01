@@ -41,11 +41,11 @@ The homelab uses multiple backup strategies:
 
 ## PBS (Proxmox Backup Server)
 
-| Setting  | Value                      |
-| -------- | -------------------------- |
-| Server   | 192.168.100.187            |
-| Location | VM on QNAP TS-251+         |
-| Scope    | All VMs and LXC containers |
+| Setting  | Value                        |
+| -------- | ---------------------------- |
+| Server   | 192.168.100.187              |
+| Location | VM on QNAP TS-251+ (4 vCPUs) |
+| Scope    | All VMs and LXC containers   |
 
 PBS provides VM-level backups with deduplication and integrity verification.
 
@@ -76,6 +76,7 @@ Jobs were recreated on 2026-03-01. All VMIDs now have fresh backups.
 errors to `192.168.200.187:8007`. Vzdump transfers complete successfully despite
 this. Suspected cause: QNAP PBS VM high memory/load (902 MB RSS, load avg ~3).
 Not a data integrity risk — pvestatd polling is separate from backup data transfer.
+CPU bumped from 2 → 4 vCPUs on 2026-03-01 to reduce timeouts.
 
 ### Cross-Site Sync (nwlab ↔ homelab)
 
