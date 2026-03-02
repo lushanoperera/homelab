@@ -1,0 +1,14 @@
+/var/log/zimaboard-monitor.log
+/var/log/zfs-monitor.log
+/var/log/proxmox-monitoring/temperature.log
+/var/log/update-monitor.log
+/var/log/temp-monitor.log
+/var/log/log-monitor.log
+/var/log/immich-mounts.log {
+    weekly
+    rotate 4
+    compress
+    missingok
+    notifempty
+    copytruncate
+}
