@@ -38,10 +38,10 @@ ssh root@192.168.100.38
 | Plex (LXC 105)      | PF 00:02.0   | card0 / renderD128 | Privileged LXC   | Working   |
 | Nextcloud (LXC 101) | VF 1 00:02.2 | card2 / renderD130 | Unprivileged LXC | Working   |
 | Immich (LXC 103)    | VF 2 00:02.3 | card3 / renderD131 | Unprivileged LXC | Working   |
-| Flatcar (VM 100)    | —            | —                  | VM               | Blocked   |
-| VF 0, 3-6           | 00:02.1,4-7  | card1,4-7          | —                | Available |
+| Flatcar (VM 100)    | VF 0 00:02.1 | card1 / renderD129 | VM (sysext)      | Working   |
+| VF 3-6              | 00:02.4-7    | card4-7            | —                | Available |
 
-**Flatcar GPU blocked**: Intel GPU SR-IOV requires patched `i915-sriov-dkms` in guest OS. Stock Flatcar kernel's i915 cannot drive VFs (`MMIO returns 0xFFFFFFFF`). Would need a Flatcar sysext with the patched driver.
+**Flatcar GPU**: Uses `i915-sriov-dkms` compiled as a systemd-sysext image. See `vms/flatcar-media/sysext/i915-sriov/` for build/deploy/test.
 
 ### Unprivileged LXC GPU Setup
 

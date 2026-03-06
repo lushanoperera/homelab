@@ -148,6 +148,8 @@ homelab/
 │   ├── flatcar-media/       # VM 100 - Media stack
 │   │   ├── butane/          # Butane configs (.bu)
 │   │   ├── ignition/        # Compiled Ignition (.ign)
+│   │   ├── sysext/          # Systemd-sysext images
+│   │   │   └── i915-sriov/  # GPU SR-IOV driver (build/deploy/test)
 │   │   └── docker-compose.yml
 │   └── pbs/                 # Proxmox Backup Server
 ├── networking/

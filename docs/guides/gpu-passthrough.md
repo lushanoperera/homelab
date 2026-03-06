@@ -17,16 +17,19 @@ This guide covers Intel iGPU SR-IOV Virtual Function (VF) assignment to LXC cont
 | Plex (LXC 105)      | PF 00:02.0   | card0 / renderD128 | Privileged LXC   | Working |
 | Nextcloud (LXC 101) | VF 1 00:02.2 | card2 / renderD130 | Unprivileged LXC | Working |
 | Immich (LXC 103)    | VF 2 00:02.3 | card3 / renderD131 | Unprivileged LXC | Working |
-| VF 0, 3-6           | 00:02.1,4-7  | card1,4-7          | —                | Free    |
+| Flatcar (VM 100)    | VF 0 00:02.1 | card1 / renderD129 | VM (sysext)      | Working |
+| VF 0-6              | 00:02.1-7    | card4-7            | —                | Free    |
 
 ### What Works
 
 - **Privileged LXCs** (e.g., Plex): PF or VF, just set `dev0`/`dev1` + cgroup rules. Symlinks auto-created.
 - **Unprivileged LXCs** (e.g., Nextcloud, Immich): VFs only, requires udev rules + bind mounts (see below).
 
-### What Does NOT Work
+### VM GPU Passthrough (Flatcar Sysext)
 
-- **VM GPU passthrough with stock kernel**: Intel GPU VFs require the patched `i915-sriov-dkms` in the guest OS. The stock kernel's i915 fails with `MMIO returns 0xFFFFFFFF`. Flatcar, Ubuntu, etc. all need the DKMS module compiled for the guest kernel.
+- **Flatcar VM 100**: Uses `i915-sriov-dkms` compiled as a systemd-sysext image. VF 0 (00:02.1) passed through via `hostpci0`. The stock kernel's i915 cannot drive VFs (`MMIO returns 0xFFFFFFFF`) — the sysext overlays the patched module onto `/usr`.
+- **Build/deploy/test**: See `vms/flatcar-media/sysext/i915-sriov/`
+- **Auto-rebuild**: `i915-sriov-rebuild.service` detects kernel changes after Flatcar updates and rebuilds the sysext via Docker.
 
 ---
 
@@ -39,11 +42,11 @@ This guide covers Intel iGPU SR-IOV Virtual Function (VF) assignment to LXC cont
    - Should see 7 VGA devices (00:02.1 through 00:02.7)
    - See: `docs/sr-iov/igpu-guide.md`
 
-2. **VF 3 Available**: Ensure VF 3 (00:02.4) is not assigned to another VM
+2. **VF 0 Available**: Ensure VF 0 (00:02.1) is not assigned to another VM/LXC
 
    ```bash
    # On Proxmox host
-   grep "hostpci.*00:02.4" /etc/pve/qemu-server/*.conf
+   grep -rl "00:02.1" /etc/pve/qemu-server/ /etc/pve/lxc/ 2>/dev/null
    ```
 
 3. **VM Stopped**: VM 100 must be stopped for PCI passthrough configuration
@@ -56,24 +59,39 @@ This guide covers Intel iGPU SR-IOV Virtual Function (VF) assignment to LXC cont
 
 ## Deployment Steps
 
+### Phase 0: Build i915-sriov Sysext (on VM)
+
+Before configuring PCI passthrough, build and deploy the patched i915 module as a sysext:
+
+```bash
+# Build on VM (compiles via Docker, packages as squashfs sysext)
+ssh core@192.168.100.100 'cd ~/i915-sriov-build && ./build.sh'
+
+# Deploy from workstation (copies sysext + configs + enables services)
+cd vms/flatcar-media/sysext/i915-sriov
+./deploy.sh
+```
+
+See `vms/flatcar-media/sysext/i915-sriov/README.md` for full details.
+
 ### Phase 1: Proxmox Host Configuration
 
 **Important**: These steps must be performed on the Proxmox host via SSH.
 
-#### Step 1: Verify VF 3 Availability
+#### Step 1: Verify VF 0 Availability
 
 ```bash
 # SSH to Proxmox host
 ssh root@<PROXMOX_IP>
 
-# Check if VF 3 exists
-lspci | grep "00:02.4"
+# Check if VF 0 exists
+lspci | grep "00:02.1"
 ```
 
 **Expected Output**:
 
 ```
-00:02.4 VGA compatible controller: Intel Corporation Raptor Lake-P [Iris Xe Graphics] (rev 04)
+00:02.1 VGA compatible controller: Intel Corporation Raptor Lake-P [Iris Xe Graphics] (rev 04)
 ```
 
 #### Step 2: Stop VM 100
@@ -89,15 +107,15 @@ qm status 100
 # Should show: status: stopped
 ```
 
-#### Step 3: Add VF 3 to VM Configuration
+#### Step 3: Add VF 0 to VM Configuration
 
 ```bash
-qm set 100 -hostpci0 0000:00:02.4,x-vga=0,rombar=0,pcie=1
+qm set 100 -hostpci0 0000:00:02.1,x-vga=0,rombar=0,pcie=1
 ```
 
 **Parameter Explanation**:
 
-- `0000:00:02.4` - PCI address of VF 3
+- `0000:00:02.1` - PCI address of VF 0
 - `x-vga=0` - Not primary display (headless GPU)
 - `rombar=0` - Disable ROM BAR (required for Intel iGPU VFs)
 - `pcie=1` - Enable PCIe mode (required for Q35 machine type)
@@ -111,7 +129,7 @@ qm config 100 | grep hostpci
 **Expected Output**:
 
 ```
-hostpci0: 0000:00:02.4,pcie=1,rombar=0,x-vga=0
+hostpci0: 0000:00:02.1,pcie=1,rombar=0,x-vga=0
 ```
 
 #### Step 5: Start VM
@@ -151,7 +169,7 @@ lspci | grep VGA
 00:06.0 VGA compatible controller: Intel Corporation Raptor Lake-P [Iris Xe Graphics] (rev 04)
 ```
 
-**Note**: PCI address may differ inside VM (e.g., 00:06.0 instead of 00:02.4).
+**Note**: PCI address may differ inside VM (e.g., 00:06.0 instead of 00:02.1).
 
 #### Step 3: Check DRI Device
 
@@ -180,9 +198,9 @@ crw-rw----  1 root render 226, 128 Oct 11 10:00 renderD128
 **Expected Output**:
 
 ```
-=== Intel iGPU VF 3 Verification ===
+=== Intel iGPU VF 0 Verification ===
 
-Checking PCI device (0000:00:02.4)...
+Checking PCI device (0000:00:02.1)...
 ✓ PCI device found
 00:06.0 VGA compatible controller: Intel Corporation Raptor Lake-P [Iris Xe Graphics]
 
@@ -209,7 +227,7 @@ sudo systemctl status gpu-setup.service
 **Expected Output**:
 
 ```
-● gpu-setup.service - Setup Intel iGPU VF 3 for Docker
+● gpu-setup.service - Setup Intel iGPU VF 0 for Docker
      Loaded: loaded (/etc/systemd/system/gpu-setup.service; enabled; preset: enabled)
      Active: active (exited) since ...
     Process: ... ExecStartPre=/usr/bin/udevadm control --reload-rules (code=exited, status=0/SUCCESS)
@@ -378,7 +396,7 @@ qm start 100
 
    ```bash
    # On Proxmox host
-   lspci | grep "00:02.4"
+   lspci | grep "00:02.1"
    ```
 
    - Ensure VF exists on host
@@ -387,7 +405,7 @@ qm start 100
 
    ```bash
    # On Proxmox host
-   find /sys/kernel/iommu_groups/ -type l | grep 00:02.4
+   find /sys/kernel/iommu_groups/ -type l | grep 00:02.1
    ```
 
 3. **Remove and Re-add PCI Device**:
@@ -395,7 +413,7 @@ qm start 100
    ```bash
    # On Proxmox host
    qm set 100 -delete hostpci0
-   qm set 100 -hostpci0 0000:00:02.4,x-vga=0,rombar=0,pcie=1
+   qm set 100 -hostpci0 0000:00:02.1,x-vga=0,rombar=0,pcie=1
    ```
 
 4. **Check Proxmox Logs**:
@@ -455,7 +473,7 @@ To apply this GPU configuration to an existing VM:
 
 ### Device Naming
 
-- **Host PCI**: Always `0000:00:02.4`
+- **Host PCI**: Always `0000:00:02.1`
 - **VM PCI**: May differ (e.g., `00:06.0`)
 - **DRI Device**: Depends on kernel enumeration
   - First VF usually: `renderD128`
@@ -481,7 +499,7 @@ To apply this GPU configuration to an existing VM:
 
 Before considering deployment complete, verify:
 
-- [ ] VF 3 visible on Proxmox host: `lspci | grep "00:02.4"`
+- [ ] VF 0 visible on Proxmox host: `lspci | grep "00:02.1"`
 - [ ] VM 100 has hostpci0 configured: `qm config 100 | grep hostpci`
 - [ ] VM boots successfully after adding GPU
 - [ ] PCI device visible inside VM: `lspci | grep VGA`
@@ -525,7 +543,7 @@ lspci | grep "00:02.[1-7].*VGA"
 qm stop 100
 
 # Add GPU passthrough
-qm set 100 -hostpci0 0000:00:02.4,x-vga=0,rombar=0,pcie=1
+qm set 100 -hostpci0 0000:00:02.1,x-vga=0,rombar=0,pcie=1
 
 # Remove GPU passthrough
 qm set 100 -delete hostpci0
@@ -598,4 +616,4 @@ docker exec <container> intel_gpu_top
 
 ---
 
-**Deployment Complete!** The Intel iGPU VF 3 is now available for hardware-accelerated workloads in Docker containers.
+**Deployment Complete!** The Intel iGPU VF 0 is now available for hardware-accelerated workloads in Docker containers.

@@ -34,9 +34,23 @@ paths:
 
 ## GPU SR-IOV
 
-### VM Passthrough (BLOCKED)
+### VM Passthrough (Flatcar Sysext)
 
-Intel iGPU SR-IOV passthrough to VMs requires patched `i915-sriov-dkms` in BOTH host AND guest. Stock kernel i915 fails with `MMIO returns 0xFFFFFFFF`. Unlike network SR-IOV, GPU VFs are NOT compatible with the upstream kernel driver.
+Intel iGPU SR-IOV passthrough to VMs requires patched `i915-sriov-dkms` in BOTH host AND guest. Stock kernel i915 fails with `MMIO returns 0xFFFFFFFF`. For Flatcar (immutable /usr), the module is packaged as a systemd-sysext squashfs image.
+
+| Lesson                         | Detail                                                                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| Sysext `ID=_any`               | Use `ID=_any` in extension-release so sysext works across Flatcar versions; kernel specificity enforced by module path    |
+| `updates/` priority            | Modules in `updates/` override `kernel/` in depmod — sysext module takes precedence over stock i915                       |
+| Blacklist + explicit load      | Blacklist prevents udev auto-loading stock i915; `gpu-setup.service` explicitly loads after sysext activation             |
+| Docker build can't bind-mount  | `docker build -v` doesn't exist — use `docker run` with bind-mount for compilation against host kernel headers            |
+| Squashfs via Docker            | Flatcar lacks `mksquashfs` — run it inside an Alpine container                                                            |
+| Auto-rebuild on kernel change  | `i915-sriov-rebuild.service` checks module path at boot; if kernel changed, rebuilds sysext via Docker                    |
+| DKMS version must match kernel | DKMS 2025.07.22 targets 6.12.x, 2025.10.10 targets 6.17.x — mismatched version causes `Unknown symbol` at insmod          |
+| GCC >= 14 required             | Flatcar kernel built with GCC 14.3 (`-fmin-function-alignment`); Dockerfile must use Debian trixie, not bookworm          |
+| `insmod` not `modprobe`        | depmod can't write to read-only `/lib/modules` on Flatcar — use `insmod` with explicit sysext path                        |
+| CONFIG_FOO=m breaks Makefile   | Flatcar sets `CONFIG_HWMON=m` not `=y`; `i915-$(CONFIG_HWMON)` becomes `i915-m`, bypasses `addprefix` — force to `i915-y` |
+| Older DKMS has inline compat   | Tags <=2025.07.22 include compat backports in i915.ko itself; tags >=2025.10.10 have separate `intel_sriov_compat.ko`     |
 
 ### Unprivileged LXC GPU (3-layer fix)
 

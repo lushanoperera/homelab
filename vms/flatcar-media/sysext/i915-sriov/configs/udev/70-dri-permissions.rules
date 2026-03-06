@@ -1,0 +1,2 @@
+SUBSYSTEM=="drm", KERNEL=="renderD*", MODE="0660", GROUP="render"
+SUBSYSTEM=="drm", KERNEL=="card*", MODE="0660", GROUP="video"
