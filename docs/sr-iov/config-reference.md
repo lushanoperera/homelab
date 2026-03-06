@@ -705,16 +705,16 @@ journalctl -xe | grep i915
 
 ### PCI Addresses to Render Devices
 
-| PCI Address  | Device Type  | Render Device | Container Config |
-| ------------ | ------------ | ------------- | ---------------- |
-| 0000:00:02.0 | Physical GPU | card0         | N/A (host only)  |
-| 0000:00:02.1 | VF 0         | renderD128    | c 226:128 rwm    |
-| 0000:00:02.2 | VF 1         | renderD129    | c 226:129 rwm    |
-| 0000:00:02.3 | VF 2         | renderD130    | c 226:130 rwm    |
-| 0000:00:02.4 | VF 3         | renderD131    | c 226:131 rwm    |
-| 0000:00:02.5 | VF 4         | renderD132    | c 226:132 rwm    |
-| 0000:00:02.6 | VF 5         | renderD133    | c 226:133 rwm    |
-| 0000:00:02.7 | VF 6         | renderD134    | c 226:134 rwm    |
+| PCI Address  | Device Type  | Host Card | Host Render | cgroup Minor | Assigned To         |
+| ------------ | ------------ | --------- | ----------- | ------------ | ------------------- |
+| 0000:00:02.0 | Physical GPU | card0     | renderD128  | 0 / 128      | Plex (LXC 105, PF)  |
+| 0000:00:02.1 | VF 0         | card1     | renderD129  | 1 / 129      | Available           |
+| 0000:00:02.2 | VF 1         | card2     | renderD130  | 2 / 130      | Nextcloud (LXC 101) |
+| 0000:00:02.3 | VF 2         | card3     | renderD131  | 3 / 131      | Immich (LXC 103)    |
+| 0000:00:02.4 | VF 3         | card4     | renderD132  | 4 / 132      | Available           |
+| 0000:00:02.5 | VF 4         | card5     | renderD133  | 5 / 133      | Available           |
+| 0000:00:02.6 | VF 5         | card6     | renderD134  | 6 / 134      | Available           |
+| 0000:00:02.7 | VF 6         | card7     | renderD135  | 7 / 135      | Available           |
 
 ### Character Device Major/Minor Numbers
 

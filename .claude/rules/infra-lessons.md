@@ -34,7 +34,28 @@ paths:
 
 ## GPU SR-IOV
 
-Intel iGPU SR-IOV passthrough to Flatcar **not working** - guest requires patched `i915-sriov-dkms` driver. See `docs/sr-iov/` for details.
+### VM Passthrough (BLOCKED)
+
+Intel iGPU SR-IOV passthrough to VMs requires patched `i915-sriov-dkms` in BOTH host AND guest. Stock kernel i915 fails with `MMIO returns 0xFFFFFFFF`. Unlike network SR-IOV, GPU VFs are NOT compatible with the upstream kernel driver.
+
+### Unprivileged LXC GPU (3-layer fix)
+
+| Layer                    | What                                                         | Why                                                                              |
+| ------------------------ | ------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| 1. Proxmox `dev0`/`dev1` | `by-path` device with `gid=N`                                | Creates char device in container `/dev/dri/by-path/` but NOT standard names      |
+| 2. Host udev rule        | Set VF device GID to **mapped** GID (100000 + container GID) | `lxc.mount.entry` bind mounts use HOST ownership; must match container's UID map |
+| 3. `lxc.mount.entry`     | Bind-mount `/dev/dri/cardN` → `dev/dri/card0`                | Applications and Docker expect `/dev/dri/card0` + `/dev/dri/renderD128`          |
+
+### Key Gotchas
+
+| Gotcha                                                     | Detail                                                                                                               |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `gid=` in Proxmox dev must match **container's** group GID | `render` group GID varies per distro/image (108, 993, etc.) — always check `grep render /etc/group` inside container |
+| Proxmox hookscripts run with `/bin/sh`                     | Ignores shebang — use POSIX syntax, no `[[ ]]`                                                                       |
+| `mknod` blocked in unprivileged LXCs                       | Even with `c 226:* rwm` cgroup rule — kernel blocks `mknod` in user namespaces                                       |
+| Docker `devices:` skips symlinks                           | Only picks up actual char devices, not symlinks. Use `lxc.mount.entry` bind mounts to create real device nodes       |
+| Docker `--device` can't handle colons in paths             | `by-path` names contain `:` which Docker interprets as host:container separator                                      |
+| Card minor = VF index, render minor = 128 + VF index       | `00:02.3` → card3 (minor 3) → renderD131 (minor 131)                                                                 |
 
 ## AWS SDK (Garage)
 

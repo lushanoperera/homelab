@@ -1,0 +1,19 @@
+# SR-IOV VF device ownership for unprivileged LXCs
+# Deployed to: /etc/udev/rules.d/99-sriov-lxc.rules on winston
+#
+# Unprivileged LXCs use UID/GID mapping (idmap starts at 100000).
+# Host device GIDs must match the MAPPED GID so that bind-mounted
+# devices inside the container have correct group ownership.
+#
+# To find the correct mapped GID:
+#   1. Inside LXC: grep render /etc/group  → e.g., render:x:108
+#   2. Check idmap: grep "lxc.idmap" /etc/pve/lxc/<CTID>.conf → offset (usually 100000)
+#   3. Host GID = offset + container GID  → 100000 + 108 = 100108
+
+# VF 1 (00:02.2) → LXC 101 (Nextcloud): video=GID 44→100044, render=GID 108→100108
+SUBSYSTEM=="drm", KERNEL=="card2", OWNER="100000", GROUP="100044", MODE="0660"
+SUBSYSTEM=="drm", KERNEL=="renderD130", OWNER="100000", GROUP="100108", MODE="0660"
+
+# VF 2 (00:02.3) → LXC 103 (Immich): video=GID 44→100044, render=GID 993→100993
+SUBSYSTEM=="drm", KERNEL=="card3", OWNER="100000", GROUP="100044", MODE="0660"
+SUBSYSTEM=="drm", KERNEL=="renderD131", OWNER="100000", GROUP="100993", MODE="0660"

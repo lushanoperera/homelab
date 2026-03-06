@@ -1,22 +1,32 @@
-# Intel iGPU VF 3 GPU Passthrough Deployment Guide
+# Intel iGPU SR-IOV GPU Passthrough Guide
 
-**Last Updated**: 2025-10-11
-**Target VM**: Flatcar VM 100 (192.168.100.100)
-**GPU Device**: Intel iGPU VF 3 (renderD132) - PCI Address 0000:00:02.4
+**Last Updated**: 2026-03-06
+**Host**: Winston (192.168.100.38) — Proxmox VE 9.1.6
+**Driver**: `i915-sriov-dkms/2025.10.10` on kernel `6.17.13-1-pve`
 
 ---
 
 ## Overview
 
-This guide covers the deployment of Intel iGPU SR-IOV Virtual Function 3 (VF 3) passthrough to the Flatcar Container Linux VM at 192.168.100.100. This enables hardware-accelerated video transcoding and GPU compute for Docker containers.
+This guide covers Intel iGPU SR-IOV Virtual Function (VF) assignment to LXC containers and VMs on the winston Proxmox host. 7 VFs are available (00:02.1–00:02.7).
 
-### What This Configuration Provides
+### Current VF Allocation
 
-- **PCI Passthrough**: Intel iGPU VF 3 passed through to VM
-- **DRI Device**: `/dev/dri/renderD132` available inside VM
-- **Docker Ready**: GPU device accessible to Docker containers
-- **Auto-Configuration**: Systemd services handle setup at boot
-- **Verification Script**: Built-in GPU availability checking
+| Consumer            | PCI Device   | Host Device        | Type             | Status  |
+| ------------------- | ------------ | ------------------ | ---------------- | ------- |
+| Plex (LXC 105)      | PF 00:02.0   | card0 / renderD128 | Privileged LXC   | Working |
+| Nextcloud (LXC 101) | VF 1 00:02.2 | card2 / renderD130 | Unprivileged LXC | Working |
+| Immich (LXC 103)    | VF 2 00:02.3 | card3 / renderD131 | Unprivileged LXC | Working |
+| VF 0, 3-6           | 00:02.1,4-7  | card1,4-7          | —                | Free    |
+
+### What Works
+
+- **Privileged LXCs** (e.g., Plex): PF or VF, just set `dev0`/`dev1` + cgroup rules. Symlinks auto-created.
+- **Unprivileged LXCs** (e.g., Nextcloud, Immich): VFs only, requires udev rules + bind mounts (see below).
+
+### What Does NOT Work
+
+- **VM GPU passthrough with stock kernel**: Intel GPU VFs require the patched `i915-sriov-dkms` in the guest OS. The stock kernel's i915 fails with `MMIO returns 0xFFFFFFFF`. Flatcar, Ubuntu, etc. all need the DKMS module compiled for the guest kernel.
 
 ---
 

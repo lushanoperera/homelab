@@ -22,7 +22,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 | Host/VM                         | IP                           | Role                                                                   |
 | ------------------------------- | ---------------------------- | ---------------------------------------------------------------------- |
 | UniFi Fiber Gateway (UCG-Fiber) | 192.168.1.1                  | Router, firewall, UniFi OS 10.1 controller                             |
-| winston                         | 192.168.100.38 / .200.38     | Primary Proxmox VE 9.1.4 host (32 GB)                                  |
+| winston                         | 192.168.100.38 / .200.38     | Primary Proxmox VE 9.1.6 host (32 GB, SR-IOV active: 7 VFs)            |
 | reginald                        | 192.168.100.4 / .200.4       | Secondary Proxmox VE 9.1.5 host (8 GB)                                 |
 | flatcar-media (VM 100)          | .100.100 / .7.119 / .200.100 | Media stack (Sonarr, Radarr, qBittorrent)                              |
 | homeassistant (VM 102)          | .100.102 / .4.102 / .5.102   | Home Assistant (multi-VLAN: Infra+IoT+Multimedia)                      |
@@ -295,7 +295,7 @@ Key paths inside LXC 103:
 - Compose + .env: `/home/`
 - Database: `/mnt/database` (NFS from reginald)
 - Photo library: `/mnt/upload` (NFS from reginald)
-- GPU: Intel iGPU VFs (dev0/dev1) for hardware transcoding
+- GPU: Intel iGPU VF 2 (00:02.3) via udev+bind mount — HW transcoding (QuickSync) enabled
 
 ### nwlab WireGuard Tunnel
 
