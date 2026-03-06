@@ -64,7 +64,8 @@ services:
       - backend_logs:/app/logs
     networks:
       - kido-network
-    command: bun run start
+      - traefik_internal
+    command: node src/simple-server.js
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
       interval: 30s
@@ -85,6 +86,7 @@ services:
       - backend
     networks:
       - kido-network
+      - traefik_internal
     restart: unless-stopped
 
 volumes:
@@ -95,3 +97,5 @@ volumes:
 networks:
   kido-network:
     driver: bridge
+  traefik_internal:
+    external: true
