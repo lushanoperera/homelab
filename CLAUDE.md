@@ -40,7 +40,6 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 - Technitium DNS (secondary node, `/srv/docker/dns/`, separate `dns-compose.yml`)
 - Traefik (DMZ IP: 192.168.7.119) — public services via Cloudflare Tunnel + Cloudflared
 - CrowdSec + Bouncer (Metabase dashboard removed 2026-03-07, use `cscli` CLI)
-- Kido (Docker app, `kido.giulyart.it`)
 - Vaultwarden (`/opt/vaultwarden/`) — password manager
 - CouchDB (`/srv/docker/couchdb/`) — Obsidian LiveSync backend
 - Nextcloud (`/srv/docker/nextcloud/`) — standard Nextcloud (nginx + FPM + Postgres + Redis)
@@ -172,7 +171,6 @@ homelab/
 │   └── terraform/           # Terraform IaC
 ├── apps/
 │   ├── couchdb/             # CouchDB (Obsidian LiveSync)
-│   ├── kido/                # Kido web app
 │   └── vaultwarden/         # Vaultwarden password manager
 ├── systemd/                 # Systemd units
 └── tools/
@@ -190,7 +188,6 @@ homelab/
 | `scripts/vms/*.sh`                                | `/opt/bin/`                                  | deploy-media-scripts.sh |
 | `apps/couchdb/`                                   | `/srv/docker/couchdb/`                       | rsync/scp               |
 | `apps/couchdb/couchdb-stack.service`              | `/etc/systemd/system/couchdb-stack.service`  | scp + systemctl enable  |
-| `apps/kido/`                                      | `/srv/docker/kido/`                          | rsync/scp               |
 | `apps/vaultwarden/docker-compose.yml`             | `/opt/vaultwarden/docker-compose.yml`        | scp                     |
 | `apps/vaultwarden/backup.sh`                      | `/opt/vaultwarden/backup.sh`                 | scp + chmod +x          |
 | `systemd/*.mount`                                 | `/etc/systemd/system/`                       | Ignition or manual      |
@@ -526,14 +523,13 @@ pvesm status        # Check storage
 
 ## Network Services Map
 
-| Service           | Hostname                           | Traefik Backend (Docker DNS)           | Caddy Backend       |
-| ----------------- | ---------------------------------- | -------------------------------------- | ------------------- |
-| Immich            | immich.lushanoperera.com           | immich_server:2283                     | localhost:2283      |
-| Nextcloud         | nextcloud.lushanoperera.com        | nextcloud-web:80                       | localhost:11000     |
-| Kido              | kido.giulyart.it                   | kido-frontend:3000 / kido-backend:3001 | localhost:3000/3001 |
-| Traefik Dashboard | traefik.lushanoperera.com          | api@internal                           | —                   |
-| CrowdSec (CLI)    | N/A (use `cscli decisions list`)   | —                                      | —                   |
-| Obsidian Sync     | obsidian-sync.home.disconnesso.com | —                                      | localhost:5984      |
+| Service           | Hostname                           | Traefik Backend (Docker DNS) | Caddy Backend   |
+| ----------------- | ---------------------------------- | ---------------------------- | --------------- |
+| Immich            | immich.lushanoperera.com           | immich_server:2283           | localhost:2283  |
+| Nextcloud         | nextcloud.lushanoperera.com        | nextcloud-web:80             | localhost:11000 |
+| Traefik Dashboard | traefik.lushanoperera.com          | api@internal                 | —               |
+| CrowdSec (CLI)    | N/A (use `cscli decisions list`)   | —                            | —               |
+| Obsidian Sync     | obsidian-sync.home.disconnesso.com | —                            | localhost:5984  |
 
 **Note:** Traefik (DMZ macvlan) routes to backends via `traefik_internal` Docker network — macvlan cannot reach host IPs.
 

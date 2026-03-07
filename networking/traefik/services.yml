@@ -56,52 +56,6 @@ http:
         - rate-limit
         - crowdsec-bouncer
 
-    # Kido Frontend - HTTPS direct access
-    kido-frontend:
-      rule: "Host(`kido.giulyart.it`) && !PathPrefix(`/api`)"
-      service: "kido-frontend-service"
-      entryPoints:
-        - websecure
-      tls: {}
-      middlewares:
-        - security-headers
-        - rate-limit
-        - crowdsec-bouncer
-
-    # Kido Frontend - HTTP (for Cloudflare Tunnel)
-    kido-frontend-http:
-      rule: "Host(`kido.giulyart.it`) && !PathPrefix(`/api`)"
-      service: "kido-frontend-service"
-      entryPoints:
-        - web
-      middlewares:
-        - security-headers
-        - rate-limit
-        - crowdsec-bouncer
-
-    # Kido Backend - HTTPS direct access
-    kido-backend:
-      rule: "Host(`kido.giulyart.it`) && PathPrefix(`/api`)"
-      service: "kido-backend-service"
-      entryPoints:
-        - websecure
-      tls: {}
-      middlewares:
-        - security-headers
-        - rate-limit
-        - crowdsec-bouncer
-
-    # Kido Backend - HTTP (for Cloudflare Tunnel)
-    kido-backend-http:
-      rule: "Host(`kido.giulyart.it`) && PathPrefix(`/api`)"
-      service: "kido-backend-service"
-      entryPoints:
-        - web
-      middlewares:
-        - security-headers
-        - rate-limit
-        - crowdsec-bouncer
-
   services:
     immich-service:
       loadBalancer:
@@ -111,14 +65,6 @@ http:
       loadBalancer:
         servers:
           - url: "http://nextcloud-web:80"
-    kido-frontend-service:
-      loadBalancer:
-        servers:
-          - url: "http://kido-frontend:3000"
-    kido-backend-service:
-      loadBalancer:
-        servers:
-          - url: "http://kido-backend:3001"
   middlewares:
     # Dashboard BasicAuth
     dashboard-auth:

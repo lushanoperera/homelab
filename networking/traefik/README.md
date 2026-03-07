@@ -21,8 +21,6 @@ Traefik runs on a dedicated DMZ macvlan interface (`eth1`) with IP `192.168.7.11
 | ----------------- | --------------------------- | -------------------- |
 | Immich            | immich.lushanoperera.com    | immich_server:2283   |
 | Nextcloud         | nextcloud.lushanoperera.com | nextcloud-web:80     |
-| Kido Frontend     | kido.giulyart.it            | kido-frontend:3000   |
-| Kido Backend      | kido.giulyart.it/api        | kido-backend:3001    |
 | Traefik Dashboard | traefik.lushanoperera.com   | api@internal         |
 
 ## Deployment

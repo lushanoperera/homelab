@@ -47,7 +47,6 @@ This repository contains configurations, scripts, and documentation for:
 │ - PDM   │       │ - Traefik │      │ LXC 123:  │
 │         │       │ - CrowdSec│      │ - Samba   │
 └─────────┘       │ - DNS     │      └───────────┘
-                  │ - Kido    │
                   │ - CouchDB │
                   │ - Vaultw. │
                   └───────────┘
@@ -106,7 +105,6 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 ├── apps/
 │   ├── couchdb/             # CouchDB (Obsidian LiveSync)
 │   ├── immich/              # Immich photo management
-│   ├── kido/                # Kido web app
 │   ├── nextcloud/           # Nextcloud (FPM + nginx)
 │   └── vaultwarden/         # Vaultwarden password manager
 ├── qnap/                    # QNAP NAS Container Station services
@@ -156,7 +154,6 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 - Gluetun (ProtonVPN)
 - Nextcloud (FPM + nginx, `nextcloud.lushanoperera.com`)
 - Immich (photo management, `immich.lushanoperera.com`)
-- Kido (Docker app, `kido.giulyart.it`)
 - CouchDB (Obsidian LiveSync backend)
 - Vaultwarden (password manager)
 - Traefik (public reverse proxy, DMZ macvlan) + CrowdSec + Cloudflared
