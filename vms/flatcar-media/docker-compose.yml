@@ -3,7 +3,7 @@ services:
     image: qmcgaw/gluetun:latest
     container_name: gluetun
     hostname: gluetun
-    mem_limit: 512m
+    mem_limit: 256m
     labels:
       - "com.centurylinklabs.watchtower.enable=false"
       - "com.centurylinklabs.watchtower.scope=weekly"
@@ -44,7 +44,7 @@ services:
     image: flaresolverr/flaresolverr:latest
     container_name: flaresolverr
     hostname: flaresolverr
-    mem_limit: 512m
+    mem_limit: 256m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -65,7 +65,7 @@ services:
   prowlarr:
     image: linuxserver/prowlarr:latest
     container_name: prowlarr
-    mem_limit: 512m
+    mem_limit: 256m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -94,7 +94,7 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=false"
       - "com.centurylinklabs.watchtower.scope=weekly"
-    mem_limit: 1g
+    mem_limit: 512m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -162,7 +162,7 @@ services:
     image: linuxserver/radarr:latest
     container_name: radarr
     hostname: radarr
-    mem_limit: 512m
+    mem_limit: 384m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -208,7 +208,7 @@ services:
     image: linuxserver/sonarr:latest
     container_name: sonarr
     hostname: sonarr
-    mem_limit: 1g
+    mem_limit: 512m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -253,7 +253,7 @@ services:
     image: linuxserver/lidarr:latest
     container_name: lidarr
     hostname: lidarr
-    mem_limit: 512m
+    mem_limit: 256m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -298,7 +298,7 @@ services:
     image: linuxserver/bazarr:latest
     container_name: bazarr
     hostname: bazarr
-    mem_limit: 512m
+    mem_limit: 384m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}

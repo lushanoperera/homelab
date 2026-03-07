@@ -2,6 +2,7 @@ services:
   nextcloud-db:
     image: postgres:17-alpine
     container_name: nextcloud-db
+    mem_limit: 256m
     restart: unless-stopped
     shm_size: 128mb
     environment:
@@ -19,6 +20,7 @@ services:
   nextcloud-redis:
     image: redis:7-alpine
     container_name: nextcloud-redis
+    mem_limit: 64m
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -29,6 +31,7 @@ services:
   nextcloud-app:
     image: nextcloud:${NEXTCLOUD_VERSION:-32}-fpm
     container_name: nextcloud-app
+    mem_limit: 512m
     restart: unless-stopped
     environment:
       POSTGRES_HOST: nextcloud-db
@@ -56,6 +59,7 @@ services:
   nextcloud-web:
     image: nginx:alpine
     container_name: nextcloud-web
+    mem_limit: 64m
     restart: unless-stopped
     ports:
       - "192.168.100.101:11000:80"
@@ -68,6 +72,7 @@ services:
   nextcloud-cron:
     image: nextcloud:${NEXTCLOUD_VERSION:-32}-fpm
     container_name: nextcloud-cron
+    mem_limit: 256m
     restart: unless-stopped
     entrypoint: /cron.sh
     volumes:
@@ -79,6 +84,7 @@ services:
   nextcloud-imaginary:
     image: nextcloud/aio-imaginary:latest
     container_name: nextcloud-imaginary
+    mem_limit: 512m
     restart: unless-stopped
     cap_add:
       - SYS_NICE

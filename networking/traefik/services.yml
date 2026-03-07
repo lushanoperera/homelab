@@ -102,29 +102,6 @@ http:
         - rate-limit
         - crowdsec-bouncer
 
-    # CrowdSec Metabase Dashboard - HTTPS
-    crowdsec-metabase:
-      rule: "Host(`crowdsec.lushanoperera.com`)"
-      service: "metabase-service"
-      entryPoints:
-        - websecure
-      tls: {}
-      middlewares:
-        - security-headers
-        - rate-limit
-        - crowdsec-bouncer
-
-    # CrowdSec Metabase Dashboard - HTTP
-    crowdsec-metabase-http:
-      rule: "Host(`crowdsec.lushanoperera.com`)"
-      service: "metabase-service"
-      entryPoints:
-        - web
-      middlewares:
-        - security-headers
-        - rate-limit
-        - crowdsec-bouncer
-
   services:
     immich-service:
       loadBalancer:
@@ -142,11 +119,6 @@ http:
       loadBalancer:
         servers:
           - url: "http://192.168.100.100:3001"
-    metabase-service:
-      loadBalancer:
-        servers:
-          - url: "http://crowdsec-metabase:3001"
-
   middlewares:
     # Dashboard BasicAuth
     dashboard-auth:
