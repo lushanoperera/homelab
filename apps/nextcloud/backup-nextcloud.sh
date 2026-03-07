@@ -1,23 +1,20 @@
 #!/bin/bash
-# Lock file
-LOCK_FILE="/var/run/nextcloud-backup.lock"
-# Verifica se il backup è già in esecuzione
+# Nextcloud Restic backup script
+# Deployed to: /opt/bin/backup-nextcloud.sh on Flatcar VM 100
+LOCK_FILE="/tmp/nextcloud-backup.lock"
 if [ -f "$LOCK_FILE" ]; then
     pid=$(cat "$LOCK_FILE")
     if ps -p "$pid" > /dev/null; then
-        echo "Backup già in esecuzione con PID $pid"
+        echo "Backup already running with PID $pid"
         exit 1
     fi
 fi
-# Crea lock file
 echo $$ > "$LOCK_FILE"
-# Rimuovi lock file all'uscita
 trap 'rm -f "$LOCK_FILE"' EXIT
-# Carica variabili d'ambiente per Restic
-source /root/.restic-env
-# Configurazione email
+# Load Restic credentials
+source /srv/docker/nextcloud/.restic-env
 EMAIL="lushano.perera@gmail.com"
-# Log file
+COMPOSE_DIR="/srv/docker/nextcloud"
 LOG_DIR="/var/log/nextcloud"
 LOG_FILE="$LOG_DIR/backup.log"
 ERROR_LOG="$LOG_DIR/error.log"
@@ -142,8 +139,8 @@ check_integrity() {
 # Inizio backup
 log_message "Backup iniziato"
 
-# Attiva maintenance mode
-if ! docker exec -u www-data nextcloud-aio-nextcloud php occ maintenance:mode --on; then
+# Enable maintenance mode
+if ! docker exec -u www-data nextcloud-app php occ maintenance:mode --on; then
     log_error "Impossibile attivare maintenance mode"
     send_error_email "Backup Nextcloud - FALLITO" "Impossibile attivare maintenance mode"
     exit 1
@@ -211,7 +208,6 @@ if $BACKUP_SUCCESS; then
 
     # Esegui la pulizia dei backup vecchi
     log_message "Avvio pulizia backup vecchi"
-    # Primo tentativo: solo keep-daily per ridurre la complessità
     timeout 15m restic forget \
         --no-cache \
         --keep-daily 7 \
@@ -244,11 +240,9 @@ if $BACKUP_SUCCESS; then
         send_error_email "Backup Nextcloud - Pulizia Fallita" "La pulizia dei backup vecchi è fallita. Output: $PRUNE_ERROR"
         log_message "Scheduling pulizia manuale necessaria"
 
-        # Crea uno script separato per la pulizia manuale
-        cat > /root/cleanup-snapshots.sh << 'CLEANUP'
+        cat > /tmp/cleanup-snapshots.sh << 'CLEANUP'
 #!/bin/bash
-# Carica variabili d'ambiente per Restic
-source /root/.restic-env
+source /srv/docker/nextcloud/.restic-env
 
 # Sblocca repository
 restic unlock
@@ -261,8 +255,8 @@ timeout 120m restic forget \
 
 echo "Pulizia completata. Verifica lo stato con 'restic snapshots'"
 CLEANUP
-        chmod +x /root/cleanup-snapshots.sh
-        log_message "Creato script di pulizia manuale in /root/cleanup-snapshots.sh"
+        chmod +x /tmp/cleanup-snapshots.sh
+        log_message "Manual cleanup script created at /tmp/cleanup-snapshots.sh"
     fi
 else
     STATUS="fallito"
@@ -270,8 +264,8 @@ else
     send_error_email "Backup Nextcloud - FALLITO" "Almeno uno dei componenti del backup è fallito. Controlla i log in $ERROR_LOG"
 fi
 
-# Disattiva maintenance mode
-if ! docker exec -u www-data nextcloud-aio-nextcloud php occ maintenance:mode --off; then
+# Disable maintenance mode
+if ! docker exec -u www-data nextcloud-app php occ maintenance:mode --off; then
     log_error "Impossibile disattivare maintenance mode"
     send_error_email "Backup Nextcloud - ERRORE" "Impossibile disattivare maintenance mode"
 fi

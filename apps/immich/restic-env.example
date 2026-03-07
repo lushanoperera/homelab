@@ -2,8 +2,8 @@ export AWS_ACCESS_KEY_ID="your-minio-access-key"
 export AWS_SECRET_ACCESS_KEY="your-minio-secret-key"
 export RESTIC_REPOSITORY="s3:http://192.168.200.210:9000/restic-immich"
 export RESTIC_PASSWORD="your-restic-password"
-export UPLOAD_LOCATION="/mnt/upload"
-export DB_DATA_LOCATION="/mnt/database"
+export UPLOAD_LOCATION="/mnt/immich/upload"
+export DB_DATA_LOCATION="/mnt/immich/database"
 
 # Opzioni aggiuntive per la compressione
 export RESTIC_COMPRESSION="max"

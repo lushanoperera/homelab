@@ -19,6 +19,8 @@ storage:
 
           [Network]
           Address=192.168.100.100/24
+          Address=192.168.100.101/24
+          Address=192.168.100.103/24
           Gateway=192.168.100.1
           DNS=192.168.100.254
           DNS=192.168.100.100
@@ -249,6 +251,10 @@ storage:
           d /mnt/media 0755 core core -
           d /mnt/media/movies 0755 core core -
           d /mnt/nfs_vaultwarden 0755 core core -
+          d /mnt/ncdata 0755 root root -
+          d /mnt/immich 0755 root root -
+          d /mnt/immich/upload 0755 root root -
+          d /mnt/immich/database 0755 root root -
 
 systemd:
   units:
@@ -290,11 +296,11 @@ systemd:
       contents: |
         [Unit]
         Description=Create mount directories
-        Before=mnt-nfs_shared.mount mnt-media.mount mnt-media-movies.mount mnt-nfs_vaultwarden.mount portainer-compose.service
+        Before=portainer-compose.service
 
         [Service]
         Type=oneshot
-        ExecStart=/usr/bin/mkdir -p /mnt/nfs_shared /mnt/media /mnt/media/movies /mnt/nfs_vaultwarden /opt/portainer /opt/bin /opt/vaultwarden /srv/docker/couchdb /srv/docker/dns
+        ExecStart=/usr/bin/mkdir -p /mnt/nfs_shared /mnt/media /mnt/media/movies /mnt/nfs_vaultwarden /mnt/ncdata /mnt/immich/upload /mnt/immich/database /opt/portainer /opt/bin /opt/vaultwarden /srv/docker/couchdb /srv/docker/dns /srv/docker/nextcloud /srv/docker/immich
         RemainAfterExit=true
 
         [Install]
@@ -386,6 +392,66 @@ systemd:
         [Mount]
         What=192.168.200.4:/rpool/shared/media/movies
         Where=/mnt/media/movies
+        Type=nfs4
+        Options=rw,relatime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,_netdev
+        TimeoutSec=300
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # NFS mount for Nextcloud data from reginald (Storage LAN)
+    - name: mnt-ncdata.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=NFS mount for Nextcloud data from reginald
+        Requires=network-online.target
+        After=network-online.target
+        Before=docker.service nextcloud-stack.service
+
+        [Mount]
+        What=192.168.200.4:/rpool/shared/nextcloud
+        Where=/mnt/ncdata
+        Type=nfs4
+        Options=rw,relatime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,_netdev
+        TimeoutSec=300
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # NFS mount for Immich library from reginald (Storage LAN)
+    - name: mnt-immich-upload.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=NFS mount for Immich library from reginald
+        Requires=network-online.target
+        After=network-online.target
+        Before=docker.service immich-stack.service
+
+        [Mount]
+        What=192.168.200.4:/rpool/shared/immich/library
+        Where=/mnt/immich/upload
+        Type=nfs4
+        Options=rw,relatime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,_netdev
+        TimeoutSec=300
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # NFS mount for Immich database from reginald (Storage LAN)
+    - name: mnt-immich-database.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=NFS mount for Immich database from reginald
+        Requires=network-online.target
+        After=network-online.target
+        Before=docker.service immich-stack.service
+
+        [Mount]
+        What=192.168.200.4:/rpool/shared/immich/database
+        Where=/mnt/immich/database
         Type=nfs4
         Options=rw,relatime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,_netdev
         TimeoutSec=300
@@ -730,6 +796,108 @@ systemd:
         OnCalendar=*-*-* 03:00:00
         Persistent=true
         RandomizedDelaySec=300
+
+        [Install]
+        WantedBy=timers.target
+
+    # Nextcloud stack deployment service
+    - name: nextcloud-stack.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Nextcloud Docker Compose Stack
+        Requires=docker.service mnt-ncdata.mount
+        After=docker.service mnt-ncdata.mount gpu-setup.service
+        Wants=network-online.target
+        After=network-online.target
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        WorkingDirectory=/srv/docker/nextcloud
+        ExecStart=/opt/bin/docker-compose up -d --remove-orphans
+        ExecStop=/opt/bin/docker-compose down
+        TimeoutStartSec=180
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # Immich stack deployment service
+    - name: immich-stack.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Immich Docker Compose Stack
+        Requires=docker.service mnt-immich-upload.mount mnt-immich-database.mount
+        After=docker.service mnt-immich-upload.mount mnt-immich-database.mount gpu-setup.service
+        Wants=network-online.target
+        After=network-online.target
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        WorkingDirectory=/srv/docker/immich
+        ExecStart=/opt/bin/docker-compose up -d --remove-orphans
+        ExecStop=/opt/bin/docker-compose down
+        TimeoutStartSec=180
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # Nextcloud Restic backup
+    - name: nextcloud-backup.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Nextcloud Restic backup to MinIO S3
+        Requires=docker.service mnt-ncdata.mount
+        After=docker.service mnt-ncdata.mount
+
+        [Service]
+        Type=oneshot
+        ExecStart=/opt/bin/backup-nextcloud.sh
+        Environment=HOME=/home/core
+        TimeoutStartSec=6h
+
+    - name: nextcloud-backup.timer
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Daily Nextcloud Restic backup
+
+        [Timer]
+        OnCalendar=*-*-* 00:00:00
+        Persistent=true
+        RandomizedDelaySec=120
+
+        [Install]
+        WantedBy=timers.target
+
+    # Immich Restic backup
+    - name: immich-backup.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Immich Restic backup to MinIO S3
+        Requires=docker.service mnt-immich-upload.mount mnt-immich-database.mount
+        After=docker.service mnt-immich-upload.mount mnt-immich-database.mount
+
+        [Service]
+        Type=oneshot
+        ExecStart=/opt/bin/backup-immich.sh
+        Environment=HOME=/home/core
+        TimeoutStartSec=6h
+
+    - name: immich-backup.timer
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Daily Immich Restic backup
+
+        [Timer]
+        OnCalendar=*-*-* 00:00:00
+        Persistent=true
+        RandomizedDelaySec=120
 
         [Install]
         WantedBy=timers.target

@@ -1,0 +1,15 @@
+[Unit]
+Description=NFS mount for Nextcloud data from reginald
+Requires=network-online.target
+After=network-online.target
+Before=docker.service nextcloud-stack.service
+
+[Mount]
+What=192.168.200.4:/rpool/shared/nextcloud
+Where=/mnt/ncdata
+Type=nfs4
+Options=rw,relatime,vers=4.2,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,_netdev
+TimeoutSec=300
+
+[Install]
+WantedBy=multi-user.target

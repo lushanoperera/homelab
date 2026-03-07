@@ -1,0 +1,90 @@
+services:
+  nextcloud-db:
+    image: postgres:17-alpine
+    container_name: nextcloud-db
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nextcloud}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-nextcloud_database}
+    volumes:
+      - nextcloud-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nextcloud} -d ${POSTGRES_DB:-nextcloud_database}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nextcloud-redis:
+    image: redis:7-alpine
+    container_name: nextcloud-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nextcloud-app:
+    image: nextcloud:${NEXTCLOUD_VERSION:-32}-fpm
+    container_name: nextcloud-app
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: nextcloud-db
+      POSTGRES_USER: ${POSTGRES_USER:-nextcloud}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-nextcloud_database}
+      REDIS_HOST: nextcloud-redis
+      NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_TRUSTED_DOMAINS}
+      NEXTCLOUD_DATA_DIR: /var/www/html/data
+      OVERWRITEPROTOCOL: https
+      OVERWRITECLIURL: ${NEXTCLOUD_URL:-https://nextcloud.home.disconnesso.com}
+      TZ: ${TZ:-Europe/Rome}
+    volumes:
+      - /mnt/ncdata:/var/www/html/data
+      - nextcloud-app:/var/www/html
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+      - /dev/dri/card0:/dev/dri/card0
+    depends_on:
+      nextcloud-db:
+        condition: service_healthy
+      nextcloud-redis:
+        condition: service_healthy
+
+  nextcloud-web:
+    image: nginx:alpine
+    container_name: nextcloud-web
+    restart: unless-stopped
+    ports:
+      - "192.168.100.101:11000:80"
+    volumes:
+      - nextcloud-app:/var/www/html:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - nextcloud-app
+
+  nextcloud-cron:
+    image: nextcloud:${NEXTCLOUD_VERSION:-32}-fpm
+    container_name: nextcloud-cron
+    restart: unless-stopped
+    entrypoint: /cron.sh
+    volumes:
+      - /mnt/ncdata:/var/www/html/data
+      - nextcloud-app:/var/www/html
+    depends_on:
+      - nextcloud-app
+
+  nextcloud-imaginary:
+    image: nextcloud/aio-imaginary:latest
+    container_name: nextcloud-imaginary
+    restart: unless-stopped
+    cap_add:
+      - SYS_NICE
+
+volumes:
+  nextcloud-db:
+    driver: local
+  nextcloud-app:
+    driver: local

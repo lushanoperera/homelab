@@ -1,10 +1,10 @@
 [Unit]
 Description=Immich Restic backup to MinIO S3
-Requires=docker.service
-After=docker.service
+Requires=docker.service mnt-immich-upload.mount mnt-immich-database.mount
+After=docker.service mnt-immich-upload.mount mnt-immich-database.mount
 
 [Service]
 Type=oneshot
-ExecStart=/root/backup-immich.sh
-Environment=HOME=/root
+ExecStart=/opt/bin/backup-immich.sh
+Environment=HOME=/home/core
 TimeoutStartSec=6h

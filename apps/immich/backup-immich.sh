@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# -------------------
-# Configurazione base
-# -------------------
-LOCK_FILE="/var/run/immich-backup.lock"
+# Immich Restic backup script
+# Deployed to: /opt/bin/backup-immich.sh on Flatcar VM 100
+LOCK_FILE="/tmp/immich-backup.lock"
 EMAIL="lushano.perera@gmail.com"
+COMPOSE_DIR="/srv/docker/immich"
 LOG_DIR="/var/log/immich"
 LOG_FILE="$LOG_DIR/backup.log"
 ERROR_LOG="$LOG_DIR/error.log"
@@ -157,10 +157,7 @@ fi
 echo $$ > "$LOCK_FILE"
 trap 'rm -f "$LOCK_FILE"; rm -rf /tmp/immich_backup_tmp' EXIT
 
-# -------------------
-# Caricamento configurazione
-# -------------------
-source /root/.restic-env
+source /srv/docker/immich/.restic-env
 
 # Verifica variabili d'ambiente
 log_message "Verifica configurazione:"
@@ -186,14 +183,14 @@ else
     DB_DUMP_SUCCESS=false
 fi
 
-# Stop dei container Immich
-cd /home || {
-    log_error "Impossibile accedere alla directory /home"
+# Stop Immich containers
+cd "$COMPOSE_DIR" || {
+    log_error "Cannot access compose directory: $COMPOSE_DIR"
     exit 1
 }
 
-log_message "Arresto container Immich"
-docker compose down
+log_message "Stopping Immich containers"
+/opt/bin/docker-compose down
 
 # Esegui il backup con restic del dump del database
 if $DB_DUMP_SUCCESS; then
@@ -262,7 +259,7 @@ fi
 
 # Riavvio dei container
 log_message "Riavvio container Immich"
-docker compose up -d
+/opt/bin/docker-compose up -d
 
 # -------------------
 # Verifiche finali

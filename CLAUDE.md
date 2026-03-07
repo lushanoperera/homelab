@@ -19,17 +19,17 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 
 ### Hosts & VMs
 
-| Host/VM                         | IP                           | Role                                                                   |
-| ------------------------------- | ---------------------------- | ---------------------------------------------------------------------- |
-| UniFi Fiber Gateway (UCG-Fiber) | 192.168.1.1                  | Router, firewall, UniFi OS 10.1 controller                             |
-| winston                         | 192.168.100.38 / .200.38     | Primary Proxmox VE 9.1.6 host (32 GB, SR-IOV active: 7 VFs)            |
-| reginald                        | 192.168.100.4 / .200.4       | Secondary Proxmox VE 9.1.5 host (8 GB)                                 |
-| flatcar-media (VM 100)          | .100.100 / .7.119 / .200.100 | Media stack (Sonarr, Radarr, qBittorrent)                              |
-| homeassistant (VM 102)          | .100.102 / .4.102 / .5.102   | Home Assistant (multi-VLAN: Infra+IoT+Multimedia)                      |
-| PBS                             | 192.168.100.187              | Proxmox Backup Server (on QNAP)                                        |
-| PDM (LXC 106)                   | 192.168.100.106              | Proxmox Datacenter Manager (manages winston, reginald, nwlab-thinkpad) |
-| QNAP NAS                        | 192.168.100.254 / .200.254   | Storage (MinIO S3, NFS)                                                |
-| nwlab-thinkpad (remote)         | 10.21.21.99                  | nwlab Proxmox VE 9.1.5 host (managed via WG tunnel)                    |
+| Host/VM                         | IP                                                 | Role                                                                   |
+| ------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------- |
+| UniFi Fiber Gateway (UCG-Fiber) | 192.168.1.1                                        | Router, firewall, UniFi OS 10.1 controller                             |
+| winston                         | 192.168.100.38 / .200.38                           | Primary Proxmox VE 9.1.6 host (32 GB, SR-IOV active: 7 VFs)            |
+| reginald                        | 192.168.100.4 / .200.4                             | Secondary Proxmox VE 9.1.5 host (8 GB)                                 |
+| flatcar-media (VM 100)          | .100.100 / .100.101 / .100.103 / .7.119 / .200.100 | Media stack + Nextcloud + Immich                                       |
+| homeassistant (VM 102)          | .100.102 / .4.102 / .5.102                         | Home Assistant (multi-VLAN: Infra+IoT+Multimedia)                      |
+| PBS                             | 192.168.100.187                                    | Proxmox Backup Server (on QNAP)                                        |
+| PDM (LXC 106)                   | 192.168.100.106                                    | Proxmox Datacenter Manager (manages winston, reginald, nwlab-thinkpad) |
+| QNAP NAS                        | 192.168.100.254 / .200.254                         | Storage (MinIO S3, NFS)                                                |
+| nwlab-thinkpad (remote)         | 10.21.21.99                                        | nwlab Proxmox VE 9.1.5 host (managed via WG tunnel)                    |
 
 ### Services by Location
 
@@ -44,6 +44,8 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 - Kido (Docker app, `kido.giulyart.it`)
 - Vaultwarden (`/opt/vaultwarden/`) — password manager
 - CouchDB (`/srv/docker/couchdb/`) — Obsidian LiveSync backend
+- Nextcloud (`/srv/docker/nextcloud/`) — standard Nextcloud (nginx + FPM + Postgres + Redis)
+- Immich (`/srv/docker/immich/`) — photo management with ML
 
 **QNAP NAS** (`192.168.100.254`):
 
@@ -52,13 +54,11 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 
 **VMs (winston)**:
 
-- 100: flatcar-media — Media stack (Infra .100.100, DMZ .7.119, Storage .200.100)
+- 100: flatcar-media — Media stack + Nextcloud + Immich (Infra .100.100/.100.101/.100.103, DMZ .7.119, Storage .200.100)
 - 102: homeassistant — Home Assistant (192.168.100.102, IoT .4.102, Multimedia .5.102)
 
 **LXC Containers (winston)**:
 
-- 101: Nextcloud (192.168.100.101)
-- 103: Immich (192.168.100.103)
 - 104: WireGuard (192.168.100.104)
 - 105: Plex (192.168.100.105)
 - 106: PDM — Proxmox Datacenter Manager (192.168.100.106)
@@ -180,24 +180,27 @@ homelab/
 
 ### Repo → VM Path Mapping
 
-| Repo Path                                         | Deployed Path (Flatcar)                      | Deploy Method                 |
-| ------------------------------------------------- | -------------------------------------------- | ----------------------------- |
-| `vms/flatcar-media/docker-compose.yml`            | `/srv/docker/media-stack/docker-compose.yml` | rsync/scp                     |
-| `networking/caddy/`                               | `/srv/docker/caddy/`                         | rsync/scp                     |
-| `networking/traefik/`                             | `/srv/docker/traefik/`                       | rsync/scp                     |
-| `networking/cloudflare-tunnel/`                   | `/srv/docker/cloudflare-tunnel/`             | rsync/scp                     |
-| `scripts/vms/*.sh`                                | `/opt/bin/`                                  | deploy-media-scripts.sh       |
-| `apps/couchdb/`                                   | `/srv/docker/couchdb/`                       | rsync/scp                     |
-| `apps/couchdb/couchdb-stack.service`              | `/etc/systemd/system/couchdb-stack.service`  | scp + systemctl enable        |
-| `apps/kido/`                                      | `/srv/docker/kido/`                          | rsync/scp                     |
-| `apps/vaultwarden/docker-compose.yml`             | `/opt/vaultwarden/docker-compose.yml`        | scp                           |
-| `apps/vaultwarden/backup.sh`                      | `/opt/vaultwarden/backup.sh`                 | scp + chmod +x                |
-| `systemd/*.mount`                                 | `/etc/systemd/system/`                       | Ignition or manual            |
-| `hosts/winston/ksm-enable.service`                | `/etc/systemd/system/ksm-enable.service`     | scp + systemctl enable        |
-| `apps/nextcloud/backup-nextcloud.sh`              | LXC 101 `/root/backup-nextcloud.sh`          | `pct push`                    |
-| `apps/nextcloud/nextcloud-backup.{service,timer}` | LXC 101 `/etc/systemd/system/`               | `pct push` + systemctl enable |
-| `apps/immich/backup-immich.sh`                    | LXC 103 `/root/backup-immich.sh`             | `pct push`                    |
-| `apps/immich/immich-backup.{service,timer}`       | LXC 103 `/etc/systemd/system/`               | `pct push` + systemctl enable |
+| Repo Path                                         | Deployed Path (Flatcar)                      | Deploy Method           |
+| ------------------------------------------------- | -------------------------------------------- | ----------------------- |
+| `vms/flatcar-media/docker-compose.yml`            | `/srv/docker/media-stack/docker-compose.yml` | rsync/scp               |
+| `networking/caddy/`                               | `/srv/docker/caddy/`                         | rsync/scp               |
+| `networking/traefik/`                             | `/srv/docker/traefik/`                       | rsync/scp               |
+| `networking/cloudflare-tunnel/`                   | `/srv/docker/cloudflare-tunnel/`             | rsync/scp               |
+| `scripts/vms/*.sh`                                | `/opt/bin/`                                  | deploy-media-scripts.sh |
+| `apps/couchdb/`                                   | `/srv/docker/couchdb/`                       | rsync/scp               |
+| `apps/couchdb/couchdb-stack.service`              | `/etc/systemd/system/couchdb-stack.service`  | scp + systemctl enable  |
+| `apps/kido/`                                      | `/srv/docker/kido/`                          | rsync/scp               |
+| `apps/vaultwarden/docker-compose.yml`             | `/opt/vaultwarden/docker-compose.yml`        | scp                     |
+| `apps/vaultwarden/backup.sh`                      | `/opt/vaultwarden/backup.sh`                 | scp + chmod +x          |
+| `systemd/*.mount`                                 | `/etc/systemd/system/`                       | Ignition or manual      |
+| `hosts/winston/ksm-enable.service`                | `/etc/systemd/system/ksm-enable.service`     | scp + systemctl enable  |
+| `apps/nextcloud/docker-compose.yml`               | `/srv/docker/nextcloud/docker-compose.yml`   | rsync/scp               |
+| `apps/nextcloud/nginx.conf`                       | `/srv/docker/nextcloud/nginx.conf`           | rsync/scp               |
+| `apps/nextcloud/backup-nextcloud.sh`              | Flatcar `/opt/bin/backup-nextcloud.sh`       | scp + chmod +x          |
+| `apps/nextcloud/nextcloud-backup.{service,timer}` | Flatcar `/etc/systemd/system/`               | scp + systemctl enable  |
+| `apps/immich/docker-compose.yml`                  | `/srv/docker/immich/docker-compose.yml`      | rsync/scp               |
+| `apps/immich/backup-immich.sh`                    | Flatcar `/opt/bin/backup-immich.sh`          | scp + chmod +x          |
+| `apps/immich/immich-backup.{service,timer}`       | Flatcar `/etc/systemd/system/`               | scp + systemctl enable  |
 
 ## Quick Reference
 
@@ -273,31 +276,58 @@ ssh core@192.168.100.100 'curl -s http://localhost:5984/_up'
 ssh core@192.168.100.100 'curl -s http://localhost:5984/obsidian-livesync | jq .doc_count'
 ```
 
-### Immich (LXC 103)
+### Immich (Flatcar VM 100)
 
 ```bash
 # Access
-ssh root@192.168.100.38 'pct exec 103 -- bash'
+ssh core@192.168.100.100
 
 # Container status
-ssh root@192.168.100.38 'pct exec 103 -- docker ps --format "table {{.Names}}\t{{.Status}}"'
+ssh core@192.168.100.100 'cd /srv/docker/immich && docker compose ps'
 
 # Check version (public endpoint, no auth needed)
-ssh root@192.168.100.38 'pct exec 103 -- curl -s http://localhost:2283/api/server/version'
+ssh core@192.168.100.100 'curl -s http://localhost:2283/api/server/version'
 
 # Update (uses :release rolling tag, not pinned)
-ssh root@192.168.100.38 'pct exec 103 -- bash -c "cd /home && docker compose pull && docker compose up -d"'
+ssh core@192.168.100.100 'cd /srv/docker/immich && docker compose pull && docker compose up -d'
 
 # Cleanup old images
-ssh root@192.168.100.38 'pct exec 103 -- docker image prune -f'
+ssh core@192.168.100.100 'docker image prune -f'
 ```
 
-Key paths inside LXC 103:
+Key paths on Flatcar:
 
-- Compose + .env: `/home/`
-- Database: `/mnt/database` (NFS from reginald)
-- Photo library: `/mnt/upload` (NFS from reginald)
-- GPU: Intel iGPU VF 2 (00:02.3) via udev+bind mount — HW transcoding (QuickSync) enabled
+- Compose + .env: `/srv/docker/immich/`
+- Photo library: `/mnt/immich/upload` (NFS from reginald)
+- Database: `/mnt/immich/database` (NFS from reginald)
+- GPU: Intel iGPU VF 0 (`/dev/dri/renderD129`) shared with other containers — HW transcoding (QuickSync) enabled
+
+### Nextcloud (Flatcar VM 100)
+
+```bash
+# Container status
+ssh core@192.168.100.100 'cd /srv/docker/nextcloud && docker compose ps'
+
+# Nextcloud version
+ssh core@192.168.100.100 'docker exec -u www-data nextcloud-app php occ status'
+
+# Maintenance mode
+ssh core@192.168.100.100 'docker exec -u www-data nextcloud-app php occ maintenance:mode --on'
+ssh core@192.168.100.100 'docker exec -u www-data nextcloud-app php occ maintenance:mode --off'
+
+# Update
+ssh core@192.168.100.100 'cd /srv/docker/nextcloud && docker compose pull && docker compose up -d'
+
+# File scan after restoring data
+ssh core@192.168.100.100 'docker exec -u www-data nextcloud-app php occ files:scan --all'
+```
+
+Key paths on Flatcar:
+
+- Compose + .env: `/srv/docker/nextcloud/`
+- Data directory: `/mnt/ncdata` (NFS from reginald)
+- nginx config: `/srv/docker/nextcloud/nginx.conf`
+- GPU: Intel iGPU VF 0 (`/dev/dri/renderD129`) shared with other containers
 
 ### nwlab WireGuard Tunnel
 
@@ -349,6 +379,13 @@ ssh core@192.168.100.100 'sudo systemctl restart mnt-media-movies.mount'
 
 # Check all NFS mounts on Flatcar (all via Storage LAN 192.168.200.x)
 ssh core@192.168.100.100 'mount -t nfs4'
+
+# Check Nextcloud NFS mount
+ssh core@192.168.100.100 'mountpoint -q /mnt/ncdata && echo "Nextcloud NFS OK"'
+
+# Check Immich NFS mounts
+ssh core@192.168.100.100 'mountpoint -q /mnt/immich/upload && echo "Immich upload NFS OK"'
+ssh core@192.168.100.100 'mountpoint -q /mnt/immich/database && echo "Immich database NFS OK"'
 ```
 
 ### Technitium DNS Operations
@@ -490,8 +527,8 @@ pvesm status        # Check storage
 
 | Service            | Hostname                           | Backend                   |
 | ------------------ | ---------------------------------- | ------------------------- |
-| Immich             | immich.lushanoperera.com           | 192.168.100.103:2283      |
-| Nextcloud          | nextcloud.lushanoperera.com        | 192.168.100.101:11000     |
+| Immich             | immich.lushanoperera.com           | 192.168.100.100:2283      |
+| Nextcloud          | nextcloud.lushanoperera.com        | 192.168.100.100:11000     |
 | Traefik Dashboard  | traefik.lushanoperera.com          | 192.168.7.119:8080        |
 | CrowdSec Dashboard | crowdsec.lushanoperera.com         | crowdsec-metabase:3001    |
 | Kido               | kido.giulyart.it                   | 192.168.100.100:3000/3001 |
@@ -513,10 +550,15 @@ pvesm status        # Check storage
 │   ├─ /media/music      (ZFS child dataset)                  │
 │   └─ /media/tv         (ZFS child dataset)                  │
 │                                                             │
+│ rpool/shared/nextcloud → /rpool/shared/nextcloud             │
+│ rpool/shared/immich   → /rpool/shared/immich                 │
+│                                                             │
 │ NFS Exports (Storage LAN 192.168.200.0/24 only):            │
 │   /rpool/shared        (crossmnt, fsid=7) — NFSv4 pseudo-root│
 │   /rpool/shared/media  (crossmnt)         — child datasets  │
 │   /rpool/shared/media/movies (fsid=6)     — bind mount      │
+│   /rpool/shared/nextcloud                 — Nextcloud data   │
+│   /rpool/shared/immich                    — Immich data      │
 │   /rpool/shared/vaultwarden               — app data        │
 └─────────────────────────┬───────────────────────────────────┘
                           │ NFSv4.2 (Storage LAN only)
@@ -526,6 +568,9 @@ pvesm status        # Check storage
     (192.168.200.100)(192.168.200.38) (via Winston)
     /mnt/media       /mnt/nfs_media   /mnt/media
     /mnt/media/movies (separate mount for bind-mount subpath)
+    /mnt/ncdata      (Nextcloud data from rpool/shared/nextcloud)
+    /mnt/immich/upload   (Immich photos from rpool/shared/immich)
+    /mnt/immich/database (Immich DB from rpool/shared/immich)
 ```
 
 **Movies architecture note:** Movies live in the parent ZFS dataset `rpool/shared` at
