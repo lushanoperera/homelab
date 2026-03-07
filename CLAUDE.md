@@ -97,7 +97,10 @@ LAN clients → Caddy (192.168.100.100:443)
                   ├── localhost ports (media stack, vaultwarden, portainer)
                   └── remote IPs (LXCs, Proxmox hosts, NAS)
 
-Internet → Cloudflare Tunnel → Traefik (192.168.7.119)
+Internet → Cloudflare Tunnel → cloudflared → Traefik (192.168.7.119, DMZ macvlan)
+                                                │
+                                                └── backends via traefik_internal Docker network
+                                                    (macvlan cannot reach host 192.168.100.x IPs)
 ```
 
 | Proxy   | Scope    | Cert                       | Config Location        |
@@ -523,14 +526,16 @@ pvesm status        # Check storage
 
 ## Network Services Map
 
-| Service           | Hostname                           | Backend                   |
-| ----------------- | ---------------------------------- | ------------------------- |
-| Immich            | immich.lushanoperera.com           | 192.168.100.100:2283      |
-| Nextcloud         | nextcloud.lushanoperera.com        | 192.168.100.100:11000     |
-| Traefik Dashboard | traefik.lushanoperera.com          | 192.168.7.119:8080        |
-| CrowdSec (CLI)    | N/A (use `cscli decisions list`)   | crowdsec:8080 (internal)  |
-| Kido              | kido.giulyart.it                   | 192.168.100.100:3000/3001 |
-| Obsidian Sync     | obsidian-sync.home.disconnesso.com | localhost:5984            |
+| Service           | Hostname                           | Traefik Backend (Docker DNS)           | Caddy Backend       |
+| ----------------- | ---------------------------------- | -------------------------------------- | ------------------- |
+| Immich            | immich.lushanoperera.com           | immich_server:2283                     | localhost:2283      |
+| Nextcloud         | nextcloud.lushanoperera.com        | nextcloud-web:80                       | localhost:11000     |
+| Kido              | kido.giulyart.it                   | kido-frontend:3000 / kido-backend:3001 | localhost:3000/3001 |
+| Traefik Dashboard | traefik.lushanoperera.com          | api@internal                           | —                   |
+| CrowdSec (CLI)    | N/A (use `cscli decisions list`)   | —                                      | —                   |
+| Obsidian Sync     | obsidian-sync.home.disconnesso.com | —                                      | localhost:5984      |
+
+**Note:** Traefik (DMZ macvlan) routes to backends via `traefik_internal` Docker network — macvlan cannot reach host IPs.
 
 ## Storage Architecture
 

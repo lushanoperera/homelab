@@ -1,34 +1,48 @@
 # Proxmox 9.0 SR-IOV Migration Guide for MS-01
 
-**Last Updated**: 2025-10-11
-**Your System**: Proxmox VE 9.0.10, Kernel 6.14.11-3-pve
+> **STATUS: COMPLETED** — SR-IOV migration fully deployed as of 2026-03-06.
+> System now running PVE 9.1.6, kernel 6.17.13-1-pve, i915-sriov-dkms/2025.10.10, 7 VFs active.
+>
+> **Remaining issue**: LXC 101 (Nextcloud) and LXC 103 (Immich) still point to the PF (00:02.0)
+> instead of VFs. Unprivileged LXCs cannot access PF device nodes properly — GPU access is broken
+> (wrong GID mapping, no card/render symlinks). Only Plex (LXC 105, privileged) has working GPU.
+> All 7 VFs (00:02.1–00:02.7) exist but nothing uses them yet.
+
+**Last Updated**: 2026-03-06
+**Current System**: Proxmox VE 9.1.6, Kernel 6.17.13-1-pve
 **Hardware**: Minisforum MS-01 with Intel i9-13900H
 
 ---
 
-## Your Current Configuration Analysis
-
-Based on your system information:
+## Current Configuration (Post-Migration)
 
 ```
-Proxmox VE: 9.0.10
-Kernel: 6.14.11-3-pve (current) + 6.8.12-15-pve (installed)
+Proxmox VE: 9.1.6
+Kernel: 6.17.13-1-pve
 Bootloader: GRUB
-Kernel params: quiet (only)
-Modules: i915 + xe (BOTH LOADED - CONFLICT!)
-SR-IOV VFs: 0 (not configured)
-DKMS: Not installed
-GPU: 00:02.0 Intel Iris Xe (physical only, no VFs)
+Kernel params: intel_iommu=on iommu=pt i915.enable_guc=3 i915.max_vfs=7 module_blacklist=xe
+Modules: i915 (xe blacklisted)
+SR-IOV VFs: 7/7 active (sriov_numvfs=7)
+DKMS: i915-sriov-dkms/2025.10.10
+GPU PF: 00:02.0 (renderD128) — used by Plex (105, privileged)
+GPU VFs: 00:02.1–00:02.7 (renderD129–135) — UNASSIGNED
 Groups: video=44, render=104
 ```
 
-### Current Plex Container Setup
+### Container GPU Status
 
-- Container ID: 105
-- Using physical GPU: `/dev/dri/by-path/pci-0000:00:02.0-card`
-- Device mapping: GID 44 (video), GID 104 (render)
-- Privileged container
-- Working hardware transcoding ✅
+| Container           | Type | Privileged | GPU Config | Working    | Issue                                      |
+| ------------------- | ---- | ---------- | ---------- | ---------- | ------------------------------------------ |
+| LXC 105 (Plex)      | LXC  | Yes        | PF (02.0)  | **YES**    | None — privileged access works             |
+| LXC 103 (Immich)    | LXC  | No         | PF (02.0)  | **BROKEN** | Unprivileged + PF = no symlinks, wrong GID |
+| LXC 101 (Nextcloud) | LXC  | No         | PF (02.0)  | **BROKEN** | Same unprivileged mapping issue            |
+| VM 100 (Flatcar)    | VM   | N/A        | None       | N/A        | No GPU configured                          |
+
+---
+
+## Original Migration Guide (Reference)
+
+The steps below were used to complete the migration. Kept for reference/rollback.
 
 ---
 
@@ -524,26 +538,17 @@ However, be aware:
 
 ## Summary Checklist
 
-- [ ] Prerequisites installed (DKMS, build-essential, headers)
-- [ ] xe module blacklisted
-- [ ] GRUB kernel parameters configured
-- [ ] i915-sriov-dkms installed
-- [ ] sysfs.conf created
-- [ ] System rebooted
-- [ ] 7 VFs created and visible
-- [ ] Plex container migrated to VF
-- [ ] Hardware transcoding verified
+- [x] Prerequisites installed (DKMS, build-essential, headers)
+- [x] xe module blacklisted
+- [x] GRUB kernel parameters configured
+- [x] i915-sriov-dkms installed
+- [x] sysfs.conf created
+- [x] System rebooted
+- [x] 7 VFs created and visible
+- [ ] Plex container migrated to VF (still on PF — works because privileged)
+- [x] Hardware transcoding verified (Plex only)
+- [ ] LXC 103 (Immich) switched to VF — currently broken on PF
+- [ ] LXC 101 (Nextcloud) switched to VF — currently broken on PF
+- [ ] VM 100 (Flatcar) GPU passthrough configured
 - [ ] Monitoring tools configured
 - [ ] Performance baseline documented
-
----
-
-**Your System Specifics**:
-
-- Bootloader: GRUB (update via `update-grub`)
-- Kernel: 6.14.11-3-pve (supported by DKMS)
-- Groups: video=44, render=104
-- Current Plex: Container 105 on physical GPU
-- Target: Container 105 on VF 0 (renderD129)
-
-**Estimated Downtime**: ~10 minutes (single reboot + container reconfiguration)

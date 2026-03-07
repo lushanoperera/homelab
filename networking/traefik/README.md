@@ -7,22 +7,23 @@ Public-facing reverse proxy running on the DMZ macvlan network, secured with Cro
 ## Architecture
 
 ```
-Internet → Cloudflare Tunnel → Traefik (192.168.7.119:443) → Backend services
-                                  │
-                                  ├── CrowdSec bouncer (inline threat blocking)
-                                  └── CrowdSec engine (log analysis + CAPI)
+Internet → Cloudflare Tunnel → cloudflared (Docker) → Traefik (192.168.7.119)
+                                                          │
+                                                          ├── CrowdSec bouncer (inline threat blocking)
+                                                          └── CrowdSec engine (log analysis + CAPI)
 ```
 
-Traefik runs on a dedicated DMZ macvlan interface (`eth1`) with IP `192.168.7.119`, isolated from the LAN.
+Traefik runs on a dedicated DMZ macvlan interface (`eth1`) with IP `192.168.7.119`, isolated from the LAN. Because macvlan containers **cannot reach host IPs** on the same NIC (Linux kernel limitation), backend services are routed via the shared `traefik_internal` Docker bridge network using container hostnames instead of IPs.
 
 ## Services
 
-| Service            | Hostname                    | Backend                |
-| ------------------ | --------------------------- | ---------------------- |
-| Immich             | immich.lushanoperera.com    | 192.168.100.103:2283   |
-| Nextcloud          | nextcloud.lushanoperera.com | 192.168.100.101:11000  |
-| Traefik Dashboard  | traefik.lushanoperera.com   | 192.168.7.119:8080     |
-| CrowdSec Dashboard | crowdsec.lushanoperera.com  | crowdsec-metabase:3001 |
+| Service           | Hostname                    | Backend (Docker DNS) |
+| ----------------- | --------------------------- | -------------------- |
+| Immich            | immich.lushanoperera.com    | immich_server:2283   |
+| Nextcloud         | nextcloud.lushanoperera.com | nextcloud-web:80     |
+| Kido Frontend     | kido.giulyart.it            | kido-frontend:3000   |
+| Kido Backend      | kido.giulyart.it/api        | kido-backend:3001    |
+| Traefik Dashboard | traefik.lushanoperera.com   | api@internal         |
 
 ## Deployment
 
@@ -34,16 +35,16 @@ systemctl status traefik-stack
 
 # The service creates Docker networks on startup:
 #   - dmz_macvlan: macvlan on eth1, subnet 192.168.7.0/24, IP 192.168.7.119
-#   - traefik_internal: internal network for Traefik ↔ CrowdSec communication
+#   - traefik_internal: shared network for Traefik ↔ backends + CrowdSec
 ```
 
 ## Configuration Files
 
-| File               | Purpose                                |
-| ------------------ | -------------------------------------- |
-| docker-compose.yml | Container definitions (Traefik, CrowdSec, bouncer, metabase) |
-| services.yml       | Dynamic router and service definitions |
-| config.yml         | Middleware and dynamic configuration   |
+| File               | Purpose                                                         |
+| ------------------ | --------------------------------------------------------------- |
+| docker-compose.yml | Container definitions (Traefik, CrowdSec, bouncer, cloudflared) |
+| services.yml       | Dynamic router and service definitions                          |
+| config.yml         | Middleware and dynamic configuration                            |
 
 ## Common Operations
 

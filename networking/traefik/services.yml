@@ -106,19 +106,19 @@ http:
     immich-service:
       loadBalancer:
         servers:
-          - url: "http://192.168.100.103:2283"
+          - url: "http://immich_server:2283"
     nextcloud-service:
       loadBalancer:
         servers:
-          - url: "http://192.168.100.101:11000"
+          - url: "http://nextcloud-web:80"
     kido-frontend-service:
       loadBalancer:
         servers:
-          - url: "http://192.168.100.100:3000"
+          - url: "http://kido-frontend:3000"
     kido-backend-service:
       loadBalancer:
         servers:
-          - url: "http://192.168.100.100:3001"
+          - url: "http://kido-backend:3001"
   middlewares:
     # Dashboard BasicAuth
     dashboard-auth:

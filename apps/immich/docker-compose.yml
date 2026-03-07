@@ -18,6 +18,9 @@ services:
     devices:
       - /dev/dri/renderD128:/dev/dri/renderD128
       - /dev/dri/card0:/dev/dri/card0
+    networks:
+      - default
+      - traefik_internal
     depends_on:
       immich_redis:
         condition: service_healthy
@@ -78,3 +81,7 @@ services:
 volumes:
   immich-model-cache:
     driver: local
+
+networks:
+  traefik_internal:
+    external: true

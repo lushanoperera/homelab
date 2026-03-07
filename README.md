@@ -41,12 +41,14 @@ This repository contains configurations, scripts, and documentation for:
 │ VM 102: │       │           │      │ NFS       │
 │ - HA    │       │ Docker:   │      │ Server    │
 │         │       │ - Media   │      │           │
-│ LXC:    │       │ - Caddy   │      │ LXC 120:  │
-│ - Nextcloud     │ - Traefik │      │ - DNS     │
-│ - Immich │      │ - CrowdSec│      │           │
-│ - Plex   │      │ - DNS     │      │ LXC 123:  │
-│ - WireGuard     └───────────┘      │ - Samba   │
-└─────────┘                          └───────────┘
+│ LXC:    │       │ - Nextcloud      │ LXC 120:  │
+│ - Plex  │       │ - Immich  │      │ - DNS     │
+│ - WG    │       │ - Caddy   │      │           │
+│ - PDM   │       │ - Traefik │      │ LXC 123:  │
+│         │       │ - CrowdSec│      │ - Samba   │
+└─────────┘       │ - DNS     │      └───────────┘
+                  │ - Kido    │
+                  └───────────┘
      │                  │                  │
      └────────┬─────────┴──────────────────┘
               │
@@ -113,16 +115,16 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 
 ## Networks
 
-| Network     | Subnet            | VLAN | Purpose                    |
-| ----------- | ----------------- | ---- | -------------------------- |
-| Management  | 192.168.1.0/24    | 1    | Gateway, APs, defaults     |
-| Trusted     | 192.168.2.0/24    | 2    | Personal devices           |
-| Guests      | 192.168.3.0/24    | 3    | Guest WiFi                 |
-| IoT         | 192.168.4.0/24    | 4    | Smart home, cameras        |
-| Multimedia  | 192.168.5.0/24    | 5    | Sonos, Sky Q, media        |
-| Infra       | 192.168.100.0/20  | 100  | Proxmox, VMs, services     |
-| DMZ         | 192.168.7.0/24    | 7    | Internet-facing (Traefik)  |
-| Storage LAN | 192.168.200.0/24  | —    | NFS, backups (not on UFG)  |
+| Network     | Subnet           | VLAN | Purpose                   |
+| ----------- | ---------------- | ---- | ------------------------- |
+| Management  | 192.168.1.0/24   | 1    | Gateway, APs, defaults    |
+| Trusted     | 192.168.2.0/24   | 2    | Personal devices          |
+| Guests      | 192.168.3.0/24   | 3    | Guest WiFi                |
+| IoT         | 192.168.4.0/24   | 4    | Smart home, cameras       |
+| Multimedia  | 192.168.5.0/24   | 5    | Sonos, Sky Q, media       |
+| Infra       | 192.168.100.0/20 | 100  | Proxmox, VMs, services    |
+| DMZ         | 192.168.7.0/24   | 7    | Internet-facing (Traefik) |
+| Storage LAN | 192.168.200.0/24 | —    | NFS, backups (not on UFG) |
 
 ## Services
 
@@ -130,35 +132,35 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 
 3-node Technitium DNS cluster with native zone replication.
 
-| Node     | IP              | Role      | Web UI              |
-| -------- | --------------- | --------- | ------------------- |
-| QNAP     | 192.168.100.254 | Primary   | :5380               |
-| Flatcar  | 192.168.100.100 | Secondary | :5380               |
-| Reginald | 192.168.100.120 | Secondary | :5380               |
+| Node     | IP              | Role      | Web UI |
+| -------- | --------------- | --------- | ------ |
+| QNAP     | 192.168.100.254 | Primary   | :5380  |
+| Flatcar  | 192.168.100.100 | Secondary | :5380  |
+| Reginald | 192.168.100.120 | Secondary | :5380  |
 
-### Media Stack (Flatcar VM 100)
+### Flatcar VM 100 (Docker Stacks)
 
 - qBittorrent, SABnzbd (downloaders)
 - Radarr, Sonarr, Lidarr (media managers)
-- Prowlarr (indexer)
-- Seerr (requests)
-- Tautulli (Plex analytics)
+- Prowlarr (indexer), Seerr (requests), Tautulli (Plex analytics)
 - Gluetun (ProtonVPN)
+- Nextcloud (FPM + nginx, `nextcloud.lushanoperera.com`)
+- Immich (photo management, `immich.lushanoperera.com`)
 - Kido (Docker app, `kido.giulyart.it`)
+- Traefik (public reverse proxy, DMZ macvlan) + CrowdSec + Cloudflared
+- Caddy (internal reverse proxy, `*.home.disconnesso.com`)
 
 ### VMs (winston)
 
-| VMID | Name          | IP              | Purpose        |
-| ---- | ------------- | --------------- | -------------- |
-| 100  | flatcar-media | 192.168.100.100 | Media stack    |
-| 102  | homeassistant | .100.102 / .4.102 / .5.102 | Home Assistant (multi-VLAN) |
+| VMID | Name          | IP                         | Purpose                              |
+| ---- | ------------- | -------------------------- | ------------------------------------ |
+| 100  | flatcar-media | .100.100/.101/.103/.7.119  | Media + Nextcloud + Immich + Traefik |
+| 102  | homeassistant | .100.102 / .4.102 / .5.102 | Home Assistant (multi-VLAN)          |
 
 ### LXC Containers (winston)
 
 | CTID | Service   | IP              |
 | ---- | --------- | --------------- |
-| 101  | Nextcloud | 192.168.100.101 |
-| 103  | Immich    | 192.168.100.103 |
 | 104  | WireGuard | 192.168.100.104 |
 | 105  | Plex      | 192.168.100.105 |
 | 106  | PDM       | 192.168.100.106 |
@@ -197,16 +199,16 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 | CPU       | Intel Celeron N3450 (4C/4T)       |
 | RAM       | 8 GB                              |
 | Proxmox   | 9.1.5                             |
-| Storage   | 7x SSD in ZFS RAIDZ2 (10.1 TB)   |
+| Storage   | 7x SSD in ZFS RAIDZ2 (10.1 TB)    |
 | Role      | NFS server for LXC container data |
 
 ### QNAP NAS (TS-251+)
 
-| Service     | IP              | Description              |
-| ----------- | --------------- | ------------------------ |
-| Technitium  | 192.168.100.254 | DNS primary (port 53)    |
-| PBS VM      | 192.168.100.187 | Proxmox Backup Server    |
-| MinIO       | 192.168.200.210 | S3-compatible storage    |
+| Service    | IP              | Description           |
+| ---------- | --------------- | --------------------- |
+| Technitium | 192.168.100.254 | DNS primary (port 53) |
+| PBS VM     | 192.168.100.187 | Proxmox Backup Server |
+| MinIO      | 192.168.200.210 | S3-compatible storage |
 
 ## Documentation
 
