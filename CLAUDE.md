@@ -38,9 +38,8 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 - Media stack: gluetun (ProtonVPN), prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr, seerr, tautulli, flaresolverr, watchtower (nickfedor fork)
 - Caddy reverse proxy (`/srv/docker/caddy/`) — internal `*.home.disconnesso.com` routing
 - Technitium DNS (secondary node, `/srv/docker/dns/`, separate `dns-compose.yml`)
-- Traefik (DMZ IP: 192.168.7.119) — public services via Cloudflare Tunnel
-- CrowdSec + Bouncer
-- Cloudflared tunnel
+- Traefik (DMZ IP: 192.168.7.119) — public services via Cloudflare Tunnel + Cloudflared
+- CrowdSec + Bouncer (Metabase dashboard removed 2026-03-07, use `cscli` CLI)
 - Kido (Docker app, `kido.giulyart.it`)
 - Vaultwarden (`/opt/vaultwarden/`) — password manager
 - CouchDB (`/srv/docker/couchdb/`) — Obsidian LiveSync backend
@@ -154,8 +153,7 @@ homelab/
 │   └── pbs/                 # Proxmox Backup Server
 ├── networking/
 │   ├── caddy/               # Internal reverse proxy (*.home.disconnesso.com)
-│   ├── traefik/             # External reverse proxy + CrowdSec
-│   └── cloudflare-tunnel/   # Cloudflare tunnel config
+│   └── traefik/             # External reverse proxy + CrowdSec + Cloudflared
 ├── storage/
 │   ├── minio/               # Current S3 storage
 │   ├── garage/              # Target S3 storage (migration)
@@ -525,14 +523,14 @@ pvesm status        # Check storage
 
 ## Network Services Map
 
-| Service            | Hostname                           | Backend                   |
-| ------------------ | ---------------------------------- | ------------------------- |
-| Immich             | immich.lushanoperera.com           | 192.168.100.100:2283      |
-| Nextcloud          | nextcloud.lushanoperera.com        | 192.168.100.100:11000     |
-| Traefik Dashboard  | traefik.lushanoperera.com          | 192.168.7.119:8080        |
-| CrowdSec Dashboard | crowdsec.lushanoperera.com         | crowdsec-metabase:3001    |
-| Kido               | kido.giulyart.it                   | 192.168.100.100:3000/3001 |
-| Obsidian Sync      | obsidian-sync.home.disconnesso.com | localhost:5984            |
+| Service           | Hostname                           | Backend                   |
+| ----------------- | ---------------------------------- | ------------------------- |
+| Immich            | immich.lushanoperera.com           | 192.168.100.100:2283      |
+| Nextcloud         | nextcloud.lushanoperera.com        | 192.168.100.100:11000     |
+| Traefik Dashboard | traefik.lushanoperera.com          | 192.168.7.119:8080        |
+| CrowdSec (CLI)    | N/A (use `cscli decisions list`)   | crowdsec:8080 (internal)  |
+| Kido              | kido.giulyart.it                   | 192.168.100.100:3000/3001 |
+| Obsidian Sync     | obsidian-sync.home.disconnesso.com | localhost:5984            |
 
 ## Storage Architecture
 
