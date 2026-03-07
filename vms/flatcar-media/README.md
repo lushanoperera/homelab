@@ -10,24 +10,30 @@ ssh core@192.168.100.100
 
 ## Services
 
-| Service     | Port | Description            |
-| ----------- | ---- | ---------------------- |
-| Gluetun     | -    | VPN client (ProtonVPN) |
-| Prowlarr    | 9696 | Indexer manager        |
-| qBittorrent | 8080 | Torrent client         |
-| SABnzbd     | 8081 | Usenet client          |
-| Radarr      | 7878 | Movie manager          |
-| Sonarr      | 8989 | TV show manager        |
-| Lidarr      | 8686 | Music manager          |
-| Bazarr      | 6767 | Subtitle manager       |
-| Seerr       | 5055 | Request management     |
-| Tautulli    | 8181 | Plex analytics         |
-| Flaresolverr| 8191 | CAPTCHA solving for Prowlarr |
-| Technitium  | 5380 | DNS server (secondary) |
-| Caddy       | 443  | Internal reverse proxy (`*.home.disconnesso.com`) |
-| Traefik     | 443  | Public reverse proxy (DMZ 192.168.7.119) |
-| CrowdSec    | -    | Security engine (Traefik bouncer) |
-| Portainer   | 9443 | Container management UI |
+| Service      | Port      | Description                                            |
+| ------------ | --------- | ------------------------------------------------------ |
+| Gluetun      | -         | VPN client (ProtonVPN)                                 |
+| Prowlarr     | 9696      | Indexer manager                                        |
+| qBittorrent  | 8080      | Torrent client                                         |
+| SABnzbd      | 8081      | Usenet client                                          |
+| Radarr       | 7878      | Movie manager                                          |
+| Sonarr       | 8989      | TV show manager                                        |
+| Lidarr       | 8686      | Music manager                                          |
+| Bazarr       | 6767      | Subtitle manager                                       |
+| Seerr        | 5055      | Request management                                     |
+| Tautulli     | 8181      | Plex analytics                                         |
+| Flaresolverr | 8191      | CAPTCHA solving for Prowlarr                           |
+| Technitium   | 5380      | DNS server (secondary)                                 |
+| Caddy        | 443       | Internal reverse proxy (`*.home.disconnesso.com`)      |
+| Traefik      | 443       | Public reverse proxy (DMZ 192.168.7.119)               |
+| CrowdSec     | -         | Security engine (Traefik bouncer)                      |
+| Cloudflared  | -         | Cloudflare Tunnel connector                            |
+| Nextcloud    | 11000     | Nextcloud (FPM + nginx, `nextcloud.lushanoperera.com`) |
+| Immich       | 2283      | Photo management (`immich.lushanoperera.com`)          |
+| CouchDB      | 5984      | Obsidian LiveSync backend                              |
+| Vaultwarden  | 8200      | Password manager                                       |
+| Kido         | 3000/3001 | Web app (`kido.giulyart.it`)                           |
+| Portainer    | 9443      | Container management UI                                |
 
 ## Directory Structure
 
@@ -55,7 +61,15 @@ cat ignition/config.ign | jq '.'
 - Caddy (internal proxy): `/srv/docker/caddy/`
 - Traefik (public proxy): `/srv/docker/traefik/`
 - DNS stack: `/srv/docker/dns/`
+- Nextcloud: `/srv/docker/nextcloud/`
+- Immich: `/srv/docker/immich/`
+- CouchDB: `/srv/docker/couchdb/`
+- Kido: `/srv/docker/kido/`
+- Vaultwarden: `/opt/vaultwarden/`
 - Media data: `/mnt/media/`
+- Nextcloud data: `/mnt/ncdata` (NFS)
+- Immich uploads: `/mnt/immich/upload` (NFS)
+- Immich database: `/mnt/immich/database` (NFS)
 
 ## Common Operations
 
@@ -70,4 +84,4 @@ cd /srv/docker/media-stack && /opt/bin/docker-compose up -d --remove-orphans
 docker exec gluetun wget -qO- https://ipinfo.io/ip
 ```
 
-> **Note:** Always use `/opt/bin/docker-compose` (standalone binary) for all compose operations. The Docker Compose plugin (`docker compose`) is not available on Flatcar — `/usr/lib` is read-only and the Butane download fails silently.
+> **Note:** The media stack uses `/opt/bin/docker-compose` (standalone binary). Nextcloud and Immich stacks use `docker compose` plugin (available in newer Flatcar). Both work — use whichever matches the stack's compose file.

@@ -7,7 +7,7 @@
 | Chassis   | Minisforum MS-01                         |
 | CPU       | Intel i9-13900H (14C/20T, up to 5.2 GHz) |
 | RAM       | 32 GB                                    |
-| Proxmox   | 9.1.4 (Kernel 6.17.2-2-pve)              |
+| Proxmox   | 9.1.6 (Kernel 6.17.13-1-pve)             |
 
 ## Network
 

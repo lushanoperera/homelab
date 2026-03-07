@@ -9,13 +9,13 @@
 | RAM       | 8 GB                        |
 | Expansion | SATA PCIe controller card   |
 | Storage   | 7x SSD in ZFS RAIDZ2 pool   |
-| Proxmox   | 9.1.5 (Kernel 6.17.4-2-pve) |
+| Proxmox   | 9.1.6 (Kernel 6.17.9-1-pve) |
 
 ## Network
 
-| Interface | Bridge | IP            | Purpose    |
-| --------- | ------ | ------------- | ---------- |
-| Infra     | vmbr0  | 192.168.100.4 | Management |
+| Interface | Bridge        | IP            | Purpose    |
+| --------- | ------------- | ------------- | ---------- |
+| Infra     | vmbr0         | 192.168.100.4 | Management |
 | Storage   | vmbr1 (bond0) | 192.168.200.4 | NFS server |
 
 ## SSH
@@ -26,7 +26,7 @@ ssh root@192.168.100.4
 
 ## Role
 
-Primary NFS server for LXC container data on winston. Storage LAN (192.168.200.0/24) provides dedicated bandwidth for NFS traffic.
+Primary NFS server for media, Nextcloud, Immich, and Vaultwarden data. Storage LAN (192.168.200.0/24) provides dedicated bandwidth for NFS traffic.
 
 ## LXC Containers
 
@@ -41,8 +41,9 @@ See [lxc-120-technitium.md](lxc-120-technitium.md) for setup details.
 
 7x SSD in RAIDZ2 configuration.
 
-| Metric   | Value  |
-| -------- | ------ |
-| Total    | 10.1 TB |
-| Used     | 8.1 TB |
-| Capacity | 80%    |
+| Metric    | Value   |
+| --------- | ------- |
+| Total     | ~9.3 TB |
+| Used      | 7.36 TB |
+| Available | 1.94 TB |
+| Capacity  | 79%     |

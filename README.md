@@ -48,6 +48,8 @@ This repository contains configurations, scripts, and documentation for:
 │         │       │ - CrowdSec│      │ - Samba   │
 └─────────┘       │ - DNS     │      └───────────┘
                   │ - Kido    │
+                  │ - CouchDB │
+                  │ - Vaultw. │
                   └───────────┘
      │                  │                  │
      └────────┬─────────┴──────────────────┘
@@ -101,6 +103,14 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 │   ├── caddy/               # Internal reverse proxy (*.home.disconnesso.com)
 │   ├── traefik/             # Public reverse proxy + CrowdSec
 │   └── cloudflare-tunnel/   # Tunnel config
+├── apps/
+│   ├── couchdb/             # CouchDB (Obsidian LiveSync)
+│   ├── immich/              # Immich photo management
+│   ├── kido/                # Kido web app
+│   ├── nextcloud/           # Nextcloud (FPM + nginx)
+│   └── vaultwarden/         # Vaultwarden password manager
+├── qnap/                    # QNAP NAS Container Station services
+│   └── watchtower/          # Auto-update all QNAP containers
 ├── storage/
 │   ├── minio/               # Current S3
 │   ├── garage/              # Target S3
@@ -147,6 +157,8 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 - Nextcloud (FPM + nginx, `nextcloud.lushanoperera.com`)
 - Immich (photo management, `immich.lushanoperera.com`)
 - Kido (Docker app, `kido.giulyart.it`)
+- CouchDB (Obsidian LiveSync backend)
+- Vaultwarden (password manager)
 - Traefik (public reverse proxy, DMZ macvlan) + CrowdSec + Cloudflared
 - Caddy (internal reverse proxy, `*.home.disconnesso.com`)
 
@@ -187,20 +199,20 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 | Chassis   | Minisforum MS-01                                |
 | CPU       | Intel i9-13900H (14C/20T, up to 5.2 GHz)        |
 | RAM       | 32 GB                                           |
-| Proxmox   | 9.1.4                                           |
+| Proxmox   | 9.1.6                                           |
 | Features  | SR-IOV GPU passthrough, Quick Sync HW transcode |
 | Thermal   | powersave governor, thermald                    |
 
 ### Reginald (Storage Server)
 
-| Component | Specification                     |
-| --------- | --------------------------------- |
-| Chassis   | Zimaboard 832                     |
-| CPU       | Intel Celeron N3450 (4C/4T)       |
-| RAM       | 8 GB                              |
-| Proxmox   | 9.1.5                             |
-| Storage   | 7x SSD in ZFS RAIDZ2 (10.1 TB)    |
-| Role      | NFS server for LXC container data |
+| Component | Specification                                        |
+| --------- | ---------------------------------------------------- |
+| Chassis   | Zimaboard 832                                        |
+| CPU       | Intel Celeron N3450 (4C/4T)                          |
+| RAM       | 8 GB                                                 |
+| Proxmox   | 9.1.6                                                |
+| Storage   | 7x SSD in ZFS RAIDZ2 (7.36 TB used / 1.94 TB free)   |
+| Role      | NFS server for media, Nextcloud, Immich, Vaultwarden |
 
 ### QNAP NAS (TS-251+)
 

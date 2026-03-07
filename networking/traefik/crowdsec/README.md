@@ -4,11 +4,12 @@ CrowdSec intrusion detection and prevention for Traefik.
 
 ## Components
 
-| Container         | Port | Purpose              |
-| ----------------- | ---- | -------------------- |
-| crowdsec          | 8080 | Main CrowdSec engine |
-| crowdsec-bouncer  | 8082 | Traefik ForwardAuth  |
-| crowdsec-metabase | 3001 | Dashboard            |
+| Container        | Port | Purpose              |
+| ---------------- | ---- | -------------------- |
+| crowdsec         | 8080 | Main CrowdSec engine |
+| crowdsec-bouncer | 8082 | Traefik ForwardAuth  |
+
+> **Note:** Metabase dashboard was removed (2026-03-07, saved ~2 GB RAM). Use `cscli` CLI for ad-hoc queries — see commands below.
 
 ## Common Operations
 
