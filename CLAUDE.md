@@ -58,7 +58,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 **LXC Containers (winston)**:
 
 - 104: WireGuard (192.168.100.104)
-- 105: Plex (192.168.100.105)
+- 105: Plex (192.168.100.105) — v2 apt repo configured, updates via `apt upgrade`
 - 106: PDM — Proxmox Datacenter Manager (192.168.100.106)
 
 **LXC Containers (reginald)**:
