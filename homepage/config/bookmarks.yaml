@@ -1,0 +1,29 @@
+- Documentation:
+    - Homelab Repo:
+        - abbr: GH
+          href: https://github.com/disconnesso/homelab
+    - Proxmox Docs:
+        - abbr: PVE
+          href: https://pve.proxmox.com/pve-docs/
+    - Flatcar Docs:
+        - abbr: FC
+          href: https://www.flatcar.org/docs/latest/
+
+- Admin Panels:
+    - UniFi:
+        - abbr: UF
+          href: https://192.168.1.1
+    - QNAP:
+        - abbr: QN
+          href: https://192.168.100.254:8080
+    - Cloudflare:
+        - abbr: CF
+          href: https://dash.cloudflare.com
+
+- Public Services:
+    - Immich:
+        - abbr: IM
+          href: https://immich.lushanoperera.com
+    - Nextcloud:
+        - abbr: NC
+          href: https://nextcloud.lushanoperera.com

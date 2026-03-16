@@ -38,3 +38,8 @@ handle @wireguard {
 handle @obsidian-sync {
 	reverse_proxy localhost:5984
 }
+
+@homepage host homepage.home.disconnesso.com
+handle @homepage {
+	reverse_proxy localhost:3000
+}

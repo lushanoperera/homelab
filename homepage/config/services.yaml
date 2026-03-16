@@ -1,0 +1,269 @@
+- Media:
+    - Seerr:
+        icon: overseerr.png
+        href: https://seerr.home.disconnesso.com
+        description: Media requests
+        server: my-docker
+        container: seerr
+        widget:
+          type: overseerr
+          url: http://localhost:5055
+          key: "{{HOMEPAGE_VAR_SEERR_KEY}}"
+    - Radarr:
+        icon: radarr.png
+        href: https://radarr.home.disconnesso.com
+        description: Movie management
+        server: my-docker
+        container: radarr
+        widget:
+          type: radarr
+          url: http://localhost:7878
+          key: "{{HOMEPAGE_VAR_RADARR_KEY}}"
+    - Sonarr:
+        icon: sonarr.png
+        href: https://sonarr.home.disconnesso.com
+        description: TV management
+        server: my-docker
+        container: sonarr
+        widget:
+          type: sonarr
+          url: http://localhost:8989
+          key: "{{HOMEPAGE_VAR_SONARR_KEY}}"
+    - Lidarr:
+        icon: lidarr.png
+        href: https://lidarr.home.disconnesso.com
+        description: Music management
+        server: my-docker
+        container: lidarr
+        widget:
+          type: lidarr
+          url: http://localhost:8686
+          key: "{{HOMEPAGE_VAR_LIDARR_KEY}}"
+    - Prowlarr:
+        icon: prowlarr.png
+        href: https://prowlarr.home.disconnesso.com
+        description: Indexer management
+        server: my-docker
+        container: prowlarr
+        widget:
+          type: prowlarr
+          url: http://localhost:9696
+          key: "{{HOMEPAGE_VAR_PROWLARR_KEY}}"
+    - qBittorrent:
+        icon: qbittorrent.png
+        href: https://qbittorrent.home.disconnesso.com
+        description: Torrent client
+        server: my-docker
+        container: qbittorrent
+        widget:
+          type: qbittorrent
+          url: http://localhost:8080
+          username: admin
+          password: "{{HOMEPAGE_VAR_QBIT_PASS}}"
+    - SABnzbd:
+        icon: sabnzbd.png
+        href: https://sabnzbd.home.disconnesso.com
+        description: Usenet client
+        server: my-docker
+        container: sabnzbd
+        widget:
+          type: sabnzbd
+          url: http://localhost:8081
+          key: "{{HOMEPAGE_VAR_SABNZBD_KEY}}"
+    - Bazarr:
+        icon: bazarr.png
+        href: https://bazarr.home.disconnesso.com
+        description: Subtitle management
+        server: my-docker
+        container: bazarr
+        widget:
+          type: bazarr
+          url: http://localhost:6767
+          key: "{{HOMEPAGE_VAR_BAZARR_KEY}}"
+    - Tautulli:
+        icon: tautulli.png
+        href: https://tautulli.home.disconnesso.com
+        description: Plex monitoring
+        server: my-docker
+        container: tautulli
+        widget:
+          type: tautulli
+          url: http://localhost:8181
+          key: "{{HOMEPAGE_VAR_TAUTULLI_KEY}}"
+    - Plex:
+        icon: plex.png
+        href: https://plex.home.disconnesso.com
+        description: Media server (LXC 105)
+        widget:
+          type: plex
+          url: http://192.168.100.105:32400
+          key: "{{HOMEPAGE_VAR_PLEX_KEY}}"
+    - FlareSolverr:
+        icon: flaresolverr.png
+        description: Cloudflare bypass
+        server: my-docker
+        container: flaresolverr
+
+- Applications:
+    - Nextcloud:
+        icon: nextcloud.png
+        href: https://nextcloud.home.disconnesso.com
+        description: Cloud storage
+        server: my-docker
+        container: nextcloud-app
+        widget:
+          type: nextcloud
+          url: http://192.168.100.101:11000
+          username: "{{HOMEPAGE_VAR_NEXTCLOUD_USER}}"
+          password: "{{HOMEPAGE_VAR_NEXTCLOUD_PASS}}"
+    - Immich:
+        icon: immich.png
+        href: https://immich.home.disconnesso.com
+        description: Photo management
+        server: my-docker
+        container: immich_server
+        widget:
+          type: customapi
+          url: http://192.168.100.103:2283/api/server/statistics
+          headers:
+            x-api-key: "{{HOMEPAGE_VAR_IMMICH_KEY}}"
+          mappings:
+            - field: photos
+              label: Photos
+              format: number
+            - field: videos
+              label: Videos
+              format: number
+            - field: usage
+              label: Storage
+              format: bytes
+    - Home Assistant:
+        icon: home-assistant.png
+        href: https://homeassistant.home.disconnesso.com
+        description: Smart home
+        widget:
+          type: homeassistant
+          url: http://192.168.100.102:8123
+          key: "{{HOMEPAGE_VAR_HA_KEY}}"
+    - Vaultwarden:
+        icon: vaultwarden.png
+        href: https://vaultwarden.home.disconnesso.com
+        description: Password manager
+        server: my-docker
+        container: vaultwarden
+    - Obsidian Sync:
+        icon: obsidian.png
+        href: https://obsidian-sync.home.disconnesso.com
+        description: CouchDB LiveSync
+        server: my-docker
+        container: couchdb
+    - Portainer:
+        icon: portainer.png
+        href: https://portainer.home.disconnesso.com
+        description: Container management
+        server: my-docker
+        container: portainer
+        widget:
+          type: portainer
+          url: https://localhost:9443
+          env: 3
+          key: "{{HOMEPAGE_VAR_PORTAINER_KEY}}"
+
+- Network:
+    - Caddy:
+        icon: caddy.png
+        href: https://caddy.home.disconnesso.com
+        description: Internal reverse proxy
+        server: my-docker
+        container: caddy
+        widget:
+          type: caddy
+          url: http://localhost:2019
+    - Traefik:
+        icon: traefik.png
+        href: https://traefik.lushanoperera.com
+        description: Public reverse proxy
+        server: my-docker
+        container: traefik
+    - CrowdSec:
+        icon: crowdsec.png
+        description: Intrusion prevention
+        server: my-docker
+        container: crowdsec
+    - Cloudflared:
+        icon: cloudflare-zero-trust.png
+        description: Cloudflare Tunnel
+        server: my-docker
+        container: cloudflared
+    - Technitium DNS:
+        icon: technitium.png
+        href: http://192.168.100.254:5380
+        description: DNS cluster (primary)
+        ping: 192.168.100.254
+    - WireGuard:
+        icon: wireguard.png
+        href: https://wireguard.home.disconnesso.com
+        description: VPN server
+        ping: 192.168.100.104
+
+- Infrastructure:
+    - Winston:
+        icon: proxmox.png
+        href: https://192.168.100.38:8006
+        description: Primary PVE host
+        widget:
+          type: proxmox
+          url: https://192.168.100.38:8006
+          username: "{{HOMEPAGE_VAR_PROXMOX_TOKEN_ID}}"
+          password: "{{HOMEPAGE_VAR_PROXMOX_WINSTON_SECRET}}"
+    - Reginald:
+        icon: proxmox.png
+        href: https://192.168.100.4:8006
+        description: Secondary PVE host
+        widget:
+          type: proxmox
+          url: https://192.168.100.4:8006
+          username: "{{HOMEPAGE_VAR_PROXMOX_TOKEN_ID}}"
+          password: "{{HOMEPAGE_VAR_PROXMOX_REGINALD_SECRET}}"
+    - PBS:
+        icon: proxmox.png
+        href: https://192.168.100.187:8007
+        description: Proxmox Backup Server
+        ping: 192.168.100.187
+    - QNAP:
+        icon: qnap.png
+        href: https://192.168.100.254:8080
+        description: NAS storage
+        ping: 192.168.100.254
+    - PDM:
+        icon: proxmox.png
+        href: https://192.168.100.106:8443
+        description: Datacenter Manager
+        ping: 192.168.100.106
+
+- System:
+    - Gluetun VPN:
+        icon: gluetun.png
+        description: ProtonVPN gateway
+        server: my-docker
+        container: gluetun
+        widget:
+          type: gluetun
+          url: http://localhost:8001
+    - Watchtower (Daily):
+        icon: watchtower.png
+        description: Auto-update (daily)
+        server: my-docker
+        container: watchtower
+    - Watchtower (Weekly):
+        icon: watchtower.png
+        description: Auto-update (weekly)
+        server: my-docker
+        container: watchtower-weekly
+
+- Remote:
+    - nwlab-thinkpad:
+        icon: proxmox.png
+        href: https://10.21.21.99:8006
+        description: Remote PVE host (via WireGuard)
+        ping: 10.21.21.99

@@ -1,0 +1,25 @@
+title: Homelab
+theme: dark
+color: slate
+headerStyle: clean
+statusStyle: dot
+hideVersion: true
+layout:
+  Media:
+    style: row
+    columns: 3
+  Applications:
+    style: row
+    columns: 3
+  Network:
+    style: row
+    columns: 3
+  Infrastructure:
+    style: row
+    columns: 3
+  System:
+    style: row
+    columns: 3
+  Remote:
+    style: row
+    columns: 1
