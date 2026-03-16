@@ -35,6 +35,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 
 **Flatcar VM 100** (`ssh core@192.168.100.100`):
 
+- Homepage dashboard (`/srv/docker/homepage/`) — single-pane service overview
 - Media stack: gluetun (ProtonVPN), prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr, seerr, tautulli, flaresolverr, watchtower (nickfedor fork)
 - Caddy reverse proxy (`/srv/docker/caddy/`) — internal `*.home.disconnesso.com` routing
 - Technitium DNS (secondary node, `/srv/docker/dns/`, separate `dns-compose.yml`)
@@ -107,7 +108,7 @@ Internet → Cloudflare Tunnel → cloudflared → Traefik (192.168.7.119, DMZ m
 | Caddy   | Internal | `*.home.disconnesso.com`   | `/srv/docker/caddy/`   |
 | Traefik | Public   | Per-service via Cloudflare | `/srv/docker/traefik/` |
 
-Caddy proxies 21 services across 3 site files: `media.caddy` (9), `apps.caddy` (6), `infrastructure.caddy` (6).
+Caddy proxies 22 services across 3 site files: `media.caddy` (9), `apps.caddy` (7), `infrastructure.caddy` (6).
 
 ### Cross-Site WireGuard Routing (winston ↔ nwlab)
 
@@ -169,6 +170,9 @@ homelab/
 ├── automation/
 │   ├── ansible/             # Ansible playbooks
 │   └── terraform/           # Terraform IaC
+├── homepage/                 # Homepage dashboard
+│   ├── config/              # YAML config files
+│   └── docker-compose.yml
 ├── apps/
 │   ├── couchdb/             # CouchDB (Obsidian LiveSync)
 │   └── vaultwarden/         # Vaultwarden password manager
@@ -199,6 +203,8 @@ homelab/
 | `apps/immich/docker-compose.yml`                  | `/srv/docker/immich/docker-compose.yml`      | rsync/scp               |
 | `apps/immich/backup-immich.sh`                    | Flatcar `/opt/bin/backup-immich.sh`          | scp + chmod +x          |
 | `apps/immich/immich-backup.{service,timer}`       | Flatcar `/etc/systemd/system/`               | scp + systemctl enable  |
+| `homepage/docker-compose.yml`                     | `/srv/docker/homepage/docker-compose.yml`    | rsync/scp               |
+| `homepage/config/*`                               | `/srv/docker/homepage/config/`               | rsync/scp               |
 
 ## Quick Reference
 
@@ -530,6 +536,7 @@ pvesm status        # Check storage
 | Traefik Dashboard | traefik.lushanoperera.com          | api@internal                 | —               |
 | CrowdSec (CLI)    | N/A (use `cscli decisions list`)   | —                            | —               |
 | Obsidian Sync     | obsidian-sync.home.disconnesso.com | —                            | localhost:5984  |
+| Homepage          | homepage.home.disconnesso.com      | —                            | localhost:3000  |
 
 **Note:** Traefik (DMZ macvlan) routes to backends via `traefik_internal` Docker network — macvlan cannot reach host IPs.
 
@@ -600,13 +607,14 @@ LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3
 
 Moved to conditional rules (loaded on-demand by file pattern):
 
-| Rule File                             | Topics                                 | Triggers                                         |
-| ------------------------------------- | -------------------------------------- | ------------------------------------------------ |
-| `.claude/rules/flatcar-lessons.md`    | Flatcar, Butane, Ignition, Compose     | `vms/flatcar-media/**`, `systemd/**`             |
-| `.claude/rules/nfs-zfs-lessons.md`    | NFS, ZFS, mounts, exports              | `storage/nfs/**`, `systemd/*.mount`              |
-| `.claude/rules/dns-lessons.md`        | Technitium DNS cluster                 | `dns/**`, `**/dns-compose*`                      |
-| `.claude/rules/infra-lessons.md`      | Proxmox networking, GPU SR-IOV, Garage | `hosts/**`, `networking/**`, `storage/garage/**` |
-| `.claude/rules/networking-lessons.md` | UniFi API, WiFi, mesh, Radio AI        | `scripts/network/**`, `networking/**`            |
+| Rule File                             | Topics                                 | Triggers                                                             |
+| ------------------------------------- | -------------------------------------- | -------------------------------------------------------------------- |
+| `.claude/rules/flatcar-lessons.md`    | Flatcar, Butane, Ignition, Compose     | `vms/flatcar-media/**`, `systemd/**`                                 |
+| `.claude/rules/nfs-zfs-lessons.md`    | NFS, ZFS, mounts, exports              | `storage/nfs/**`, `systemd/*.mount`                                  |
+| `.claude/rules/dns-lessons.md`        | Technitium DNS cluster                 | `dns/**`, `**/dns-compose*`                                          |
+| `.claude/rules/infra-lessons.md`      | Proxmox networking, GPU SR-IOV, Garage | `hosts/**`, `networking/**`, `storage/garage/**`                     |
+| `.claude/rules/networking-lessons.md` | UniFi API, WiFi, mesh, Radio AI        | `scripts/network/**`, `networking/**`                                |
+| `.claude/rules/gpu-sriov-lessons.md`  | GPU SR-IOV build, deploy, containers   | `vms/flatcar-media/sysext/**`, `apps/immich/**`, `apps/nextcloud/**` |
 
 ## Verification
 

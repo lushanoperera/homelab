@@ -131,13 +131,15 @@ ssh core@192.168.100.100 'sudo rm /etc/extensions/i915-sriov.raw && sudo systemd
 
 ## Troubleshooting
 
-| Problem                         | Solution                                                                         |
-| ------------------------------- | -------------------------------------------------------------------------------- |
-| GCC version mismatch in build   | Dockerfile must use GCC >= 14 (Debian trixie) to match Flatcar's kernel compiler |
-| `Unknown symbol` at insmod      | DKMS version doesn't match kernel — check table above                            |
-| Module loads but no /dev/dri    | Check VF is passed through: `lspci \| grep VGA`                                  |
-| Stock i915 loaded instead       | Check blacklist: `cat /etc/modprobe.d/i915-blacklist.conf`                       |
-| depmod errors (read-only fs)    | Expected on Flatcar — gpu-setup uses insmod, not modprobe                        |
-| MMIO 0xFFFFFFFF in dmesg        | Sysext module not loading — check `systemd-sysext status`                        |
-| VM won't start after adding GPU | Remove: `qm set 100 -delete hostpci0`                                            |
-| gpu-setup fails on restart      | Expected if module already loaded — will succeed on next boot                    |
+| Problem                         | Solution                                                                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GCC version mismatch in build   | Dockerfile must use GCC >= 14 (Debian trixie) to match Flatcar's kernel compiler                                                                  |
+| `Unknown symbol` at insmod      | DKMS version doesn't match kernel — check table above                                                                                             |
+| Module loads but no /dev/dri    | Check VF is passed through: `lspci \| grep VGA`                                                                                                   |
+| Stock i915 loaded instead       | Check blacklist: `cat /etc/modprobe.d/i915-blacklist.conf`                                                                                        |
+| depmod errors (read-only fs)    | Expected on Flatcar — gpu-setup uses insmod, not modprobe                                                                                         |
+| MMIO 0xFFFFFFFF in dmesg        | Sysext module not loading — check `systemd-sysext status`                                                                                         |
+| VM won't start after adding GPU | Remove: `qm set 100 -delete hostpci0`                                                                                                             |
+| gpu-setup fails on restart      | Expected if module already loaded — will succeed on next boot                                                                                     |
+| kvmgt linker error during build | Verify `entrypoint.sh` on VM matches repo — stale Docker cache may use old entrypoint. Rebuild with `docker build --no-cache` or resync from repo |
+| Runtime module swap (no reboot) | `sudo rmmod i915 && sudo insmod /usr/lib/modules/$(uname -r)/updates/i915/i915.ko enable_guc=3` — works if no consumers hold the module           |
