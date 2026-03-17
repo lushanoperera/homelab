@@ -29,7 +29,11 @@ services:
       retries: 5
 
   nextcloud-app:
-    image: nextcloud:${NEXTCLOUD_VERSION:-32}-fpm
+    build:
+      context: .
+      args:
+        NEXTCLOUD_VERSION: ${NEXTCLOUD_VERSION:-32}
+    image: nextcloud-custom:${NEXTCLOUD_VERSION:-32}-fpm
     container_name: nextcloud-app
     mem_limit: 512m
     restart: unless-stopped
@@ -74,7 +78,7 @@ services:
       - nextcloud-app
 
   nextcloud-cron:
-    image: nextcloud:${NEXTCLOUD_VERSION:-32}-fpm
+    image: nextcloud-custom:${NEXTCLOUD_VERSION:-32}-fpm
     container_name: nextcloud-cron
     mem_limit: 256m
     restart: unless-stopped
@@ -106,6 +110,20 @@ services:
       NETWORKS: 1
       VOLUMES: 1
       POST: 1
+
+  appapi-harp:
+    image: ghcr.io/nextcloud/nextcloud-appapi-harp:release
+    container_name: appapi-harp
+    mem_limit: 128m
+    restart: unless-stopped
+    environment:
+      HP_SHARED_KEY: ${HARP_SHARED_KEY:-zxi9gSrZevgz9e8re951f7qa8OeUE5Ht}
+      NC_INSTANCE_URL: http://nextcloud-web:80
+      HP_LOG_LEVEL: info
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - nextcloud-web
 
 volumes:
   nextcloud-db:

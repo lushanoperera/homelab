@@ -22,6 +22,14 @@ paths:
 | Gluetun public IP empty after restart | DNS (DoT → Cloudflare) may not be ready at startup. `PUBLICIP_PERIOD=12h` ensures periodic retry. Without it, empty IP cached permanently                                                            |
 | Homepage widget API error             | Usually means gluetun's `/v1/publicip/ip` returns empty. Check with `curl -s http://localhost:8001/v1/publicip/ip`                                                                                   |
 
+## Nextcloud Config Management
+
+| Issue                                  | Solution                                                                                                                                                |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Env var vs config.php key names differ | `OVERWRITECLIURL` → `overwrite.cli.url`, `OVERWRITEHOST` → `overwritehost`. `occ config:system:delete` uses config.php keys                             |
+| Env var removal doesn't fix config     | Docker env vars only set config.php on first install. Once persisted, must use `occ config:system:delete` with the correct key                          |
+| `overwritehost` breaks multi-domain    | Forces ALL URLs to one hostname regardless of incoming Host header. Delete it for multi-domain setups — Nextcloud will respect each proxy's Host header |
+
 ## General Deployment Safety
 
 | Rule                                    | Detail                                                                                                                       |
