@@ -25,6 +25,7 @@ services:
       - PORT_FORWARD_ONLY=on
       - SERVER_COUNTRIES=${VPN_COUNTRY:-Netherlands}
       - TZ=${TZ}
+      - PUBLICIP_PERIOD=12h
     secrets:
       - wireguard_private_key
       - wireguard_addresses

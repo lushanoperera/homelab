@@ -43,11 +43,21 @@ ssh core@192.168.100.100 'docker restart sonarr'
 
 ### Restart with Dependencies
 
-Some containers depend on gluetun (VPN). Restart in order:
+Some containers depend on gluetun (VPN) via `network_mode: service:gluetun`.
+
+**Simple restart (no config change)** — preserves container ID, dependents stay connected:
 
 ```bash
-ssh core@192.168.100.100 'docker restart gluetun && sleep 10 && docker restart qbittorrent prowlarr'
+ssh core@192.168.100.100 'docker restart gluetun && sleep 10 && docker restart qbittorrent prowlarr sabnzbd'
 ```
+
+**After config change (recreate)** — MUST recreate the whole stack because `up -d gluetun` creates a new container ID, orphaning dependents:
+
+```bash
+ssh core@192.168.100.100 'cd /srv/docker/media-stack && /opt/bin/docker-compose up -d'
+```
+
+> **WARNING**: Never `docker-compose restart` or `docker restart` dependents after a recreate of gluetun — they'll fail with "No such container" because the old network namespace ID is gone. Always use `up -d` on the full stack.
 
 ### View Logs
 
@@ -152,12 +162,19 @@ ssh core@192.168.100.100 'docker system prune -f'
 ## Container Dependencies
 
 ```
-gluetun (VPN gateway)
-  └── qbittorrent (uses gluetun network)
-  └── prowlarr (uses gluetun network for trackers)
+gluetun (VPN gateway — network_mode provider)
+  ├── qbittorrent (network_mode: service:gluetun)
+  ├── prowlarr    (network_mode: service:gluetun)
+  └── sabnzbd     (network_mode: service:gluetun)
+
+sonarr, radarr, lidarr → depend_on: prowlarr (healthy)
+bazarr → depends_on: sonarr, radarr (healthy)
+seerr → depends_on: sonarr, radarr (healthy)
 
 All media apps use /mnt/media NFS mount
 ```
+
+**Critical rule**: If gluetun is **recreated** (new container ID), all 3 network dependents MUST also be recreated via `docker-compose up -d`. A simple `restart` will fail.
 
 ## Common Issues
 

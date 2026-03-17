@@ -615,6 +615,7 @@ Moved to conditional rules (loaded on-demand by file pattern):
 | `.claude/rules/infra-lessons.md`      | Proxmox networking, GPU SR-IOV, Garage | `hosts/**`, `networking/**`, `storage/garage/**`                     |
 | `.claude/rules/networking-lessons.md` | UniFi API, WiFi, mesh, Radio AI        | `scripts/network/**`, `networking/**`                                |
 | `.claude/rules/gpu-sriov-lessons.md`  | GPU SR-IOV build, deploy, containers   | `vms/flatcar-media/sysext/**`, `apps/immich/**`, `apps/nextcloud/**` |
+| `.claude/rules/deployment-lessons.md` | Compose deployment, SCP, verification  | `vms/flatcar-media/**`, `networking/**`, `apps/**`, `homepage/**`    |
 
 ## Verification
 

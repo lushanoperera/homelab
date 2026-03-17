@@ -1,0 +1,32 @@
+---
+paths:
+  - "vms/flatcar-media/**"
+  - "networking/**"
+  - "apps/**"
+  - "homepage/**"
+---
+
+# Deployment Lessons
+
+## Compose Deployment to Flatcar
+
+| Issue                                 | Solution                                                                                                                                                                                             |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Network namespace orphaning           | When `up -d` recreates a network-provider container (gluetun), dependents using `network_mode: service:X` get stale container IDs. Always `up -d` the **entire stack**, not just the changed service |
+| `restart` vs `up -d` confusion        | `restart` = same container, same ID. `up -d` = recreate if config changed (new ID). After recreating network providers, dependents need `up -d` too, not `restart`                                   |
+| Deploying invalid YAML                | Always validate locally first: `docker compose -f <file> config --quiet` before SCP                                                                                                                  |
+| SCP to wrong path                     | Consult repo→remote path mapping in CLAUDE.md before deploying. Media stack = `/srv/docker/media-stack/`, NOT `/srv/docker/`                                                                         |
+| Forgetting post-deploy verification   | Always verify: container health, VPN IP, port forwarding, web UI responses. Use `/media-health` or `/vpn-status` skills                                                                              |
+| Caddy reload vs recreate              | Caddy supports hot reload: `docker exec caddy caddy reload ...`. No need to recreate container for config changes                                                                                    |
+| Compose on Flatcar needs `/opt/bin/`  | Use `/opt/bin/docker-compose`, not `docker compose` (plugin not installed on read-only Flatcar)                                                                                                      |
+| Gluetun public IP empty after restart | DNS (DoT → Cloudflare) may not be ready at startup. `PUBLICIP_PERIOD=12h` ensures periodic retry. Without it, empty IP cached permanently                                                            |
+| Homepage widget API error             | Usually means gluetun's `/v1/publicip/ip` returns empty. Check with `curl -s http://localhost:8001/v1/publicip/ip`                                                                                   |
+
+## General Deployment Safety
+
+| Rule                                    | Detail                                                                                                                       |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Backup before destructive changes       | For compose changes that remove volumes or change storage paths, verify PBS backup exists first                              |
+| Config files are root-owned             | `/srv/docker/{immich,nextcloud}/` need `sudo` for edits on Flatcar. SCP as `core` user works (writes to user-writable paths) |
+| Test connectivity after network changes | After any change touching ports, networks, or VPN config, verify the full chain: container → gluetun → internet              |
+| Watchtower scope awareness              | Watchtower auto-updates containers. If you pin a version, set `com.centurylinklabs.watchtower.enable=false` label            |

@@ -57,6 +57,16 @@ ssh core@192.168.100.100 'docker exec gluetun wget -qO- https://ipinfo.io'
 
 Expected: IP should be a ProtonVPN exit node, not the home ISP IP.
 
+### Phase 2b: Public IP Cache (Homepage Widget)
+
+Check gluetun's cached public IP (used by Homepage dashboard widget):
+
+```bash
+ssh core@192.168.100.100 'curl -s http://localhost:8001/v1/publicip/ip'
+```
+
+Expected: `{"public_ip":"205.x.x.x",...}` with a non-empty IP. If `public_ip` is empty, the Homepage gluetun widget will show "API Error Information". Fix: restart gluetun (if `PUBLICIP_PERIOD` is set, it will self-heal within 12h).
+
 ### Phase 3: Port Forwarding
 
 Verify forwarded port and qBittorrent sync:

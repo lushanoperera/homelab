@@ -101,17 +101,43 @@ Should show gluetun's internal DNS, not ISP DNS.
 
 ### VPN Not Connected
 
-Restart gluetun:
+**Simple restart** (no config change — preserves container ID, dependents stay connected):
 
 ```bash
 ssh core@192.168.100.100 'cd /srv/docker/media-stack && /opt/bin/docker-compose restart gluetun'
 ```
+
+**After config change** (recreate — MUST also recreate dependents):
+
+```bash
+ssh core@192.168.100.100 'cd /srv/docker/media-stack && /opt/bin/docker-compose up -d'
+```
+
+> **WARNING**: If gluetun was **recreated** (new container ID), qbittorrent/prowlarr/sabnzbd will lose their network namespace. Never restart them individually — always `up -d` the full stack.
 
 Check logs:
 
 ```bash
 ssh core@192.168.100.100 'docker logs gluetun --tail 50'
 ```
+
+### Public IP Empty (Homepage widget shows API Error)
+
+Gluetun caches public IP at startup. If DNS wasn't ready, it caches empty and never retries unless `PUBLICIP_PERIOD` is set.
+
+```bash
+# Check public IP cache
+ssh core@192.168.100.100 'curl -s http://localhost:8001/v1/publicip/ip'
+
+# If empty, restart gluetun (simple restart is enough — preserves deps)
+ssh core@192.168.100.100 'cd /srv/docker/media-stack && /opt/bin/docker-compose restart gluetun'
+
+# Verify populated after restart
+sleep 15
+ssh core@192.168.100.100 'curl -s http://localhost:8001/v1/publicip/ip'
+```
+
+Permanent fix: ensure `PUBLICIP_PERIOD=12h` in gluetun environment.
 
 ### Port Forwarding Failed
 
