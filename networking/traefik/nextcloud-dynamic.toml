@@ -1,0 +1,17 @@
+# Nextcloud-specific Traefik middleware and transport config
+[http.middlewares]
+  [http.middlewares.nextcloud-header.headers]
+    customRequestHeaders = { "X-Forwarded-Proto" = "https" }
+
+  [http.middlewares.nextcloud-redirect.redirectRegex]
+    regex = "^https://(.*)/.well-known/(card|cal)dav"
+    replacement = "https://${1}/remote.php/dav/"
+    permanent = true
+
+[http.serversTransports]
+  [http.serversTransports.nextcloud-transport]
+    maxIdleConnsPerHost = 64
+    [http.serversTransports.nextcloud-transport.forwardingTimeouts]
+      dialTimeout = "300s"
+      responseHeaderTimeout = "300s"
+      idleConnTimeout = "3600s"

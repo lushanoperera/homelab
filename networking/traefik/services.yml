@@ -41,7 +41,7 @@ http:
         - websecure
       tls: {}
       middlewares:
-        - security-headers
+        - nextcloud-headers
         - rate-limit
         - crowdsec-bouncer
 
@@ -52,7 +52,7 @@ http:
       entryPoints:
         - web
       middlewares:
-        - security-headers
+        - nextcloud-headers
         - rate-limit
         - crowdsec-bouncer
 
@@ -85,6 +85,19 @@ http:
         stsIncludeSubdomains: true
         stsPreload: true
         frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex, nofollow"
+
+    # Nextcloud needs SAMEORIGIN (not DENY) for internal iframes
+    nextcloud-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        customFrameOptionsValue: "SAMEORIGIN"
         contentTypeNosniff: true
         browserXssFilter: true
         referrerPolicy: "strict-origin-when-cross-origin"
