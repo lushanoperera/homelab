@@ -30,12 +30,13 @@ Primary NFS server for media, Nextcloud, Immich, and Vaultwarden data. Storage L
 
 ## LXC Containers
 
-| VMID | Hostname   | IP              | CPU | Memory | Disk   | Service                    |
-| ---- | ---------- | --------------- | --- | ------ | ------ | -------------------------- |
-| 120  | technitium | 192.168.100.120 | 2   | 512 MB | 4.1 GB | Technitium DNS (secondary) |
-| 123  | fileserver | 192.168.100.123 | 2   | 512 MB | 8.4 GB | Samba file share           |
+| VMID | Hostname   | IP              | CPU | Memory | Disk   | Service                     |
+| ---- | ---------- | --------------- | --- | ------ | ------ | --------------------------- |
+| 120  | technitium | 192.168.100.120 | 2   | 512 MB | 4.1 GB | Technitium DNS (secondary)  |
+| 123  | fileserver | 192.168.100.123 | 1   | 384 MB | 6 GB   | Samba + Cockpit (Debian 13) |
 
-See [lxc-120-technitium.md](lxc-120-technitium.md) for setup details.
+See [lxc-120-technitium.md](lxc-120-technitium.md) for Technitium DNS setup details.
+See [lxc-123-samba.md](lxc-123-samba.md) for Samba file server setup details.
 
 ## ZFS Pool
 
