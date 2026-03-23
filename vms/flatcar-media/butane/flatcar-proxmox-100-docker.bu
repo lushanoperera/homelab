@@ -25,6 +25,8 @@ storage:
           DNS=192.168.100.254
           DNS=192.168.100.100
           DNS=192.168.100.120
+          IPv6AcceptRA=no
+          KeepConfiguration=static
 
     # DMZ network configuration (Traefik macvlan)
     - path: /etc/systemd/network/20-eth1-dmz.network
