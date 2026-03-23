@@ -33,6 +33,7 @@ ssh core@192.168.100.100
 | CouchDB      | 5984  | Obsidian LiveSync backend                              |
 | Vaultwarden  | 8200  | Password manager                                       |
 | Portainer    | 9443  | Container management UI                                |
+| Autoheal     | -     | Auto-restarts unhealthy containers (gluetun dependents)|
 
 ## Directory Structure
 

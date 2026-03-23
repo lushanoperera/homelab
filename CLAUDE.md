@@ -36,7 +36,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 **Flatcar VM 100** (`ssh core@192.168.100.100`):
 
 - Homepage dashboard (`/srv/docker/homepage/`) — single-pane service overview
-- Media stack: gluetun (ProtonVPN), prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr, seerr, tautulli, flaresolverr, watchtower (nickfedor fork)
+- Media stack: gluetun (ProtonVPN), prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr, seerr, tautulli, flaresolverr, watchtower (nickfedor fork), autoheal (restarts unhealthy containers after gluetun reconnects)
 - Caddy reverse proxy (`/srv/docker/caddy/`) — internal `*.home.disconnesso.com` routing
 - Technitium DNS (secondary node, `/srv/docker/dns/`, separate `dns-compose.yml`)
 - Traefik (DMZ IP: 192.168.7.119) — public services via Cloudflare Tunnel + Cloudflared
