@@ -42,6 +42,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 - Traefik (DMZ IP: 192.168.7.119) — public services via Cloudflare Tunnel + Cloudflared
 - CrowdSec + Bouncer (Metabase dashboard removed 2026-03-07, use `cscli` CLI)
 - Vaultwarden (`/opt/vaultwarden/`) — password manager
+- Forgejo (`/srv/docker/forgejo/`) — private Git server (dotfiles, configs)
 - CouchDB (`/srv/docker/couchdb/`) — Obsidian LiveSync backend
 - Nextcloud (`/srv/docker/nextcloud/`) — standard Nextcloud (nginx + FPM + Postgres + Redis)
 - Immich (`/srv/docker/immich/`) — photo management with ML
@@ -175,6 +176,7 @@ homelab/
 │   └── docker-compose.yml
 ├── apps/
 │   ├── couchdb/             # CouchDB (Obsidian LiveSync)
+│   ├── forgejo/             # Forgejo private Git server
 │   └── vaultwarden/         # Vaultwarden password manager
 ├── systemd/                 # Systemd units
 └── tools/
@@ -205,6 +207,7 @@ homelab/
 | `apps/immich/immich-backup.{service,timer}`       | Flatcar `/etc/systemd/system/`               | scp + systemctl enable  |
 | `homepage/docker-compose.yml`                     | `/srv/docker/homepage/docker-compose.yml`    | rsync/scp               |
 | `homepage/config/*`                               | `/srv/docker/homepage/config/`               | rsync/scp               |
+| `apps/forgejo/docker-compose.yml`                 | `/srv/docker/forgejo/docker-compose.yml`     | scp                     |
 
 ## Quick Reference
 
@@ -271,6 +274,36 @@ ssh core@192.168.100.100 'ls -la /mnt/media/.trash/'
 # Recover from trash (within 7 days)
 ssh core@192.168.100.100 'cat /mnt/media/.trash/deletion_log.txt'  # Find original paths
 ```
+
+### Forgejo (Flatcar VM 100)
+
+```bash
+# Container status
+ssh core@192.168.100.100 'cd /srv/docker/forgejo && /opt/bin/docker-compose ps'
+
+# Version check
+ssh core@192.168.100.100 'curl -sf http://localhost:3100/api/v1/version'
+
+# Health check
+ssh core@192.168.100.100 'docker inspect forgejo --format "{{.State.Health.Status}}"'
+
+# Logs
+ssh core@192.168.100.100 'docker logs forgejo --tail 50'
+
+# Admin user management
+ssh core@192.168.100.100 'docker exec --user git forgejo forgejo admin user list'
+
+# Update
+ssh core@192.168.100.100 'cd /srv/docker/forgejo && /opt/bin/docker-compose pull && /opt/bin/docker-compose up -d'
+```
+
+Key details:
+
+- Web UI: `https://forgejo.home.disconnesso.com` (Caddy proxy)
+- SSH git: `ssh://git@192.168.100.100:222` (or `forgejo:` via SSH config alias)
+- Admin user: `lushano`
+- SQLite database, named volume `forgejo_data`
+- Registration disabled (single-user instance)
 
 ### CouchDB (Obsidian LiveSync)
 
@@ -537,6 +570,7 @@ pvesm status        # Check storage
 | CrowdSec (CLI)    | N/A (use `cscli decisions list`)   | —                            | —               |
 | Obsidian Sync     | obsidian-sync.home.disconnesso.com | —                            | localhost:5984  |
 | Homepage          | homepage.home.disconnesso.com      | —                            | localhost:3000  |
+| Forgejo           | forgejo.home.disconnesso.com       | —                            | localhost:3100  |
 
 **Note:** Traefik (DMZ macvlan) routes to backends via `traefik_internal` Docker network — macvlan cannot reach host IPs.
 
