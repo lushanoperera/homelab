@@ -650,6 +650,7 @@ Moved to conditional rules (loaded on-demand by file pattern):
 | `.claude/rules/networking-lessons.md` | UniFi API, WiFi, mesh, Radio AI        | `scripts/network/**`, `networking/**`                                |
 | `.claude/rules/gpu-sriov-lessons.md`  | GPU SR-IOV build, deploy, containers   | `vms/flatcar-media/sysext/**`, `apps/immich/**`, `apps/nextcloud/**` |
 | `.claude/rules/deployment-lessons.md` | Compose deployment, SCP, verification  | `vms/flatcar-media/**`, `networking/**`, `apps/**`, `homepage/**`    |
+| `.claude/rules/media-api-lessons.md`  | Seerr CSRF, qBit via gluetun, *arr API | `vms/flatcar-media/**`, `scripts/vms/**`, `apps/**`                  |
 
 ## Verification
 
