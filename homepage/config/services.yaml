@@ -168,6 +168,12 @@
           url: https://localhost:9443
           env: 3
           key: "{{HOMEPAGE_VAR_PORTAINER_KEY}}"
+    - Forgejo:
+        icon: forgejo.png
+        href: https://forgejo.home.disconnesso.com
+        description: Private Git server
+        server: my-docker
+        container: forgejo
 
 - Network:
     - Caddy:
@@ -205,6 +211,18 @@
         href: https://wireguard.home.disconnesso.com
         description: VPN server
         ping: 192.168.100.104
+
+- Storage:
+    - Samba:
+        icon: samba.png
+        href: https://cockpit.home.disconnesso.com
+        description: File shares (LXC 123)
+        ping: 192.168.100.123
+    - Cockpit:
+        icon: cockpit.png
+        href: https://cockpit.home.disconnesso.com
+        description: File share management
+        ping: 192.168.100.123
 
 - Infrastructure:
     - Winston:
