@@ -82,5 +82,5 @@ restic-env.sh
 !.claude/skills/
 !.claude/rules/
 .claude/settings.local.json
-.claude/settings.json
+!.claude/settings.json
 .claude/plans/

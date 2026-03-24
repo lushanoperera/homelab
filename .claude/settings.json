@@ -1,0 +1,17 @@
+{
+  "autoMode": {
+    "environment": [
+      "**Trusted repo**: github.com/lushanoperera/homelab",
+      "**Source control**: github.com/lushanoperera",
+      "**Trusted internal domains**: *.home.disconnesso.com, *.lushanoperera.com",
+      "**Internal infrastructure subnets**: 192.168.100.0/20 (Infra VLAN), 192.168.200.0/24 (Storage LAN), 10.21.21.0/24 (nwlab WG overlay)",
+      "**Key hosts**: winston (192.168.100.38), reginald (192.168.100.4), flatcar (192.168.100.100), QNAP (192.168.100.254), PBS (192.168.100.187)",
+      "**This is an infrastructure repo** — no build/lint/test toolchain. Verification is done via SSH to target hosts and service health checks.",
+      "**SSH read commands are safe** — status checks, docker ps, mount checks, dig, curl to internal services. These do not modify state.",
+      "**SSH write commands require confirmation** — docker-compose up/down, systemctl restart, config file writes, any destructive operations on remote hosts.",
+      "**Never auto-approve**: rm -rf, qm destroy, pct destroy, zfs destroy, systemctl stop on production services, docker-compose down without explicit request.",
+      "**Deploy pattern**: edit config locally → scp/rsync to VM → restart service on VM. Each step should be confirmed separately.",
+      "**shellcheck all .sh files** before committing — this repo has no CI, shell validation is manual."
+    ]
+  }
+}
