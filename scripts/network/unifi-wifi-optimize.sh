@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 #
-# unifi-wifi-optimize.sh — Apply WiFi channel & power optimization to UniFi APs
+# unifi-wifi-optimize.sh — Apply WiFi channel, power & band steering optimization
 #
-# Implements the WiFi optimization plan (2026-03-01):
-#   1. Fix 5 GHz co-channel: Salotto → ch 36, Camera → ch 149
-#   2. Set 5 GHz TX power: both → medium
-#   3. Set 2.4 GHz TX power: both → medium
-#   4. (Optional) Enable minimum RSSI at -75 dBm
+# Implements the WiFi optimization plan (2026-03-26):
+#   1. Fix 5GHz co-channel: Salotto → ch 36 (UNII-1), Camera → ch 100 (DFS UNII-2e)
+#   2. Fix 6GHz co-channel: Salotto → ch 37/160, Camera → ch 69/160 (separate blocks)
+#   3. Band steering: 2.4GHz TX power → low (shrink cell, push clients to 5/6GHz)
+#   4. Min RSSI on 2.4GHz only (-75 dBm) — kicks weak 2.4GHz clients to higher bands
+#   5. Radio AI exclusion for DFS-pinned APs (prevents Radio AI overriding manual channels)
 #
 # Usage:
-#   ./unifi-wifi-optimize.sh                    # Dry-run — show planned changes
-#   ./unifi-wifi-optimize.sh --apply            # Apply changes to APs
-#   ./unifi-wifi-optimize.sh --apply --min-rssi # Apply changes + minimum RSSI
-#   ./unifi-wifi-optimize.sh --rollback         # Revert to auto channels/power
+#   ./unifi-wifi-optimize.sh                       # Dry-run — show planned changes
+#   ./unifi-wifi-optimize.sh --apply               # Apply changes (min RSSI enabled by default)
+#   ./unifi-wifi-optimize.sh --apply --no-min-rssi # Apply without min RSSI
+#   ./unifi-wifi-optimize.sh --rollback            # Revert to auto channels/power/Radio AI
 #
 # Credentials: same .env as unifi-inventory.sh (UNIFI_HOST, UNIFI_USER, UNIFI_PASS)
 #
@@ -21,27 +22,26 @@
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
-# Configuration: The optimization plan
+# Configuration: The optimization plan (parallel arrays for bash 3.2 compat)
 # ---------------------------------------------------------------------------
-# Maps AP name substring → target radio settings
-# radio_table entries: radio (ng=2.4, na=5, 6e=6GHz), channel, tx_power_mode
-#
 # Channel plan rationale:
 #   Salotto 5GHz → ch 36 (UNII-1, non-DFS, pinned)
-#   Camera  5GHz → auto (managed by Radio AI, which picks DFS channels)
-#     Note: ch 149 (UNII-3) unavailable — EU/IT firmware regulatory table
-#     Note: Manual DFS channels (52,60,64,100,116,128) all failed CAC
-#     Note: Radio AI's optimizer successfully assigns DFS channels
-#   Both 2.4GHz  → keep existing channels (1 and 11 are already optimal)
-#   Both 6GHz    → no changes (37 and 85 are fine, abundant spectrum)
+#   Camera  5GHz → ch 100 (UNII-2e DFS, pinned — excluded from Radio AI)
+#   Salotto 6GHz → ch 37/160MHz (block 1-61)
+#   Camera  6GHz → ch 69/160MHz (block 65-125, no overlap with Salotto)
+#   Both 2.4GHz  → keep existing channels (1 and 11), TX power → low for band steering
+#
+# Italy regulatory: UNII-3 (ch 149+) unavailable. Only UNII-1 (36-48) and UNII-2/2e (52-140).
 
-# AP plan entries: "name_pattern:5g_channel" (use "auto" for Radio AI managed)
-PLAN_ENTRIES=(
-    "Salotto:36"
-    "Camera:auto"
-)
-TARGET_5G_TX_POWER_MODE="medium"
-TARGET_24G_TX_POWER_MODE="medium"
+PLAN_NAMES=("Salotto" "Camera")
+PLAN_5G_CH=(36 100)
+PLAN_6G_CH=(37 69)
+PLAN_5G_TX=("medium" "medium")
+PLAN_24G_TX=("low" "low")
+PLAN_6G_TX=("high" "high")
+PLAN_6G_HT=(160 160)
+PLAN_EXCLUDE_RADIO_AI=(false true)
+
 MIN_RSSI_VALUE=-75
 
 # ---------------------------------------------------------------------------
@@ -57,7 +57,7 @@ CSRF_TOKEN=""
 SITE="default"
 
 MODE="dry-run"      # dry-run | apply | rollback
-ENABLE_MIN_RSSI=false
+ENABLE_MIN_RSSI=true
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -68,6 +68,7 @@ warn() { printf '\033[1;33mWARN:\033[0m %s\n' "$*" >&2; }
 ok()   { printf '\033[1;32m[OK]\033[0m   %s\n' "$*"; }
 chg()  { printf '\033[1;33m[CHG]\033[0m  %s\n' "$*"; }
 skip() { printf '\033[0;37m[SKIP]\033[0m %s\n' "$*"; }
+dfs()  { printf '\033[1;35m[DFS]\033[0m  %s\n' "$*"; }
 
 usage() {
     cat <<'EOF'
@@ -76,10 +77,10 @@ Usage: unifi-wifi-optimize.sh [OPTIONS]
 Modes:
   (default)     Dry-run — show what would change without applying
   --apply       Apply the optimization plan to the APs
-  --rollback    Revert channels to auto and TX power to auto
+  --rollback    Revert channels to auto, TX power to auto, Radio AI exclusions removed
 
 Options:
-  --min-rssi    Also set minimum RSSI to -75 dBm (with --apply only)
+  --no-min-rssi Skip minimum RSSI setting (with --apply only)
   --site SITE   UniFi site name (default: "default")
   -h, --help    Show this help
 
@@ -167,6 +168,12 @@ api_get() {
         "https://${UNIFI_HOST}/proxy/network/api/s/${SITE}/${endpoint}"
 }
 
+api_get_setting() {
+    local endpoint="$1"
+    curl -sSk -b "$COOKIE_JAR" \
+        "https://${UNIFI_HOST}/proxy/network/api/s/${SITE}/${endpoint}"
+}
+
 api_put() {
     local endpoint="$1"
     local body="$2"
@@ -185,47 +192,104 @@ api_logout() {
 }
 
 # ---------------------------------------------------------------------------
-# Match AP name to plan entry
+# Plan lookup helpers
 # ---------------------------------------------------------------------------
-# Returns the plan key (e.g., "Salotto" or "Camera") or empty string
-match_ap_to_plan() {
+# Returns the plan index (0-based) for an AP name, or -1 if not found
+get_plan_index() {
     local ap_name="$1"
-    for entry in "${PLAN_ENTRIES[@]}"; do
-        local key="${entry%%:*}"
-        if [[ "$ap_name" == *"$key"* ]]; then
-            echo "$key"
+    local i
+    for i in "${!PLAN_NAMES[@]}"; do
+        if [[ "$ap_name" == *"${PLAN_NAMES[$i]}"* ]]; then
+            echo "$i"
             return
         fi
     done
-    echo ""
+    echo "-1"
 }
 
-# Look up 5 GHz target channel for a plan key
-get_5g_channel() {
-    local plan_key="$1"
-    for entry in "${PLAN_ENTRIES[@]}"; do
-        local key="${entry%%:*}"
-        local ch="${entry##*:}"
-        if [[ "$key" == "$plan_key" ]]; then
-            echo "$ch"
-            return
+# Check if a 5GHz channel is in the DFS range (52-140)
+is_dfs_channel() {
+    local ch="$1"
+    if [[ "$ch" == "auto" ]]; then
+        return 1
+    fi
+    (( ch >= 52 && ch <= 140 ))
+}
+
+# ---------------------------------------------------------------------------
+# Radio AI exclusion management
+# ---------------------------------------------------------------------------
+# Add or remove an AP MAC from the Radio AI exclude_devices list
+update_radio_ai_exclusion() {
+    local ap_mac="$1"
+    local action="$2"  # "add" or "remove"
+
+    # Fetch current Radio AI settings
+    local radio_ai_data
+    radio_ai_data=$(api_get_setting "rest/setting/radio_ai")
+
+    local setting_id current_excludes
+    setting_id=$(echo "$radio_ai_data" | jq -r '.data[0]._id // empty')
+    current_excludes=$(echo "$radio_ai_data" | jq '.data[0].exclude_devices // []')
+
+    if [[ -z "$setting_id" ]]; then
+        warn "Could not find Radio AI settings — skipping exclusion update"
+        return 1
+    fi
+
+    local new_excludes
+    if [[ "$action" == "add" ]]; then
+        # Add MAC if not already present
+        local already_excluded
+        already_excluded=$(echo "$current_excludes" | jq --arg mac "$ap_mac" '[.[] | select(. == $mac)] | length')
+        if (( already_excluded > 0 )); then
+            skip "  $ap_mac already excluded from Radio AI"
+            return 0
         fi
-    done
-    echo ""
+        new_excludes=$(echo "$current_excludes" | jq --arg mac "$ap_mac" '. + [$mac]')
+    elif [[ "$action" == "remove" ]]; then
+        new_excludes=$(echo "$current_excludes" | jq --arg mac "$ap_mac" '[.[] | select(. != $mac)]')
+    else
+        die "update_radio_ai_exclusion: unknown action '$action'"
+    fi
+
+    local body
+    body=$(jq -n --argjson excludes "$new_excludes" '{"exclude_devices": $excludes}')
+
+    local result
+    result=$(api_put "rest/setting/radio_ai/$setting_id" "$body")
+
+    local ok_status
+    ok_status=$(echo "$result" | jq -r '.meta.rc // "error"')
+    if [[ "$ok_status" == "ok" ]]; then
+        if [[ "$action" == "add" ]]; then
+            ok "  Excluded $ap_mac from Radio AI"
+        else
+            ok "  Removed $ap_mac from Radio AI exclusion"
+        fi
+        return 0
+    else
+        local msg
+        msg=$(echo "$result" | jq -r '.meta.msg // "unknown error"')
+        warn "  Radio AI update failed: $msg"
+        return 1
+    fi
 }
 
 # ---------------------------------------------------------------------------
 # Build target radio_table for an AP
 # ---------------------------------------------------------------------------
-# Takes current radio_table JSON and returns modified version
 build_target_radio_table() {
     local current_radios="$1"
-    local plan_key="$2"
+    local plan_idx="$2"
 
-    local target_5g_channel
-    target_5g_channel=$(get_5g_channel "$plan_key")
+    local target_5g_ch="${PLAN_5G_CH[$plan_idx]}"
+    local target_5g_tx="${PLAN_5G_TX[$plan_idx]}"
+    local target_24g_tx="${PLAN_24G_TX[$plan_idx]}"
+    local target_6g_ch="${PLAN_6G_CH[$plan_idx]}"
+    local target_6g_tx="${PLAN_6G_TX[$plan_idx]}"
+    local target_6g_ht="${PLAN_6G_HT[$plan_idx]}"
 
-    # Start with the current radio_table and modify target fields
     local result="$current_radios"
 
     # 5 GHz (na): set channel and TX power
@@ -234,13 +298,8 @@ build_target_radio_table() {
             map(if .radio == $radio then
                 .channel = "auto" | .tx_power_mode = "auto" | del(.tx_power)
             else . end)')
-    elif [[ "$target_5g_channel" == "auto" ]]; then
-        result=$(echo "$result" | jq --arg radio "na" --arg txmode "$TARGET_5G_TX_POWER_MODE" '
-            map(if .radio == $radio then
-                .channel = "auto" | .tx_power_mode = $txmode | del(.tx_power)
-            else . end)')
     else
-        result=$(echo "$result" | jq --arg radio "na" --argjson ch "$target_5g_channel" --arg txmode "$TARGET_5G_TX_POWER_MODE" '
+        result=$(echo "$result" | jq --arg radio "na" --argjson ch "$target_5g_ch" --arg txmode "$target_5g_tx" '
             map(if .radio == $radio then
                 .channel = $ch | .tx_power_mode = $txmode | del(.tx_power)
             else . end)')
@@ -253,16 +312,31 @@ build_target_radio_table() {
                 .tx_power_mode = "auto" | del(.tx_power)
             else . end)')
     else
-        result=$(echo "$result" | jq --arg radio "ng" --arg txmode "$TARGET_24G_TX_POWER_MODE" '
+        result=$(echo "$result" | jq --arg radio "ng" --arg txmode "$target_24g_tx" '
             map(if .radio == $radio then
                 .tx_power_mode = $txmode | del(.tx_power)
             else . end)')
     fi
 
-    # Minimum RSSI (optional, on all radios)
-    if $ENABLE_MIN_RSSI && [[ "$MODE" == "apply" ]]; then
+    # 6 GHz (6e): set channel, TX power, and channel width
+    if [[ "$MODE" == "rollback" ]]; then
+        result=$(echo "$result" | jq --arg radio "6e" '
+            map(if .radio == $radio then
+                .channel = "auto" | .tx_power_mode = "auto" | del(.tx_power)
+            else . end)')
+    else
+        result=$(echo "$result" | jq --arg radio "6e" --argjson ch "$target_6g_ch" --arg txmode "$target_6g_tx" --argjson ht "$target_6g_ht" '
+            map(if .radio == $radio then
+                .channel = $ch | .tx_power_mode = $txmode | .ht = $ht | del(.tx_power)
+            else . end)')
+    fi
+
+    # Minimum RSSI — 2.4GHz only (band steering: kick weak 2.4GHz clients to 5/6GHz)
+    if $ENABLE_MIN_RSSI && [[ "$MODE" != "rollback" ]]; then
         result=$(echo "$result" | jq --argjson rssi "$MIN_RSSI_VALUE" '
-            map(.min_rssi_enabled = true | .min_rssi = $rssi)')
+            map(if .radio == "ng" then
+                .min_rssi_enabled = true | .min_rssi = $rssi
+            else . end)')
     elif [[ "$MODE" == "rollback" ]]; then
         result=$(echo "$result" | jq '
             map(.min_rssi_enabled = false | del(.min_rssi))')
@@ -291,17 +365,19 @@ show_radio_diff() {
             6e) band="6GHz"   ;;
         esac
 
-        local cur_ch cur_txmode cur_rssi_en cur_rssi
+        local cur_ch cur_txmode cur_rssi_en cur_rssi cur_ht
         cur_ch=$(echo "$current" | jq -r --arg r "$radio_code" '.[] | select(.radio == $r) | .channel // "auto"')
         cur_txmode=$(echo "$current" | jq -r --arg r "$radio_code" '.[] | select(.radio == $r) | .tx_power_mode // "auto"')
         cur_rssi_en=$(echo "$current" | jq -r --arg r "$radio_code" '.[] | select(.radio == $r) | .min_rssi_enabled // false')
         cur_rssi=$(echo "$current" | jq -r --arg r "$radio_code" '.[] | select(.radio == $r) | .min_rssi // "N/A"')
+        cur_ht=$(echo "$current" | jq -r --arg r "$radio_code" '.[] | select(.radio == $r) | .ht // "auto"')
 
-        local tgt_ch tgt_txmode tgt_rssi_en tgt_rssi
+        local tgt_ch tgt_txmode tgt_rssi_en tgt_rssi tgt_ht
         tgt_ch=$(echo "$target" | jq -r --arg r "$radio_code" '.[] | select(.radio == $r) | .channel // "auto"')
         tgt_txmode=$(echo "$target" | jq -r --arg r "$radio_code" '.[] | select(.radio == $r) | .tx_power_mode // "auto"')
         tgt_rssi_en=$(echo "$target" | jq -r --arg r "$radio_code" '.[] | select(.radio == $r) | .min_rssi_enabled // false')
         tgt_rssi=$(echo "$target" | jq -r --arg r "$radio_code" '.[] | select(.radio == $r) | .min_rssi // "N/A"')
+        tgt_ht=$(echo "$target" | jq -r --arg r "$radio_code" '.[] | select(.radio == $r) | .ht // "auto"')
 
         # Skip if no data for this band
         if [[ -z "$cur_ch" && -z "$tgt_ch" ]]; then
@@ -312,6 +388,10 @@ show_radio_diff() {
 
         if [[ "$cur_ch" != "$tgt_ch" ]]; then
             chg "  $band channel: $cur_ch → $tgt_ch"
+            has_changes=true
+        fi
+        if [[ "$cur_ht" != "$tgt_ht" ]]; then
+            chg "  $band width: ${cur_ht}MHz → ${tgt_ht}MHz"
             has_changes=true
         fi
         if [[ "$cur_txmode" != "$tgt_txmode" ]]; then
@@ -342,19 +422,16 @@ main() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --apply)    MODE="apply" ;;
-            --rollback) MODE="rollback" ;;
-            --min-rssi) ENABLE_MIN_RSSI=true ;;
-            --site)     SITE="${2:?--site requires a value}"; shift ;;
-            -h|--help)  usage ;;
-            *)          die "Unknown option: $1" ;;
+            --apply)       MODE="apply" ;;
+            --rollback)    MODE="rollback" ;;
+            --no-min-rssi) ENABLE_MIN_RSSI=false ;;
+            --min-rssi)    ENABLE_MIN_RSSI=true ;;
+            --site)        SITE="${2:?--site requires a value}"; shift ;;
+            -h|--help)     usage ;;
+            *)             die "Unknown option: $1" ;;
         esac
         shift
     done
-
-    if $ENABLE_MIN_RSSI && [[ "$MODE" != "apply" ]]; then
-        warn "--min-rssi only takes effect with --apply"
-    fi
 
     load_credentials
     api_login
@@ -382,18 +459,20 @@ main() {
     esac
 
     local changes_applied=0
+    local has_dfs=false
 
     # Process each AP
     for i in $(seq 0 $((ap_count - 1))); do
-        local ap_name ap_id current_radios
+        local ap_name ap_id ap_mac current_radios
         ap_name=$(echo "$ap_data" | jq -r ".[$i].name // .[$i].hostname // \"unknown\"")
         ap_id=$(echo "$ap_data" | jq -r ".[$i]._id")
+        ap_mac=$(echo "$ap_data" | jq -r ".[$i].mac // empty")
         current_radios=$(echo "$ap_data" | jq ".[$i].radio_table")
 
-        local plan_key
-        plan_key=$(match_ap_to_plan "$ap_name")
+        local plan_idx
+        plan_idx=$(get_plan_index "$ap_name")
 
-        if [[ -z "$plan_key" ]]; then
+        if [[ "$plan_idx" == "-1" ]]; then
             echo ""
             printf '\033[1m%s\033[0m\n' "$ap_name"
             skip "  Not in optimization plan — skipping"
@@ -402,10 +481,22 @@ main() {
 
         # Build target radio_table
         local target_radios
-        target_radios=$(build_target_radio_table "$current_radios" "$plan_key")
+        target_radios=$(build_target_radio_table "$current_radios" "$plan_idx")
 
         # Show diff
         show_radio_diff "$ap_name" "$current_radios" "$target_radios"
+
+        # Show Radio AI exclusion change
+        if [[ "${PLAN_EXCLUDE_RADIO_AI[$plan_idx]}" == "true" && "$MODE" != "rollback" ]]; then
+            chg "  Radio AI: exclude this AP (pin DFS channel)"
+        elif [[ "$MODE" == "rollback" && -n "$ap_mac" ]]; then
+            chg "  Radio AI: remove exclusion (return to managed)"
+        fi
+
+        # Check if we're assigning a DFS channel
+        if [[ "$MODE" != "rollback" ]] && is_dfs_channel "${PLAN_5G_CH[$plan_idx]}"; then
+            has_dfs=true
+        fi
 
         # Apply if not dry-run
         if [[ "$MODE" != "dry-run" ]]; then
@@ -419,13 +510,24 @@ main() {
             local ok_status
             ok_status=$(echo "$result" | jq -r '.meta.rc // "error"')
             if [[ "$ok_status" == "ok" ]]; then
-                ok "  $ap_name updated successfully"
+                ok "  $ap_name radio_table updated successfully"
                 changes_applied=$((changes_applied + 1))
             else
                 local msg
                 msg=$(echo "$result" | jq -r '.meta.msg // "unknown error"')
                 printf '\033[1;31m[FAIL]\033[0m  %s — API error: %s\n' "$ap_name" "$msg"
                 warn "  Full response: $result"
+            fi
+
+            # Handle Radio AI exclusion
+            if [[ -n "$ap_mac" ]]; then
+                if [[ "${PLAN_EXCLUDE_RADIO_AI[$plan_idx]}" == "true" && "$MODE" == "apply" ]]; then
+                    info "  Updating Radio AI exclusion for $ap_name..."
+                    update_radio_ai_exclusion "$ap_mac" "add" || true
+                elif [[ "$MODE" == "rollback" ]]; then
+                    info "  Removing Radio AI exclusion for $ap_name..."
+                    update_radio_ai_exclusion "$ap_mac" "remove" || true
+                fi
             fi
         fi
     done
@@ -435,10 +537,24 @@ main() {
     case "$MODE" in
         dry-run)
             info "Dry run complete. Use --apply to execute changes."
+            if $has_dfs; then
+                echo ""
+                dfs "Plan includes DFS channel (52-140). After applying:"
+                dfs "  - AP performs 60s CAC radar scan before transmitting"
+                dfs "  - Verify channel assignment after ~90s with:"
+                dfs "    ./scripts/network/unifi-inventory.sh --wifi"
+            fi
             ;;
         apply|rollback)
             if (( changes_applied > 0 )); then
-                ok "$changes_applied AP(s) updated. Wait 30-60s for APs to provision, then verify:"
+                ok "$changes_applied AP(s) updated."
+                if $has_dfs && [[ "$MODE" == "apply" ]]; then
+                    echo ""
+                    dfs "DFS channel assigned — 60s CAC radar scan in progress."
+                    dfs "Wait ~90s, then verify:"
+                else
+                    info "Wait 30-60s for APs to provision, then verify:"
+                fi
                 info "  ./scripts/network/unifi-inventory.sh --wifi"
             else
                 warn "No changes were applied."
