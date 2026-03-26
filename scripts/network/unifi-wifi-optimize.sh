@@ -168,12 +168,6 @@ api_get() {
         "https://${UNIFI_HOST}/proxy/network/api/s/${SITE}/${endpoint}"
 }
 
-api_get_setting() {
-    local endpoint="$1"
-    curl -sSk -b "$COOKIE_JAR" \
-        "https://${UNIFI_HOST}/proxy/network/api/s/${SITE}/${endpoint}"
-}
-
 api_put() {
     local endpoint="$1"
     local body="$2"
@@ -226,7 +220,7 @@ update_radio_ai_exclusion() {
 
     # Fetch current Radio AI settings
     local radio_ai_data
-    radio_ai_data=$(api_get_setting "rest/setting/radio_ai")
+    radio_ai_data=$(api_get "rest/setting/radio_ai")
 
     local setting_id current_excludes
     setting_id=$(echo "$radio_ai_data" | jq -r '.data[0]._id // empty')
@@ -489,7 +483,7 @@ main() {
         # Show Radio AI exclusion change
         if [[ "${PLAN_EXCLUDE_RADIO_AI[$plan_idx]}" == "true" && "$MODE" != "rollback" ]]; then
             chg "  Radio AI: exclude this AP (pin DFS channel)"
-        elif [[ "$MODE" == "rollback" && -n "$ap_mac" ]]; then
+        elif [[ "$MODE" == "rollback" && "${PLAN_EXCLUDE_RADIO_AI[$plan_idx]}" == "true" && -n "$ap_mac" ]]; then
             chg "  Radio AI: remove exclusion (return to managed)"
         fi
 
