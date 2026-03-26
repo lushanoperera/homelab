@@ -518,7 +518,7 @@ main() {
                 if [[ "${PLAN_EXCLUDE_RADIO_AI[$plan_idx]}" == "true" && "$MODE" == "apply" ]]; then
                     info "  Updating Radio AI exclusion for $ap_name..."
                     update_radio_ai_exclusion "$ap_mac" "add" || true
-                elif [[ "$MODE" == "rollback" ]]; then
+                elif [[ "${PLAN_EXCLUDE_RADIO_AI[$plan_idx]}" == "true" && "$MODE" == "rollback" ]]; then
                     info "  Removing Radio AI exclusion for $ap_name..."
                     update_radio_ai_exclusion "$ap_mac" "remove" || true
                 fi
