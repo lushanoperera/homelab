@@ -3,6 +3,11 @@ paths:
   - "dns/**"
   - "**/dns-compose*"
   - "**/resolv.conf"
+recall:
+  - technitium
+  - dns
+  - cluster
+  - resolv.conf
 ---
 
 # Technitium DNS Lessons

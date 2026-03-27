@@ -3,6 +3,13 @@ paths:
   - "vms/flatcar-media/**"
   - "scripts/vms/**"
   - "apps/**"
+recall:
+  - seerr
+  - sonarr
+  - radarr
+  - qbittorrent
+  - gluetun
+  - arr api
 ---
 
 # Media Stack API Lessons

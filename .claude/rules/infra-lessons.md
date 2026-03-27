@@ -5,6 +5,12 @@ paths:
   - "storage/garage/**"
   - "storage/minio/**"
   - "scripts/migrations/**"
+recall:
+  - proxmox
+  - garage
+  - minio
+  - migration
+  - macvlan
 ---
 
 # Infrastructure Lessons

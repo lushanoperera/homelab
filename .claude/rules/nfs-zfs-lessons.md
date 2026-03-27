@@ -3,6 +3,12 @@ paths:
   - "storage/nfs/**"
   - "systemd/*.mount"
   - "**/exports*"
+recall:
+  - nfs
+  - zfs
+  - mount
+  - exports
+  - crossmnt
 ---
 
 # NFS + ZFS Lessons

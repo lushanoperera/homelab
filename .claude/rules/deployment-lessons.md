@@ -4,6 +4,11 @@ paths:
   - "networking/**"
   - "apps/**"
   - "homepage/**"
+recall:
+  - deploy
+  - scp
+  - rsync
+  - compose deploy
 ---
 
 # Deployment Lessons

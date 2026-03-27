@@ -2,6 +2,12 @@
 paths:
   - "scripts/network/**"
   - "networking/**"
+recall:
+  - unifi
+  - wifi
+  - radio ai
+  - mesh
+  - channel
 ---
 
 # Networking Lessons (UniFi / WiFi)

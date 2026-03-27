@@ -6,6 +6,12 @@ paths:
   - "**/gpu*"
   - "**/i915*"
   - "**/sriov*"
+recall:
+  - gpu
+  - sr-iov
+  - i915
+  - sysext
+  - transcoding
 ---
 
 # GPU SR-IOV Operational Lessons

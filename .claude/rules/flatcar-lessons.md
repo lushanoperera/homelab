@@ -5,6 +5,11 @@ paths:
   - "**/ignition/**"
   - "**/docker-compose*"
   - "systemd/**"
+recall:
+  - flatcar
+  - butane
+  - ignition
+  - systemd-sysext
 ---
 
 # Flatcar Lessons
