@@ -84,3 +84,8 @@ restic-env.sh
 .claude/settings.local.json
 !.claude/settings.json
 .claude/plans/
+autoresearch-results.tsv
+
+# Varlock schema (safe to commit — no secrets)
+!.env.schema
+!.env.example

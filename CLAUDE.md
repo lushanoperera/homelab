@@ -130,3 +130,12 @@ This is an infrastructure repo — no build/lint/test toolchain. Verify changes 
 2. `shellcheck` on modified shell scripts
 3. SSH to target host and test the change
 4. Check service health after deployment
+
+
+## Secrets
+
+This project uses varlock for secret management.
+- Schema: `.env.schema` (committed, safe to read)
+- Secrets resolved from Vaultwarden via rbw at runtime
+- Run commands with: `varlock run -- <command>`
+- Never create .env files or hardcode secrets
