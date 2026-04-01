@@ -56,7 +56,7 @@ Flatcar VM 100 shares VF 0 across Nextcloud, Immich, and media stack containers 
 
 | VMID | Name          | IP                         | CPU | Memory                | Disk    | Purpose                     |
 | ---- | ------------- | -------------------------- | --- | --------------------- | ------- | --------------------------- |
-| 100  | flatcar-media | .100.100/.101/.103         | 4   | 16 GB (balloon: 4 GB) | 41.3 GB | Media + Nextcloud + Immich  |
+| 100  | flatcar-media | .100.100/.101/.103         | 4   | 16 GB (balloon: 8 GB) | 41.3 GB | Media + Nextcloud + Immich  |
 | 102  | homeassistant | .100.102 / .4.102 / .5.102 | 2   | 4 GB (balloon: 1 GB)  | 34.4 GB | Home Assistant (multi-VLAN) |
 
 ## LXC Containers

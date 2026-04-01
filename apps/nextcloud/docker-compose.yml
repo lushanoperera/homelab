@@ -32,8 +32,8 @@ services:
     build:
       context: .
       args:
-        NEXTCLOUD_VERSION: ${NEXTCLOUD_VERSION:-32}
-    image: nextcloud-custom:${NEXTCLOUD_VERSION:-32}-fpm
+        NEXTCLOUD_VERSION: ${NEXTCLOUD_VERSION:-33}
+    image: nextcloud-custom:${NEXTCLOUD_VERSION:-33}-fpm
     container_name: nextcloud-app
     mem_limit: 512m
     restart: unless-stopped
@@ -78,7 +78,7 @@ services:
       - nextcloud-app
 
   nextcloud-cron:
-    image: nextcloud-custom:${NEXTCLOUD_VERSION:-32}-fpm
+    image: nextcloud-custom:${NEXTCLOUD_VERSION:-33}-fpm
     container_name: nextcloud-cron
     mem_limit: 256m
     restart: unless-stopped
