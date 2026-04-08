@@ -57,14 +57,14 @@ Flatcar VM 100 shares VF 0 across Nextcloud, Immich, and media stack containers 
 | VMID | Name          | IP                         | CPU | Memory                | Disk    | Purpose                     |
 | ---- | ------------- | -------------------------- | --- | --------------------- | ------- | --------------------------- |
 | 100  | flatcar-media | .100.100/.101/.103         | 4   | 16 GB (balloon: 8 GB) | 41.3 GB | Media + Nextcloud + Immich  |
-| 102  | homeassistant | .100.102 / .4.102 / .5.102 | 2   | 4 GB (balloon: 1 GB)  | 34.4 GB | Home Assistant (multi-VLAN) |
+| 102  | homeassistant | .100.102 / .4.102 / .5.102 | 2   | 4 GB (balloon: 2 GB)  | 34.4 GB | Home Assistant (multi-VLAN) |
 
 ## LXC Containers
 
-| CTID | Service   | IP              | CPU | Memory | Disk    |
-| ---- | --------- | --------------- | --- | ------ | ------- |
-| 104  | WireGuard | 192.168.100.104 | 1   | 512 MB | 4.3 GB  |
-| 105  | Plex      | 192.168.100.105 | 4   | 3 GB   | 12.9 GB |
-| 106  | PDM       | 192.168.100.106 | 1   | 512 MB | 10 GB   |
+| CTID | Service   | IP              | CPU | Memory | Disk    | OS              |
+| ---- | --------- | --------------- | --- | ------ | ------- | --------------- |
+| 104  | WireGuard | 192.168.100.104 | 1   | 512 MB | 4.3 GB  | Debian 12       |
+| 105  | Plex      | 192.168.100.105 | 4   | 3 GB   | 12.9 GB | Ubuntu 26.04    |
+| 106  | PDM       | 192.168.100.106 | 1   | 512 MB | 10 GB   | Debian 12       |
 
 See `../../docs/thermal-management.md` for thermal configuration.
