@@ -57,3 +57,13 @@ handle @cockpit {
 		}
 	}
 }
+
+@prometheus host prometheus.home.disconnesso.com
+handle @prometheus {
+	reverse_proxy localhost:9090
+}
+
+@grafana host grafana.home.disconnesso.com
+handle @grafana {
+	reverse_proxy localhost:3001
+}

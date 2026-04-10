@@ -1,0 +1,44 @@
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    hostname: grafana
+    mem_limit: 512m
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "com.centurylinklabs.watchtower.scope=weekly"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_SERVER_ROOT_URL=https://grafana.home.disconnesso.com
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./provisioning:/etc/grafana/provisioning:ro
+    ports:
+      # Internal-only bind so Caddy on flatcar can reverse-proxy.
+      # Port 3001 used on host because forgejo already holds 3100 → 3000.
+      - "192.168.100.100:3001:3000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - observability
+
+volumes:
+  grafana-data:
+    driver: local
+
+networks:
+  # Shared with apps/prometheus/docker-compose.yml so Grafana can reach
+  # http://prometheus:9090 as a datasource. Prometheus stack must be
+  # started first (it creates the network).
+  observability:
+    name: observability
+    external: true

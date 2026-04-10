@@ -46,6 +46,8 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 - CouchDB (`/srv/docker/couchdb/`) — Obsidian LiveSync backend
 - Nextcloud (`/srv/docker/nextcloud/`) — standard Nextcloud (nginx + FPM + Postgres + Redis)
 - Immich (`/srv/docker/immich/`) — photo management with ML
+- Prometheus (`/srv/docker/prometheus/`) — TSDB for Claude Code OTEL metrics (remote_write from flatcar-nwdesigns VM 104)
+- Grafana (`/srv/docker/grafana/`) — dashboards for blog-publisher observability (`grafana.home.disconnesso.com`)
 
 **QNAP NAS** (`192.168.100.254`): Technitium DNS (primary), Watchtower (daily 4 AM).
 
@@ -102,6 +104,8 @@ homelab/
 | `networking/cloudflare-tunnel/`                   | `/srv/docker/cloudflare-tunnel/`             | rsync/scp               |
 | `scripts/vms/*.sh`                                | `/opt/bin/`                                  | deploy-media-scripts.sh |
 | `apps/*/docker-compose.yml`                       | `/srv/docker/<app>/docker-compose.yml`       | rsync/scp               |
+| `apps/prometheus/`                                | `/srv/docker/prometheus/`                    | rsync/scp               |
+| `apps/grafana/`                                   | `/srv/docker/grafana/`                       | rsync/scp               |
 | `systemd/*.mount`                                 | `/etc/systemd/system/`                       | Ignition or manual      |
 | `homepage/config/*`                               | `/srv/docker/homepage/config/`               | rsync/scp               |
 
