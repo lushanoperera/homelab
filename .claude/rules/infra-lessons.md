@@ -83,3 +83,22 @@ Intel iGPU SR-IOV passthrough to VMs requires patched `i915-sriov-dkms` in BOTH 
 export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
 export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
 ```
+
+## ZFS Tuning — Reginald (Zimaboard 832)
+
+Reginald is hardware-constrained: Celeron N3450, **8 GB LPDDR4 soldered**, 7-drive SATA raidz2 (mix of brands, one QLC QVO), JMB58x HBA on PCIe 2.0 x2, storage LAN on 2.5 GbE USB NIC bond. Generic ZFS defaults are wrong for this box — apply via `scripts/hosts/reginald/zfs-tune.sh`.
+
+| Lesson                              | Detail                                                                                                                                                     |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ARC sizing on 8 GB host             | Default 50% (4 GB) starves page cache. Set to **2.5 GB** — leaves room for 16 nfsd threads + LXC + Proxmox daemons without thrashing. Validate via `arc_summary`. |
+| ARC ghost lists signal undersizing  | `mru_ghost_size` + `mfu_ghost_size` > c_max means shrinking more will thrash. Don't cut blindly; offload with `primarycache=metadata`.                     |
+| zram is not "swapping to disk"      | Reginald has zramswap.service (zstd L3, 15%). `swap used` > 0 is fine if zd0 shows 0 B. Check `swapon --show` before diagnosing swap pressure.             |
+| zstd-3 on Apollo Lake is expensive  | N3450 is weak. On datasets with 1.0x ratio (media, photos, nextcloud blobs) it's pure CPU waste. Use `lz4` except where ratio justifies it (immich DB).    |
+| primarycache=metadata on media      | Plex streams each movie once — caching data blocks in ARC evicts hot nextcloud/immich-db pages. Set metadata-only on `rpool/shared/media` + tv/music children. |
+| logbias=latency without SLOG        | `throughput` skips ZIL and writes direct to pool, costing latency on sync NFS writes. With no SLOG, `latency` (in-pool ZIL) wins for nextcloud/vaultwarden. |
+| `zfs_dirty_data_max` bounded by NIC | Default 10% of RAM = too much when wire is 2.5 GbE. 512 MB flushes in ~2 s, matches storage LAN throughput without holding RAM hostage.                    |
+| `vm.dirty_ratio` double-buffers     | Default 60/20 stacks on top of ZFS dirty buffer. Set 20/10 on any ZFS-heavy NFS server.                                                                    |
+| Keep `rpool/swap` zvol as failsafe  | 0 B used, but zram is only 1.2 GB. If zram fills, zvol is the OOM cushion. Don't remove just because it looks idle.                                        |
+| autotrim on all-SSD pools           | Must be explicitly enabled (`zpool set autotrim=on`). Not the default. Critical >70% capacity to keep SSD FTL healthy.                                     |
+| Hardlinks across media datasets     | Sonarr/Radarr/Lidarr hardlink from `/media/downloads` to movies/tv/music. `du` on downloads overstates real usage. `zfs list` USED on parent is truthful.  |
+| ORICO SSD on JMB58x flaky           | `sdg` has recurring READ/CKSUM errors. Before replacing the disk, swap to a different JMB58x port — the HBA controller may be the fault, not the drive.   |
