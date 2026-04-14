@@ -116,6 +116,33 @@ Applied settings (all hot, reversible, persistent across reboot via `update-init
 Keeps `primarycache=all` on immich/database, immich/library (thumbnail re-reads), nextcloud, and vaultwarden.
 Does **not** touch `rpool/swap` zvol (kept as OOM safety net since zram is only 1.2 GB).
 
+## zfs-auto-snapshot Retention
+
+Retention was cut 2026-04-14 after discovering 2 TB of pinned snapshot data (12 months of monthlies × many datasets). Config lives in `/etc/cron.{hourly,daily,weekly,monthly}/zfs-auto-snapshot` on the host — **not in this repo**. If reginald is rebuilt, reapply these `--keep` values:
+
+| Cron file               | Label    | Default `--keep` | **Tuned `--keep`** | Window       |
+| ----------------------- | -------- | ---------------- | ------------------ | ------------ |
+| `/etc/cron.d/zfs-auto-snapshot` | frequent | 4   | 4 (unchanged)      | 1 h          |
+| `/etc/cron.hourly/zfs-auto-snapshot`  | hourly   | 24  | **12**             | 12 h         |
+| `/etc/cron.daily/zfs-auto-snapshot`   | daily    | 31  | **14**             | 2 weeks      |
+| `/etc/cron.weekly/zfs-auto-snapshot`  | weekly   | 8   | **4**              | 1 month      |
+| `/etc/cron.monthly/zfs-auto-snapshot` | monthly  | 12  | **6**              | 6 months     |
+
+Reapply after rebuild:
+
+```bash
+ssh root@192.168.100.4 '
+  sed -i "s|--keep=24|--keep=12|" /etc/cron.hourly/zfs-auto-snapshot
+  sed -i "s|--keep=31|--keep=14|" /etc/cron.daily/zfs-auto-snapshot
+  sed -i "s|--keep=8|--keep=4|"   /etc/cron.weekly/zfs-auto-snapshot
+  sed -i "s|--keep=12|--keep=6|"  /etc/cron.monthly/zfs-auto-snapshot
+'
+```
+
+Also pair with: `zfs set com.sun:auto-snapshot=false rpool/shared/media/downloads/incomplete-downloads` — auto-snapshotting a torrent scratch dir is pure waste.
+
+Impact on 2026-04-14 cleanup session: 1307 → 693 snapshots, ALLOC 9.66T → 8.97T, capacity 75% → 70%, fragmentation 13% → 11%.
+
 ## Notes
 
 - All scripts use Italian-language log messages (written by the original author)
