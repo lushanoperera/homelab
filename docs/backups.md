@@ -41,20 +41,24 @@ The homelab uses multiple backup strategies:
 
 ## PBS (Proxmox Backup Server)
 
-| Setting  | Value                        |
-| -------- | ---------------------------- |
-| Server   | 192.168.100.187              |
-| Location | VM on QNAP TS-251+ (4 vCPUs) |
-| Scope    | All VMs and LXC containers   |
+| Setting  | Value                              |
+| -------- | ---------------------------------- |
+| Server   | 192.168.100.187                    |
+| Location | VM on QNAP TS-251+ (4 vCPUs, 2 GB) |
+| Scope    | All VMs and LXC containers         |
 
 PBS provides VM-level backups with deduplication and integrity verification.
 
 ### PBS Datastores
 
-| Datastore      | Purpose                         | Content                              |
-| -------------- | ------------------------------- | ------------------------------------ |
-| `pbs-backups`  | Homelab local backups           | All local VMs and LXC containers     |
-| `nwlab-backup` | nwlab offsite copies (incoming) | nwlab ct/100, ct/101, ct/102, vm/104 |
+| Datastore             | Storage            | Purpose                         | Content                              |
+| --------------------- | ------------------ | ------------------------------- | ------------------------------------ |
+| `pbs-backups`         | local vdb (755 GB) | Homelab local backups           | All local VMs and LXC containers     |
+| `nwlab-backup`        | local vdc (246 GB) | nwlab offsite copies (incoming) | nwlab ct/100, ct/101, ct/102, vm/104 |
+| `pbs-backups-legacy`  | NFS (read-only)    | Historical restores             | Pre-2026-04-15 snapshots             |
+| `nwlab-backup-legacy` | NFS (read-only)    | Historical restores             | Pre-2026-04-15 snapshots             |
+
+> Legacy datastores kept for historical restores until ~2026-07, then removed along with NFS exports.
 
 ### Scheduled Backup Jobs
 
@@ -70,13 +74,25 @@ All jobs: storage `pbs-backupnas`, compress `zstd`, mode `snapshot`, mail on fai
 October 2025 bare-metal rebuild (`/etc/pve/jobs.cfg` not preserved in pmxcfs).
 Jobs were recreated on 2026-03-01. All VMIDs now have fresh backups.
 
+### Scheduled Verify Jobs
+
+| Job ID           | Datastore    | Schedule   | Outdated After | Ignore Verified |
+| ---------------- | ------------ | ---------- | -------------- | --------------- |
+| v-b23a385a-7b31  | pbs-backups  | daily 03:00 | 30 days        | yes             |
+| v-nwlab-weekly   | nwlab-backup | sat 02:30   | 30 days        | yes             |
+
+Both jobs skip snapshots already verified within the outdated-after window.
+Verify runs before backup jobs (04:00/05:00/08:00) to avoid I/O contention.
+
 ### Known Issues
 
-**PBS Storage LAN intermittent timeouts**: pvestatd logs frequent `read timeout`
-errors to `192.168.200.187:8007`. Vzdump transfers complete successfully despite
-this. Suspected cause: QNAP PBS VM high memory/load (902 MB RSS, load avg ~3).
-Not a data integrity risk — pvestatd polling is separate from backup data transfer.
-CPU bumped from 2 → 4 vCPUs on 2026-03-01 to reduce timeouts.
+**~~PBS Storage LAN intermittent timeouts~~ (resolved 2026-04-15)**: Previously,
+pvestatd logged frequent `read timeout` errors caused by NFS-backed datastores
+walking `.chunks/` over the network stack. Resolved by migrating to local virtio
+disks — see [`docs/migrations/pbs-nfs-to-local.md`](./migrations/pbs-nfs-to-local.md).
+
+**PBS mail notifications**: `mail-to-root` errors (`no recipients`) on backup
+completion. Pre-existing, not blocking — backup jobs complete successfully.
 
 ### Cross-Site Sync (nwlab ↔ homelab)
 
@@ -95,7 +111,7 @@ Both sites push backups to each other for offsite redundancy:
 
 **WireGuard connectivity**: Homelab PBS reaches nwlab via WG overlay. nwlab PBS LXC at `10.21.21.101`, reachable as `10.0.0.6` sees it through the WG tunnel. The same WG tunnel (`wg-nwlab` on winston) also carries PDM management traffic to nwlab-thinkpad (10.21.21.99).
 
-**Storage**: `nwlab-backup` datastore on QNAP NFS share `PBS-nwlab` (`192.168.200.254:/PBS-nwlab` → `/mnt/nwlab-backup`).
+**Storage**: `nwlab-backup` datastore on local virtio disk vdc (`/mnt/pbs-local/nwlab`, 246 GB). Legacy NFS-backed datastore `nwlab-backup-legacy` retained at `/mnt/nwlab-backup` (read-only) until ~2026-07.
 
 ---
 
@@ -169,7 +185,10 @@ Both sites push backups to each other for offsite redundancy:
 - Cache: Disabled (`--no-cache`)
 - Version: 0.12.1
 
-**Planned:** MinIO → Garage migration (see `minio-to-garage` project)
+**Planned:** MinIO → RustFS migration — see
+[`docs/migrations/minio-to-rustfs.md`](./migrations/minio-to-rustfs.md). MinIO
+stays online read-only for 6 months post-cutover as rollback buffer. The older
+Garage plan (`docs/migrations/minio-to-garage.md`) is archived.
 
 ---
 
