@@ -30,6 +30,22 @@ recall:
 | pvesh storage content path              | `/nodes/<node>/storage/<id>/content` not `/storage/<id>/content`                                                                                          |
 | No scheduled backups                    | Fixed 2026-03-01: 2 vzdump jobs on winston (A: 103-106 at 04:00, B: 100-102 at 05:00) + 1 on reginald (120 at 08:00). Verify: `pvesh get /cluster/backup` |
 
+## Proxmox Host Firewall
+
+See `hosts/firewall.md` for the full runbook. Key lessons:
+
+| Lesson                                | Detail                                                                                                                         |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| cluster.fw NOT auto-synced standalone | winston + reginald are not clustered — `/etc/pve/firewall/cluster.fw` must be copied to each host individually                 |
+| Both enables required                 | Rules only match when `cluster.fw enable: 1` AND host.fw `enable: 1`. Flipping cluster.fw to 0 is the fastest kill switch      |
+| Conntrack survives reloads            | Existing SSH sessions stay alive across `pve-firewall reload`. Always test new policy from a **fresh** connection, not the old |
+| Per-VM FW stays off                   | Enabling it on VM NICs breaks multicast/mDNS (see row above). Host-level FW is sufficient for this threat model                |
+| pmxcfs lost on reinstall              | `/etc/pve/firewall/*` and `/etc/pve/nodes/*/host.fw` are NOT preserved on bare-metal reinstall — repo copy is DR source        |
+| Dead-man cron mandatory               | Arm before every enable flip: `touch /root/.fw-deadman-armed` + cron auto-disables FW at 600s if not disarmed                  |
+| Phase A log-first, Phase B drop       | Run `policy_in: ACCEPT` + `log_level_in: info` for 30 min before flipping to DROP — catches unexpected legit traffic cheaply   |
+| Hardcode laptop IP in admin_sources   | Belt + braces alongside the `192.168.2.0/24` range in case VLAN routing hiccups                                                |
+| Outbound stays ACCEPT                 | Egress filtering on a hypervisor is maintenance pain with no real value — root already owns the box if attacker is there      |
+
 ## PBS / Vzdump
 
 - `/etc/pve/jobs.cfg` lives in pmxcfs (cluster filesystem) — **lost on bare-metal reinstall**. After any Proxmox rebuild, verify vzdump jobs exist: `cat /etc/pve/jobs.cfg`
@@ -37,6 +53,37 @@ recall:
 - Manual backup verification: `pvesh get /nodes/{node}/tasks --typefilter vzdump --limit 5`
 - PBS storage on Storage LAN (192.168.200.x) — check connectivity separately from Infra LAN (192.168.100.x)
 - PBS on QNAP intermittently slow (high memory/load) — causes `read timeout` in pvestatd, but vzdump transfers complete fine
+
+## Proxmox Kernel Upgrades
+
+| Lesson                                       | Detail                                                                                                                                                                                  |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Always install matching `proxmox-headers-X`  | DKMS modules (i915-sriov-dkms etc.) silently skip rebuild if headers missing → SR-IOV breaks on next boot. Install `proxmox-default-headers` + per-version headers alongside any kernel |
+| Verify DKMS post-upgrade                     | `dkms status` must list new kernel version. Force build: `dkms autoinstall -k <ver>`. Verify module: `modinfo /lib/modules/<ver>/updates/dkms/i915.ko \| grep max_vfs`                  |
+| 7.0 kernel = no SR-IOV (Apr 2026)            | i915-sriov-dkms has `BUILD_EXCLUSIVE` blocking 7.0. Stock i915 in 7.0 lost SR-IOV sysfs support. Workaround = xe driver (`xe.max_vfs=7 xe.force_probe=0xa7a0 module_blacklist=i915`) — VFs visible in lspci but VM functional path unvalidated. Track strongtz/i915-sriov-dkms#429 |
+| ESP capacity on systemd-boot hosts           | Reginald (Zimaboard, eMMC) ESP = 511M, fits ~5 kernels. Purge stale kernels BEFORE upgrade or postinst fails mid-initrd: `apt purge proxmox-kernel-X.Y.Z-N-pve-signed`                  |
+| `proxmox-boot-tool kernel pin` ≠ systemd-boot | On systemd-boot hosts (no proxmox-boot-uuids file), `pin` only writes GRUB config which isn't used. Must manually edit `/boot/efi/loader/loader.conf` `default` line to specific entry  |
+| Winston = GRUB, Reginald = systemd-boot      | Different bootloaders → different pin/default mechanisms. Always check `bootctl list` (systemd-boot) or `grub.cfg` `set default` (GRUB) before reboot                                   |
+| `bootctl set-default` requires UEFI boot     | Returns "Not booted with UEFI" on hosts that booted via legacy/CSM. Edit `loader.conf` instead — that's persistent and bootloader-side                                                  |
+| Stale kernels cleanup                        | `dpkg -l \| awk '/^rc.*proxmox-kernel/ {print $2}' \| xargs apt purge -y` removes residual configs after auto-removal                                                                  |
+| Guest auto-start is sequential               | PVE waits per `startup: order=N,up=Ns` between VMs. With 5 guests + 30s delays, full stack restart can take 3-5 min. Don't panic if `qm list` shows stopped 90s after reboot            |
+| Reboot verification checklist                | (1) `uname -r`, (2) `zpool status -x`, (3) `lspci \| grep -c VFs` if SR-IOV, (4) `dkms status`, (5) `qm list && pct list`, (6) sleep 60-90s and re-check guests                          |
+
+### Pre-reboot pinning recipe
+
+**GRUB host (winston):**
+
+```bash
+proxmox-boot-tool kernel pin <ver>-pve   # writes /etc/default/grub.d/proxmox-kernel-pin.cfg
+grep 'set default' /boot/grub/grub.cfg   # verify
+```
+
+**systemd-boot host (reginald):**
+
+```bash
+sed -i 's|^default .*|default <machine-id>-<ver>-pve.conf|' /boot/efi/loader/loader.conf
+bootctl list | grep -E 'title|default' | head   # verify (default) tag on intended kernel
+```
 
 ## GPU SR-IOV
 
