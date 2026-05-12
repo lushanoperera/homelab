@@ -25,6 +25,8 @@ recall:
 | Stock i915 loaded after kernel update | Auto-rebuild service (`i915-sriov-rebuild.service`) triggers at boot but may fail silently. Check `journalctl -u i915-sriov-rebuild.service` first                                                                                                             |
 | Module swap at runtime                | `sudo rmmod i915 && sudo insmod /usr/lib/modules/$(uname -r)/updates/i915/i915.ko enable_guc=3` — no reboot needed if no consumers hold the module                                                                                                             |
 | Compose files need `sudo sed`         | `/srv/docker/{immich,nextcloud}/` are root-owned — all sed/edit operations require sudo                                                                                                                                                                        |
+| Kernel 6.12.87+ removes `__copy_from_user_inatomic_nocache` | `entrypoint.sh` sed-renames it to `__copy_from_user_inatomic` in `i915_gem.c` before make. Applies to DKMS 2025.07.22 series. Newer DKMS 2026.03.05.x is blocked by Flatcar's missing `CONFIG_DRM_GPUVM` |
+| Picking a DKMS version for Flatcar    | All current Flatcar channels ship kernel 6.12.87. Use DKMS `2025.07.22` (with the `nocache` shim above). DKMS 2026.03.05.x requires `CONFIG_DRM_GPUVM` which Flatcar disables. DKMS 2026.05.x requires kernel 6.17+ which Flatcar does not yet ship             |
 
 ## GPU Consumer Containers (Immich, Nextcloud)
 

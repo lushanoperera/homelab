@@ -69,6 +69,8 @@ See `hosts/firewall.md` for the full runbook. Key lessons:
 | Guest auto-start is sequential               | PVE waits per `startup: order=N,up=Ns` between VMs. With 5 guests + 30s delays, full stack restart can take 3-5 min. Don't panic if `qm list` shows stopped 90s after reboot            |
 | Reboot verification checklist                | (1) `uname -r`, (2) `zpool status -x`, (3) `lspci \| grep -c VFs` if SR-IOV, (4) `dkms status`, (5) `qm list && pct list`, (6) sleep 60-90s and re-check guests                          |
 
+> **Flatcar VM kernel 6.12.87 + i915-sriov-dkms**: Two upstream blockers — (1) DKMS 2025.07.22 references removed `__copy_from_user_inatomic_nocache` (shim required in `entrypoint.sh`); (2) DKMS 2026.03.05.x compat module needs `drm_gpuva_*` from kernel `CONFIG_DRM_GPUVM` which Flatcar does not enable (verify with `zcat /proc/config.gz | grep DRM_GPUVM`). Stay on 2025.07.22 + sed shim until Flatcar enables `DRM_GPUVM` or ships kernel ≥6.17.
+
 ### Pre-reboot pinning recipe
 
 **GRUB host (winston):**

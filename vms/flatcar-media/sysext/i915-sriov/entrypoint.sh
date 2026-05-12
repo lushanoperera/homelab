@@ -25,6 +25,19 @@ cd "${SRC_DIR}"
 # Handle both old format (obj-m += kvmgt.o) and new format (obj-m += drivers/...).
 sed -i '/obj-m.*kvmgt/d' Makefile
 sed -i '/obj-m.*drivers\/gpu\/drm\/xe/d' Makefile
+# Newer DKMS (2026.03.05.x+) moved kvmgt to inner Makefile under drivers/gpu/drm/i915/
+if [[ -f drivers/gpu/drm/i915/Makefile ]]; then
+  sed -i '/obj-m.*kvmgt/d' drivers/gpu/drm/i915/Makefile
+fi
+
+# Shim removed x86 helper for kernel 6.12.87+: __copy_from_user_inatomic_nocache
+# was deprecated since 6.10 and dropped in 6.12.87. The non-NT variant is
+# functionally equivalent for SR-IOV GGTT writes; we lose only the non-temporal
+# store hint. Applies to DKMS tag 2025.07.22 and older.
+if grep -q '__copy_from_user_inatomic_nocache' drivers/gpu/drm/i915/i915_gem.c 2>/dev/null; then
+  sed -i 's/__copy_from_user_inatomic_nocache/__copy_from_user_inatomic/g' \
+    drivers/gpu/drm/i915/i915_gem.c
+fi
 
 # Fix conditional sources that use i915-$(CONFIG_FOO). When CONFIG_FOO=m (module)
 # instead of =y (builtin), these become i915-m which bypasses the addprefix that
