@@ -76,6 +76,7 @@ get_last_port() {
 # Save current port to state file
 save_port() {
     echo "$1" > "$STATE_FILE"
+    chmod 666 "$STATE_FILE" 2>/dev/null || true
 }
 
 main() {
