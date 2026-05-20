@@ -1,0 +1,13 @@
+[Unit]
+Description=Watch gluetun forwarded port; remediate on persistent failure
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/bin/gluetun-pf-watch.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
