@@ -157,6 +157,24 @@
         description: CouchDB LiveSync
         server: my-docker
         container: couchdb
+        ping: http://192.168.100.100:5984/_up
+        widget:
+          type: customapi
+          url: http://192.168.100.100:5984/obsidian-livesync
+          username: "{{HOMEPAGE_VAR_COUCHDB_USER}}"
+          password: "{{HOMEPAGE_VAR_COUCHDB_PASS}}"
+          refreshInterval: 30000
+          mappings:
+            - field: doc_count
+              label: Docs
+              format: number
+            - field:
+                sizes: file
+              label: Size
+              format: bytes
+            - field: compact_running
+              label: Compacting
+              format: text
     - Portainer:
         icon: portainer.png
         href: https://portainer.home.disconnesso.com
