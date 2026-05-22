@@ -22,7 +22,7 @@ services:
       - /srv/docker/dns/config:/etc/dns
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/5380' || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/53 && </dev/tcp/localhost/5380' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
