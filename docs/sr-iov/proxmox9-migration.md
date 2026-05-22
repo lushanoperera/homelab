@@ -552,3 +552,13 @@ However, be aware:
 - [ ] VM 100 (Flatcar) GPU passthrough configured
 - [ ] Monitoring tools configured
 - [ ] Performance baseline documented
+
+---
+
+## PVE 9.2 / kernel 7.0 upgrade (2026-05-Q2)
+
+Proxmox VE 9.2 ships kernel 7.0 default (2026-05-21 release). `strongtz/i915-sriov-dkms` `2026.05.06` adds kernel 7.0 support (PR #438) — supersedes the earlier "BUILD_EXCLUSIVE blocks 7.0 / xe driver workaround" notes.
+
+Full runbook → [`docs/migrations/pve-9.2-kernel-7-upgrade.md`](../migrations/pve-9.2-kernel-7-upgrade.md)
+
+Order: reginald canary → winston (graceful VM shutdown, install DKMS 2026.05.06 against both 6.17.13-x and 7.0.0-3 kernels, pin 7.0, reboot, verify 7 VFs).
