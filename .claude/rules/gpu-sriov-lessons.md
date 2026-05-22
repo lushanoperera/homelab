@@ -27,6 +27,7 @@ recall:
 | Compose files need `sudo sed`         | `/srv/docker/{immich,nextcloud}/` are root-owned — all sed/edit operations require sudo                                                                                                                                                                        |
 | Kernel 6.12.87+ removes `__copy_from_user_inatomic_nocache` | `entrypoint.sh` sed-renames it to `__copy_from_user_inatomic` in `i915_gem.c` before make. Applies to DKMS 2025.07.22 series. Newer DKMS 2026.03.05.x is blocked by Flatcar's missing `CONFIG_DRM_GPUVM` |
 | Picking a DKMS version for Flatcar    | All current Flatcar channels ship kernel 6.12.87. Use DKMS `2025.07.22` (with the `nocache` shim above). DKMS 2026.03.05.x requires `CONFIG_DRM_GPUVM` which Flatcar disables. DKMS 2026.05.x requires kernel 6.17+ which Flatcar does not yet ship             |
+| Picking a DKMS version for PVE host (kernel 7.0) | DKMS `2026.05.06` (released 2026-05-06) adds kernel 7.0.x support via PR #438. Works on kernel 6.17.x + 7.0.x simultaneously. Stale rule said 7.0 blocked by `BUILD_EXCLUSIVE` — that's pre-2026.05.06; not true after the release. Use 2026.05.06 on winston host alongside PVE 9.2. |
 
 ## GPU Consumer Containers (Immich, Nextcloud)
 
