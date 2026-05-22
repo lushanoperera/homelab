@@ -1,0 +1,13 @@
+[Unit]
+Description=Technitium cluster SOA-serial drift check
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/dns-drift.env
+ExecStart=/opt/bin/check-cluster-drift.sh
+# exit 1 means drift — keep journal entry but don't mark unit failed loud
+SuccessExitStatus=0 1
+StandardOutput=journal
+StandardError=journal
