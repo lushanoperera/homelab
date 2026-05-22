@@ -45,3 +45,17 @@ handle @pdm {
 		}
 	}
 }
+
+# DoH endpoint — Technitium primary at 192.168.100.254:53443/dns-query.
+# LAN-only: not exposed via Cloudflare Tunnel. Caddy → Technitium hop stays
+# on Storage/Infra LAN; tls_insecure_skip_verify needed because Technitium
+# serves a self-signed cert on 53443.
+@dns host dns.home.disconnesso.com
+handle @dns {
+	reverse_proxy https://192.168.100.254:53443 {
+		transport http {
+			tls
+			tls_insecure_skip_verify
+		}
+	}
+}
