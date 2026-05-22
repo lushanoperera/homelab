@@ -71,6 +71,10 @@ Blocklists: StevenBlack/hosts + Hagezi Pro (~265K). Local zone: `home.disconness
 
 Two-proxy split: Caddy (internal LAN, `*.home.disconnesso.com` wildcard cert via Cloudflare DNS challenge) and Traefik (public, DMZ macvlan 192.168.7.119, via Cloudflare Tunnel + cloudflared). Caddy proxies 22 services across 3 site files.
 
+### Security Posture
+
+Host-level Proxmox firewall **configured but staged at `enable: 0`** on winston + reginald as of 2026-04-20. Configs live in `hosts/common/cluster.fw` + `hosts/<host>/firewall/host.fw`; rollout runbook at `hosts/firewall.md`. Rollout is log-first → drop-later with a dead-man cron auto-disable and a 30 min dwell per phase. Per-VM firewall stays off (multicast/mDNS). UniFi UCG-Fiber handles perimeter; intra-VLAN 100 traffic is unfiltered until FW is flipped live. Deploy: `./scripts/hosts/deploy-firewall.sh <host>`.
+
 ## Directory Structure
 
 ```
@@ -104,6 +108,10 @@ homelab/
 | `apps/*/docker-compose.yml`                       | `/srv/docker/<app>/docker-compose.yml`       | rsync/scp               |
 | `systemd/*.mount`                                 | `/etc/systemd/system/`                       | Ignition or manual      |
 | `homepage/config/*`                               | `/srv/docker/homepage/config/`               | rsync/scp               |
+| `apps/technitium-exporter/*`                      | `/srv/docker/technitium-exporter/`           | rsync/scp               |
+| `scripts/backup/technitium-config-backup.sh`      | `/opt/bin/technitium-config-backup.sh`       | rsync + chmod 0755      |
+| `scripts/dns/*.sh`                                | `/opt/bin/`                                  | rsync + chmod 0755      |
+| `apps/technitium/restic-env.example`              | `/etc/restic/technitium.env` (per node)      | manual, chmod 0600      |
 
 ## Lessons Learned
 
