@@ -222,8 +222,25 @@
     - Technitium DNS:
         icon: technitium.png
         href: http://192.168.100.254:5380
-        description: DNS cluster (primary)
+        description: DNS cluster (3-node)
         ping: 192.168.100.254
+        widget:
+          type: customapi
+          url: http://localhost:3000/data/dns-cluster.json
+          refreshInterval: 60000
+          mappings:
+            - field: status
+              label: Cluster
+              format: text
+            - field: primary_serial
+              label: Serial
+              format: text
+            - field: qps_1h
+              label: QPS (1h)
+              format: float
+            - field: blocked_1h
+              label: Blocked
+              format: number
     - WireGuard:
         icon: wireguard.png
         href: https://wireguard.home.disconnesso.com
