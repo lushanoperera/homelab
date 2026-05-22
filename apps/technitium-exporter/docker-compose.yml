@@ -1,0 +1,27 @@
+# Technitium Prometheus exporter — sidecar on Flatcar VM 100.
+# Scrapes the QNAP primary API and exposes /metrics on :9628.
+# Deployed to /srv/docker/technitium-exporter/ via rsync.
+
+services:
+  technitium-exporter:
+    image: python:3.12-alpine
+    container_name: technitium-exporter
+    restart: unless-stopped
+    mem_limit: 64m
+    ports:
+      - "127.0.0.1:9628:9628"
+    environment:
+      - TECHNITIUM_HOST=https://192.168.100.254:5380
+      - TECHNITIUM_USER=admin
+      - TECHNITIUM_PASS=${TECHNITIUM_ADMIN_PASSWORD}
+      - LISTEN_PORT=9628
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./exporter.py:/exporter.py:ro
+    command: ["python", "-u", "/exporter.py"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9628/metrics | grep -q technitium_up || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

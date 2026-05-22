@@ -1,0 +1,113 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Query rate (per second, last 5m)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(technitium_queries_total{window=\"1h\"}[5m])",
+          "legendFormat": "QPS",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Block ratio (blocked / total)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(technitium_queries_blocked{window=\"1h\"}[5m]) / clamp_min(rate(technitium_queries_total{window=\"1h\"}[5m]), 0.001)",
+          "legendFormat": "blocked",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "max": 1, "min": 0 }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Cache hit ratio",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(technitium_queries_cached{window=\"1h\"}[5m]) / clamp_min(rate(technitium_queries_total{window=\"1h\"}[5m]), 0.001)",
+          "legendFormat": "cache hit",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "max": 1, "min": 0 }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Exporter status",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "technitium_up", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "0": { "color": "red", "text": "DOWN" },
+                "1": { "color": "green", "text": "UP" }
+              },
+              "type": "value"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Unique clients (1h)",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "technitium_clients_unique{window=\"1h\"}", "refId": "A" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Response codes (NOERROR / NXDOMAIN / SERVFAIL, last 5m rate)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(technitium_queries_no_error{window=\"1h\"}[5m])",
+          "legendFormat": "NOERROR",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(technitium_queries_nx_domain{window=\"1h\"}[5m])",
+          "legendFormat": "NXDOMAIN",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(technitium_queries_server_failure{window=\"1h\"}[5m])",
+          "legendFormat": "SERVFAIL",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["dns", "technitium"],
+  "time": { "from": "now-6h", "to": "now" },
+  "title": "Technitium DNS",
+  "uid": "technitium-dns",
+  "version": 1
+}
