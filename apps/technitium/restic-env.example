@@ -1,0 +1,18 @@
+export AWS_ACCESS_KEY_ID="your-garage-access-key"
+export AWS_SECRET_ACCESS_KEY="your-garage-secret-key"
+export RESTIC_REPOSITORY="s3:http://192.168.200.211:3900/technitium-config"
+export RESTIC_PASSWORD="your-restic-password"
+
+export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
+export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
+
+# Local path to back up — set per node:
+#   QNAP:     /share/Data/technitium/config
+#   Flatcar:  /srv/docker/dns/config
+#   Reginald: /etc/dns
+export TECHNITIUM_CONFIG_DIR="/srv/docker/dns/config"
+
+# Logical node tag, used as restic --tag and hostname suffix
+export TECHNITIUM_NODE="flatcar"
+
+export RESTIC_COMPRESSION="max"

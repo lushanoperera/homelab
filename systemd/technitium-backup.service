@@ -1,0 +1,11 @@
+[Unit]
+Description=Technitium DNS config backup (restic → Garage)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/restic/technitium.env
+ExecStart=/opt/bin/technitium-config-backup.sh
+StandardOutput=journal
+StandardError=journal
