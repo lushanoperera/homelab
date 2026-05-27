@@ -49,6 +49,16 @@
           type: prowlarr
           url: http://localhost:9696
           key: "{{HOMEPAGE_VAR_PROWLARR_KEY}}"
+    - Profilarr:
+        icon: profilarr.png
+        href: https://profilarr.home.disconnesso.com
+        description: Quality profile & custom format sync
+        server: my-docker
+        container: profilarr
+        widget:
+          type: profilarr
+          url: http://localhost:6868
+          key: "{{HOMEPAGE_VAR_PROFILARR_KEY}}"
     - qBittorrent:
         icon: qbittorrent.png
         href: https://qbittorrent.home.disconnesso.com

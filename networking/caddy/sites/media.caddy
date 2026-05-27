@@ -44,3 +44,8 @@ handle @bazarr {
 handle @tautulli {
 	reverse_proxy localhost:8181
 }
+
+@profilarr host profilarr.home.disconnesso.com
+handle @profilarr {
+	reverse_proxy localhost:6868
+}
