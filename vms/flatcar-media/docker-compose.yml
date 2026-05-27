@@ -369,7 +369,6 @@ services:
       - "${PROFILARR_PORT}:6868"
     volumes:
       - ${CONFIG_ROOT}/profilarr:/config
-      - /srv/docker/resolv.conf:/etc/resolv.conf:ro
     restart: unless-stopped
     depends_on:
       profilarr-parser:
