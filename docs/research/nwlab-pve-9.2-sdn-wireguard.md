@@ -1,6 +1,6 @@
 # Research: nwlab ↔ homelab via PVE 9.2 SDN + WireGuard
 
-> Status: **Phase 0 complete (2026-05-27)** — nwlab on PVE 9.2.2 + kernel 7.0.2-6. Phase 1 (SDN WG fabric cutover) unblocked. No execution this session.
+> Status: **Phase 0 complete (2026-05-27)** — nwlab on PVE 9.2.2 + kernel 7.0.2-6. **Phase 1 deferred** — see [Decision (2026-05-27)](#decision-2026-05-27--phase-1-deferred) below.
 > Date: 2026-05-27
 > Related runbook: [docs/migrations/pve-9.2-kernel-7-upgrade.md](../migrations/pve-9.2-kernel-7-upgrade.md)
 
@@ -92,6 +92,28 @@ A 3-host cluster (winston + reginald + nwlab) over WG fabric. Theoretically poss
 **Phase 2 (optional, only if needed):** Layer a VXLAN zone on the WG fabric if a real cross-site L2 use case appears. Plan MTU = 1370. Address the boot-time race with systemd ordering.
 
 **De-scope:** PVE clustering across the WAN.
+
+## Decision (2026-05-27) — Phase 1 deferred
+
+After Phase 0 completion, reviewed actual cross-site traffic. Only three flows ride the `wg-nwlab` tunnel today:
+
+1. PBS sync push 04:00 (nwlab `pbs-nwlab` → homelab `nwlab-backup`)
+2. PBS sync reverse 21:00 (homelab → nwlab)
+3. PDM (LXC 106) → nwlab PVE API @ 10.21.21.99:8006 for host federation
+
+All three are pure L3, NAT-tolerant, latency-insensitive (cron-driven or monitoring). No L2 stretch, no live migration, no EVPN-requiring service. Current `wg-quick@wg-nwlab` on winston + wg-easy LXC 100 on nwlab is ~30 lines of config, survives reboots, debuggable in 5s with `wg show`, MASQUERADE on both ends — operationally stable.
+
+**Phase 1 gains are mostly cosmetic** (GUI mgmt, PDM resource tree visibility, auto key rotation nobody asked for, dry-run that mainly matters for EVPN). **Phase 1 costs are real**: coordinated cutover across two standalone datacenters, PBS sync window risk (silent failure invisible until next day), PDM blind during cutover, forum-documented SDN-vs-WG boot-order race (MAC leak), zero benefit to reginald, replaces a known-good config with a new failure surface.
+
+**Decision:** park research, leave hand-rolled tunnel in place. Revisit only when one of these triggers fires:
+
+- VM on nwlab needs to live on same L2 broadcast domain as a winston VM (Phase 2 VXLAN territory)
+- 3rd remote site added → fabric topology beats N²-mesh wg-quick configs
+- New service needs EVPN/BGP because it won't NAT cleanly
+- Compliance/audit demands GUI-managed tunnels with logged key rotation
+- Operational pain with the current tunnel (key rotation, debugging, drift) becomes non-trivial
+
+Until then: report stays as forward-looking reference. Phase 0 work (nwlab on 9.2.2 / k7.0.2-6) was independently valuable — kernel 7.0 + ZFS 2.4.2 alignment with winston/reginald is the real win regardless of fabric decision.
 
 ## Critical Files / Pointers (for the future implementation)
 
