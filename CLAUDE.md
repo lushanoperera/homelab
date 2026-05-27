@@ -29,7 +29,7 @@ Consolidated homelab repository covering Proxmox hosts, VMs, networking, storage
 | PBS                             | 192.168.100.187                                    | Proxmox Backup Server (VM on QNAP, 2 GB). Datastores on local virtio disks: `pbs-backups` (vdb 768 GB), `nwlab-backup` (vdc 250 GB). NFS-backed `*-legacy` kept alongside until ~2026-07 for historical restores |
 | PDM (LXC 106)                   | 192.168.100.106                                    | Proxmox Datacenter Manager (manages winston, reginald, nwlab-thinkpad) |
 | QNAP NAS                        | 192.168.100.254 / .200.254                         | Storage (MinIO S3, NFS)                                                |
-| nwlab-thinkpad (remote)         | 10.21.21.99                                        | nwlab Proxmox VE 9.1.5 host (managed via WG tunnel)                    |
+| nwlab-thinkpad (remote)         | 10.21.21.99                                        | nwlab Proxmox VE 9.2.2 / kernel 7.0.2-6 host (managed via WG tunnel)   |
 
 ### Services by Location
 
