@@ -276,3 +276,8 @@ if [ "$STATUS" = "successo" ] && [ "$(date +%u)" = "7" ]; then
     log_message "Avvio verifica approfondita settimanale"
     check_integrity "full"
 fi
+
+# Propaga il fallimento a systemd (finora usciva 0 anche su backup fallito — 4 mesi non rilevati)
+if [ "$STATUS" != "successo" ]; then
+    exit 1
+fi

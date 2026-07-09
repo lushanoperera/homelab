@@ -283,3 +283,8 @@ if [ "$STATUS" = "successo" ] && [ "$(date +%u)" = "7" ]; then
     log_message "Avvio verifica approfondita settimanale"
     check_integrity "full"
 fi
+
+# Propaga il fallimento a systemd (altrimenti l'unit risulta verde anche su backup fallito)
+if [ "$STATUS" != "successo" ]; then
+    exit 1
+fi

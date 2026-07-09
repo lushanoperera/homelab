@@ -7,4 +7,6 @@ After=docker.service mnt-immich-upload.mount mnt-immich-database.mount
 Type=oneshot
 ExecStart=/opt/bin/backup-immich.sh
 Environment=HOME=/home/core
+# restic lives in /opt/bin (placed 2026-03-07); systemd default PATH misses it
+Environment=PATH=/opt/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 TimeoutStartSec=6h
