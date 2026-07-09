@@ -17,6 +17,9 @@ ExecStartPre=/usr/sbin/modprobe video
 ExecStartPre=/usr/sbin/modprobe intel-gtt
 ExecStartPre=/usr/sbin/modprobe i2c-algo-bit
 ExecStartPre=/usr/sbin/modprobe hwmon
+# DKMS 2025.10.10+ ships intel_sriov_compat.ko (backport_* symbols) — must load before i915.
+# Guarded: skip if already loaded or if this sysext build predates the compat module.
+ExecStartPre=/bin/sh -c 'test -d /sys/module/intel_sriov_compat || ! test -f /usr/lib/modules/$(uname -r)/updates/i915-sriov-compat/intel_sriov_compat.ko || /usr/sbin/insmod /usr/lib/modules/$(uname -r)/updates/i915-sriov-compat/intel_sriov_compat.ko'
 # Load sysext i915 via insmod (modprobe would load stock module from stale index).
 # Skip if already loaded (e.g., manual restart).
 ExecStartPre=/bin/sh -c 'test -d /sys/module/i915 || /usr/sbin/insmod /usr/lib/modules/$(uname -r)/updates/i915/i915.ko enable_guc=3'
