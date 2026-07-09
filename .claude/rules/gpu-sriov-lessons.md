@@ -26,7 +26,8 @@ recall:
 | Module swap at runtime                | `sudo rmmod i915 && sudo insmod /usr/lib/modules/$(uname -r)/updates/i915/i915.ko enable_guc=3` — no reboot needed if no consumers hold the module                                                                                                             |
 | Compose files need `sudo sed`         | `/srv/docker/{immich,nextcloud}/` are root-owned — all sed/edit operations require sudo                                                                                                                                                                        |
 | Kernel 6.12.87+ removes `__copy_from_user_inatomic_nocache` | `entrypoint.sh` sed-renames it to `__copy_from_user_inatomic` in `i915_gem.c` before make. Applies to DKMS 2025.07.22 series. Newer DKMS 2026.03.05.x is blocked by Flatcar's missing `CONFIG_DRM_GPUVM` |
-| Picking a DKMS version for Flatcar    | All current Flatcar channels ship kernel 6.12.87. Use DKMS `2025.07.22` (with the `nocache` shim above). DKMS 2026.03.05.x requires `CONFIG_DRM_GPUVM` which Flatcar disables. DKMS 2026.05.x requires kernel 6.17+ which Flatcar does not yet ship             |
+| Picking a DKMS version for Flatcar    | Flatcar stable now ships kernel 6.12.95 (auto-updated 2026-07-09; stale note said 6.12.87). Kernels ≤6.12.90 → DKMS `2025.07.22` (with the `nocache` shim above). Kernels 6.12.91+ → DKMS `2025.10.10` (auto-selected by `i915-sriov-rebuild.service`; ships a compat module, see below). DKMS 2026.03.05.x requires `CONFIG_DRM_GPUVM` which Flatcar disables |
+| DKMS 2025.10.10 ships `intel_sriov_compat.ko` | This series splits `backport_*` symbols into a second module at `updates/i915-sriov-compat/intel_sriov_compat.ko`. **Must be insmod'ed BEFORE i915.ko** or i915 fails with "Unknown symbol backport_*" and `/dev/dri` never appears. `gpu-setup.service` has a guarded ExecStartPre for it (added 2026-07-09 after 6.12.95 auto-update broke GPU) |
 | Picking a DKMS version for PVE host (kernel 7.0) | DKMS `2026.05.06` (released 2026-05-06) adds kernel 7.0.x support via PR #438. Works on kernel 6.17.x + 7.0.x simultaneously. Stale rule said 7.0 blocked by `BUILD_EXCLUSIVE` — that's pre-2026.05.06; not true after the release. Use 2026.05.06 on winston host alongside PVE 9.2. |
 
 ## GPU Consumer Containers (Immich, Nextcloud)
@@ -43,7 +44,8 @@ recall:
 1. Check if patched module exists: `ls /usr/lib/modules/$(uname -r)/updates/i915/i915.ko`
 2. If missing → rebuild: `cd /opt/i915-sriov-build && sudo ./build.sh $(uname -r)`
 3. Deploy sysext: `sudo cp i915-sriov.raw /etc/extensions/i915-sriov.raw && sudo systemd-sysext refresh`
-4. Swap module: `sudo rmmod i915; sudo insmod /usr/lib/modules/$(uname -r)/updates/i915/i915.ko enable_guc=3`
-5. Trigger udev: `sudo udevadm control --reload-rules && sudo udevadm trigger --subsystem-match=drm`
-6. Verify: `/opt/bin/verify-gpu.sh` (expect 7/7 pass)
-7. Re-enable GPU in containers: uncomment `devices:` in compose, `docker-compose up -d`
+4. Load compat module first (DKMS 2025.10.10+ only): `test -f /usr/lib/modules/$(uname -r)/updates/i915-sriov-compat/intel_sriov_compat.ko && sudo insmod ...intel_sriov_compat.ko`
+5. Swap module: `sudo rmmod i915; sudo insmod /usr/lib/modules/$(uname -r)/updates/i915/i915.ko enable_guc=3`
+6. Trigger udev: `sudo udevadm control --reload-rules && sudo udevadm trigger --subsystem-match=drm`
+7. Verify: `/opt/bin/verify-gpu.sh` (expect 7/7 pass)
+8. Re-enable GPU in containers: uncomment `devices:` in compose, `docker-compose up -d`

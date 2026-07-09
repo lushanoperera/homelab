@@ -49,7 +49,8 @@ ssh core@192.168.100.100 'cd /opt/i915-sriov-build && sudo cp i915-sriov.raw /et
 
 DKMS version mapping:
 
-- Flatcar kernel 6.12.x → `--dkms-version 2025.07.22`
+- Flatcar kernel 6.12.x ≤ 6.12.90 → `--dkms-version 2025.07.22`
+- Flatcar kernel 6.12.91+ (e.g. 6.12.95) → `--dkms-version 2025.10.10` (ships `intel_sriov_compat.ko` — see Phase 3)
 - Flatcar kernel 6.17.x+ → `--dkms-version 2025.10.10`
 
 ### Phase 3: Load Module
@@ -57,6 +58,10 @@ DKMS version mapping:
 ```bash
 # Unload stock module (if loaded)
 ssh core@192.168.100.100 'sudo rmmod i915 2>/dev/null; echo "Unloaded"'
+
+# DKMS 2025.10.10+ builds a second module providing backport_* symbols — MUST load first,
+# otherwise i915.ko fails with "Unknown symbol". Guarded no-op on older DKMS builds.
+ssh core@192.168.100.100 'test -f /usr/lib/modules/$(uname -r)/updates/i915-sriov-compat/intel_sriov_compat.ko && sudo insmod /usr/lib/modules/$(uname -r)/updates/i915-sriov-compat/intel_sriov_compat.ko || echo "no compat module (pre-2025.10.10 DKMS)"'
 
 # Load patched module
 ssh core@192.168.100.100 'sudo insmod /usr/lib/modules/$(uname -r)/updates/i915/i915.ko enable_guc=3'

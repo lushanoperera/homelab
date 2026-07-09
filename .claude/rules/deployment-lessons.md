@@ -43,3 +43,5 @@ recall:
 | Config files are root-owned             | `/srv/docker/{immich,nextcloud}/` need `sudo` for edits on Flatcar. SCP as `core` user works (writes to user-writable paths) |
 | Test connectivity after network changes | After any change touching ports, networks, or VPN config, verify the full chain: container → gluetun → internet              |
 | Watchtower scope awareness              | Watchtower auto-updates containers. If you pin a version, set `com.centurylinklabs.watchtower.enable=false` label            |
+| Systemd units need `/opt/bin` in PATH   | restic (and other user-installed binaries) live in `/opt/bin` on Flatcar; systemd's default PATH omits it. Backup units silently broke 2026-03-07→07-09 ("restic: command not found"). Set `Environment=PATH=/opt/bin:...` in every unit calling scripts that use bare binary names |
+| Backup scripts must propagate failure   | A script that logs "fallito" but exits 0 keeps the systemd unit green — Immich backups failed unnoticed for 4 months. Always `exit 1` on failed final STATUS so `systemctl status`/monitoring can see it |
