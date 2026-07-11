@@ -1,3 +1,7 @@
+> **DEPRECATED 2026-04-10.** Superseded by `storage/rustfs/` and
+> [`docs/migrations/minio-to-rustfs.md`](../../docs/migrations/minio-to-rustfs.md).
+> Files in this directory are retained for reference. Do not deploy.
+
 # MinIO to Garage Migration
 
 Migrate S3 storage on QNAP NAS from MinIO to Garage for Restic backups.

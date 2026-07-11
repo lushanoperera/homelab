@@ -1,6 +1,8 @@
-export AWS_ACCESS_KEY_ID="your-garage-access-key"
-export AWS_SECRET_ACCESS_KEY="your-garage-secret-key"
-export RESTIC_REPOSITORY="s3:http://192.168.200.211:3900/technitium-config"
+# DORMANT — no live timer schedules this backup; Garage (.211) was never deployed.
+# Retargeted to the live MinIO backend; create the `technitium-config` bucket before activating.
+export AWS_ACCESS_KEY_ID="your-minio-access-key"
+export AWS_SECRET_ACCESS_KEY="your-minio-secret-key"
+export RESTIC_REPOSITORY="s3:http://192.168.200.210:9000/technitium-config"
 export RESTIC_PASSWORD="your-restic-password"
 
 export AWS_REQUEST_CHECKSUM_CALCULATION=when_required

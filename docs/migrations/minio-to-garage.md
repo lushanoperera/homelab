@@ -1,3 +1,10 @@
+> **DEPRECATED 2026-04-10.** Superseded by
+> [`minio-to-rustfs.md`](./minio-to-rustfs.md). We accepted alpha-stage RustFS
+> risk in exchange for memory safety, Apache 2.0, active upstream, and MinIO
+> drop-in compatibility. This Garage plan is retained for comparison only —
+> do not execute it. Related files under `storage/garage/` and
+> `scripts/migrations/minio-to-garage/` are also archived.
+
 # Migration Evaluation: MinIO to Garage for Restic Backups
 
 ## Executive Summary

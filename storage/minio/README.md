@@ -11,4 +11,5 @@ Current S3-compatible storage for Restic backups on QNAP NAS.
 
 ## Migration
 
-This service is being migrated to Garage. See `../garage/` and `../../docs/migrations/minio-to-garage.md`.
+This service is being migrated to RustFS. See `../rustfs/` and `../../docs/migrations/minio-to-rustfs.md`.
+(The earlier Garage plan was abandoned — `../garage/` is kept for reference only.)

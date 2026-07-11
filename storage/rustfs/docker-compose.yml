@@ -1,0 +1,32 @@
+services:
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: rustfs
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Rome
+      - RUSTFS_ROOT_USER=${RUSTFS_ROOT_USER}
+      - RUSTFS_ROOT_PASSWORD=${RUSTFS_ROOT_PASSWORD}
+      - RUSTFS_REGION=${RUSTFS_REGION:-rustfs}
+      - RUSTFS_VOLUMES=/data
+      - RUSTFS_ADDRESS=:9000
+      - RUSTFS_CONSOLE_ADDRESS=:9001
+    volumes:
+      - /share/Data/rustfs/data:/data
+      - /share/Data/rustfs/meta:/meta
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    restart: always
+    networks:
+      qnet-static-eth0-076754:
+        ipv4_address: 192.168.100.212
+      qnet-static-eth1-400be2:
+        ipv4_address: 192.168.200.212
+
+networks:
+  qnet-static-eth0-076754:
+    external: true
+  qnet-static-eth1-400be2:
+    external: true

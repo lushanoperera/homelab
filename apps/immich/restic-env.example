@@ -1,9 +1,13 @@
-export AWS_ACCESS_KEY_ID="your-minio-access-key"
-export AWS_SECRET_ACCESS_KEY="your-minio-secret-key"
-export RESTIC_REPOSITORY="s3:http://192.168.200.210:9000/restic-immich"
+# NOT LIVE — production still uses MinIO 192.168.200.210:9000 until Phase 6 cutover (docs/migrations/minio-to-rustfs.md)
+export AWS_ACCESS_KEY_ID="your-rustfs-access-key"
+export AWS_SECRET_ACCESS_KEY="your-rustfs-secret-key"
+export RESTIC_REPOSITORY="s3:http://192.168.200.212:9000/restic-immich"
 export RESTIC_PASSWORD="your-restic-password"
 export UPLOAD_LOCATION="/mnt/immich/upload"
 export DB_DATA_LOCATION="/mnt/immich/database"
+
+export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
+export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
 
 # Opzioni aggiuntive per la compressione
 export RESTIC_COMPRESSION="max"
