@@ -174,6 +174,7 @@ fi
 # -------------------
 # Esecuzione backup
 # -------------------
+PRUNE_FAILED=false
 log_message "Backup iniziato"
 
 # Prima eseguiamo il backup del database mentre i container sono ancora attivi
@@ -239,6 +240,13 @@ if $DB_SUCCESS; then
             --keep-weekly 4 \
             --keep-monthly 6 \
             --prune >> "$LOG_FILE" 2>> "$ERROR_LOG"
+        FORGET_RESULT=$?
+
+        if [ $FORGET_RESULT -ne 0 ]; then
+            PRUNE_FAILED=true
+            log_error "Pulizia backup fallita (exit $FORGET_RESULT)"
+            send_email "Backup Immich - Pulizia Fallita" "restic forget/prune fallito con exit $FORGET_RESULT. Controlla $ERROR_LOG"
+        fi
 
         # Statistiche backup
         STATS=$(restic stats latest)
@@ -279,5 +287,10 @@ fi
 
 # Propaga il fallimento a systemd (finora usciva 0 anche su backup fallito — 4 mesi non rilevati)
 if [ "$STATUS" != "successo" ]; then
+    exit 1
+fi
+
+# Prune fallito con backup OK: exit 1 comunque, altrimenti la retention non applicata resta invisibile
+if $PRUNE_FAILED; then
     exit 1
 fi

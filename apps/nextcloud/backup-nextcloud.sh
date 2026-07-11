@@ -148,6 +148,7 @@ fi
 
 # Esegui backup a blocchi
 BACKUP_SUCCESS=true
+PRUNE_FAILED=false
 
 # Identifica le principali directory da salvare
 NCDATA_DIR="/mnt/ncdata"
@@ -207,8 +208,9 @@ if $BACKUP_SUCCESS; then
     unlock_repository
 
     # Esegui la pulizia dei backup vecchi
+    # (timeout 15m troncava il prune a metà — repo grande + --no-cache; visto 2026-07-11)
     log_message "Avvio pulizia backup vecchi"
-    timeout 15m restic forget \
+    timeout 60m restic forget \
         --no-cache \
         --keep-daily 7 \
         --prune >> "$LOG_FILE" 2>> "$ERROR_LOG"
@@ -220,7 +222,7 @@ if $BACKUP_SUCCESS; then
         log_message "Prima fase di pulizia completata, proseguo con policy completa"
         unlock_repository
 
-        timeout 30m restic forget \
+        timeout 90m restic forget \
             --no-cache \
             --keep-hourly 24 \
             --keep-daily 7 \
@@ -233,6 +235,7 @@ if $BACKUP_SUCCESS; then
 
     # Se ancora fallisce, registra l'errore
     if [ $FORGET_RESULT -ne 0 ]; then
+        PRUNE_FAILED=true
         unlock_repository
 
         PRUNE_ERROR=$(restic forget --no-cache --dry-run --keep-daily 7 2>&1)
@@ -286,5 +289,10 @@ fi
 
 # Propaga il fallimento a systemd (altrimenti l'unit risulta verde anche su backup fallito)
 if [ "$STATUS" != "successo" ]; then
+    exit 1
+fi
+
+# Prune fallito con backup OK: exit 1 comunque, altrimenti la retention non applicata resta invisibile
+if $PRUNE_FAILED; then
     exit 1
 fi
