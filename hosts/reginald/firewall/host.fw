@@ -1,0 +1,41 @@
+# Reginald host firewall — Storage/NFS host (192.168.100.4 / 192.168.200.4).
+#
+# Authoritative path: /etc/pve/nodes/reginald/host.fw
+# Repo copy: version control + DR restore.
+#
+# Extra role vs winston: NFSv4.2 server on the Storage LAN. NFSv3 ports
+# (rpcbind, mountd) are opened but unused today — kept in case an older
+# client lands. DNS (LXC 120) and Samba (LXC 123) traffic terminates in
+# the guests' veths, not on the hypervisor, so host.fw does not match it.
+#
+# Staged as enable: 0 and policy_in: ACCEPT. Runbook flips through Phase A
+# (ACCEPT + log) then Phase B (DROP).
+
+[OPTIONS]
+enable: 0
+policy_in: ACCEPT
+policy_out: ACCEPT
+log_level_in: info
+log_level_out: nolog
+ndp: 0
+nf_conntrack_max: 262144
+
+[RULES]
+
+# Admin management plane.
+GROUP admin_access
+
+# NFSv4.2 — the only NFS port that matters today.
+IN ACCEPT -source +storage_lan -p tcp -dport 2049 -log nolog
+
+# NFSv3 fallback (rpcbind + mountd). Unused but cheap to keep.
+IN ACCEPT -source +storage_lan -p tcp -dport 111 -log nolog
+IN ACCEPT -source +storage_lan -p udp -dport 111 -log nolog
+IN ACCEPT -source +storage_lan -p tcp -dport 20048 -log nolog
+
+# Diagnostics.
+IN ACCEPT -p icmp -log nolog
+
+# No explicit catch-all drop. `policy_in` + `log_level_in: info` handles
+# it at the policy layer. An explicit `IN DROP` here would fire BEFORE
+# `policy_in` evaluates, silently defeating the Phase A ACCEPT dwell.

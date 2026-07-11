@@ -1,0 +1,51 @@
+# Proxmox cluster.fw — shared aliases, ipsets, and security groups.
+#
+# Deployed identically to winston and reginald. Standalone nodes do NOT
+# auto-sync this file via pmxcfs, so the deploy script copies it to both.
+#
+# Authoritative path on each host: /etc/pve/firewall/cluster.fw
+#
+# Datacenter-level OPTIONS enable: 1 is required for host.fw rules to take
+# effect. Flipping it to 0 is the emergency master kill switch — disables
+# the firewall on every host regardless of per-host enable state.
+# Staged as 0 in the repo; rollout flips to 1 per the runbook.
+
+[OPTIONS]
+enable: 0
+
+[ALIASES]
+
+pbs_host  192.168.100.187    # Proxmox Backup Server (VM on QNAP)
+pdm_host  192.168.100.106    # Proxmox Datacenter Manager (LXC 106 on winston)
+
+[IPSET admin_sources]
+
+# DEVIATION FROM PLAN: the plan lists `192.168.100.0/20` in admin_sources
+# for break-glass host-to-host admin. That /20 contains VM 100
+# (192.168.100.100) — the exact lateral-movement source this firewall
+# is designed to block. Including it would let a compromised VM 100
+# SSH straight to both hypervisor mgmt planes, defeating the stated
+# threat model. Narrowed to trusted + PDM + WG + literal peer IPs.
+# Widen only if a specific workflow breaks; document the reason.
+
+192.168.2.0/24               # Trusted VLAN (laptops, phones)
+192.168.100.106              # PDM LXC (break-glass jump host)
+192.168.100.38               # winston peer (reginald→winston admin)
+192.168.100.4                # reginald peer (winston→reginald admin)
+10.0.0.0/24                  # nwlab WireGuard tunnel (remote admin)
+
+# Hardcoded laptop IP goes here at rollout time as an extra safeguard
+# in case VLAN routing hiccups. Example:
+# 192.168.2.47
+
+[IPSET storage_lan]
+
+192.168.200.0/24             # Dedicated NFS/backup LAN
+
+[group admin_access]
+
+# Proxmox management plane from trusted admin sources.
+IN ACCEPT -source +admin_sources -p tcp -dport 22 -log nolog         # SSH
+IN ACCEPT -source +admin_sources -p tcp -dport 8006 -log nolog       # PVE webui / API
+IN ACCEPT -source +admin_sources -p tcp -dport 3128 -log nolog       # SPICE proxy
+IN ACCEPT -source +admin_sources -p tcp -dport 5900:5999 -log nolog  # noVNC / VNC consoles
