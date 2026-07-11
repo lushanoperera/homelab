@@ -3,7 +3,8 @@
 Consolidated infrastructure-as-code repository for a Proxmox-based homelab: Proxmox VE hosts
 (winston, reginald), Flatcar Container Linux VMs running Docker stacks (media + Nextcloud + Immich +
 reverse proxies), a 3-node Technitium DNS cluster, Caddy/Traefik reverse proxies with CrowdSec, S3
-storage (MinIO → Garage migration), PBS backups, and Ansible/Terraform automation. This is a
+storage (MinIO current → RustFS migration; Garage abandoned, never deployed), PBS backups, and
+Ansible/Terraform automation. This is a
 config + scripts + docs repo — there is no application build/test toolchain.
 
 > Subdirectory `CLAUDE.md` / `AGENTS.md` and the conditional rules under `.claude/rules/` carry
@@ -19,10 +20,10 @@ Mostly LAN-internal. Public services are exposed via Cloudflare Tunnel → Traef
 | Internal services    | `*.home.disconnesso.com`                     | Caddy (LAN, CF DNS-challenge cert)|
 | Nextcloud (public)   | https://nextcloud.lushanoperera.com          | Traefik + CF Tunnel (Flatcar VM)  |
 | Immich (public)      | https://immich.lushanoperera.com             | Traefik + CF Tunnel (Flatcar VM)  |
-| Technitium DNS (web) | http://192.168.100.254:5380 (primary)        | QNAP Container Station            |
+| Technitium DNS (web) | http://192.168.100.120:5380 (primary)        | Native, Debian LXC 120 (reginald) |
 | Homepage dashboard   | Flatcar VM `/srv/docker/homepage/`           | Caddy (internal)                  |
-| Proxmox VE (winston) | https://192.168.100.38:8006                  | Proxmox VE 9.1.6                  |
-| Proxmox VE (reginald)| https://192.168.100.4:8006                   | Proxmox VE 9.1.5                  |
+| Proxmox VE (winston) | https://192.168.100.38:8006                  | Proxmox VE 9.2.2                  |
+| Proxmox VE (reginald)| https://192.168.100.4:8006                   | Proxmox VE 9.2.4                  |
 | Proxmox Backup Server| https://192.168.100.187:8007                 | PBS VM on QNAP                     |
 
 ### Network architecture
@@ -43,13 +44,13 @@ Mostly LAN-internal. Public services are exposed via Cloudflare Tunnel → Traef
 | Host/VM                         | IP                                                 | Role                                                                   |
 | ------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------- |
 | UniFi Fiber Gateway (UCG-Fiber) | 192.168.1.1                                        | Router, firewall, UniFi OS 10.1 controller                             |
-| winston                         | 192.168.100.38 / .200.38                           | Primary Proxmox VE 9.1.6 host (32 GB, SR-IOV active: 7 VFs)             |
-| reginald                        | 192.168.100.4 / .200.4                             | Secondary Proxmox VE 9.1.5 host (8 GB, ZFS NFS server)                 |
+| winston                         | 192.168.100.38 / .200.38                           | Primary Proxmox VE 9.2.2 host (64 GB, SR-IOV active: 7 VFs)             |
+| reginald                        | 192.168.100.4 / .200.4                             | Secondary Proxmox VE 9.2.4 host (8 GB, ZFS NFS server)                 |
 | flatcar-media (VM 100)          | .100.100 / .101 / .103 / .7.119 / .200.100         | Media stack + Nextcloud + Immich + reverse proxies                     |
 | homeassistant (VM 102)          | .100.102 / .4.102 / .5.102                         | Home Assistant (multi-VLAN: Infra+IoT+Multimedia)                      |
 | PBS                             | 192.168.100.187                                    | Proxmox Backup Server (VM on QNAP). Datastores `pbs-backups`/`nwlab-backup` on local virtio disks |
 | PDM (LXC 106)                   | 192.168.100.106                                    | Proxmox Datacenter Manager (manages winston, reginald, nwlab-thinkpad) |
-| QNAP NAS (TS-251+)              | 192.168.100.254 / .200.254                         | Storage (MinIO S3, NFS), DNS primary, PBS host                         |
+| QNAP NAS (TS-251+)              | 192.168.100.254 / .200.254                         | Storage (MinIO S3, NFS), DNS secondary, PBS host                       |
 | nwlab-thinkpad (remote)         | 10.21.21.99                                        | nwlab Proxmox VE 9.2.2 host (managed via WireGuard tunnel)             |
 
 **LXC (winston)**: 104 WireGuard, 105 Plex, 106 PDM.
@@ -70,7 +71,7 @@ networking/
   caddy/                    # Internal reverse proxy (*.home.disconnesso.com wildcard)
   traefik/                  # Public reverse proxy + CrowdSec (DMZ macvlan .7.119)
   cloudflare-tunnel/        # Cloudflared tunnel config
-storage/{minio,garage,rustfs,nfs}/  # S3 (MinIO current → Garage/RustFS target) + NFS
+storage/{minio,garage,rustfs,nfs}/  # S3 (MinIO current → RustFS target; garage/ = abandoned plan) + NFS
 apps/{couchdb,forgejo,vaultwarden,nextcloud,immich,technitium}/  # Docker stacks + restic backup
 homepage/                   # Homepage dashboard config
 scripts/{hosts,vms,network,migrations,monitoring,dns,backup}/    # Automation
@@ -94,7 +95,7 @@ hardware-purchases/         # Hardware planning notes (e.g. 3-node MS01 Ceph clu
 | `scripts/vms/*.sh`                           | `/opt/bin/`                                  | deploy-media-scripts.sh |
 | `scripts/dns/*.sh`, `scripts/backup/*.sh`    | `/opt/bin/`                                  | rsync + chmod 0755      |
 | `systemd/*.mount`                            | `/etc/systemd/system/`                       | Ignition or manual      |
-| `apps/*/restic-env.example`                  | `/etc/restic/<app>.env` (per node)           | manual, chmod 0600      |
+| `apps/*/restic-env.example`                  | `/srv/docker/<app>/.restic-env` (VM 100)     | manual, chmod 0600      |
 | `hosts/common/cluster.fw`, `hosts/<h>/firewall/host.fw` | `/etc/pve/...` on the host        | `scripts/hosts/deploy-firewall.sh` |
 
 ## Local development
@@ -152,7 +153,7 @@ Canonical secret files and their KEY NAMES (values are real only inside the giti
 | `networking/traefik/.env`              | `CROWDSEC_BOUNCER_API_KEY`, `TUNNEL_TOKEN`                     |
 | `apps/immich/.env`                     | `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE_NAME`, `IMMICH_VERSION`, `IMMICH_MACHINE_LEARNING_HARDWARE_ACCELERATION`, `TZ` |
 | `apps/nextcloud/.env`                  | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `NEXTCLOUD_VERSION`, `NEXTCLOUD_TRUSTED_DOMAINS`, `NEXTCLOUD_URL`, `TZ` |
-| `apps/<app>/restic-env` (per node, chmod 0600) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `UPLOAD_LOCATION`, `DB_DATA_LOCATION`, `RESTIC_COMPRESSION` |
+| `/srv/docker/<app>/.restic-env` (VM 100, root:root 0600) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `UPLOAD_LOCATION`, `DB_DATA_LOCATION`, `RESTIC_COMPRESSION` |
 
 ```env
 # scripts/network/.env (placeholders — real values live only in the gitignored file)
@@ -185,9 +186,12 @@ reach the LAN only through Cloudflare Tunnel → Traefik (DMZ) → CrowdSec.
 
 | Node                               | IP              | Role      | Deployment                  |
 | ---------------------------------- | --------------- | --------- | --------------------------- |
-| qnap.dns.disconnesso.home.arpa     | 192.168.100.254 | Primary   | Docker (Container Station)  |
+| reginald.dns.disconnesso.home.arpa | 192.168.100.120 | Primary   | Native (Debian 12 LXC)      |
+| qnap.dns.disconnesso.home.arpa     | 192.168.100.254 | Secondary | Docker (Container Station)  |
 | flatcar.dns.disconnesso.home.arpa  | 192.168.100.100 | Secondary | Docker (`/srv/docker/dns/`) |
-| reginald.dns.disconnesso.home.arpa | 192.168.100.120 | Secondary | Native (Debian 12 LXC)      |
+
+Reginald was elevated to primary on 2026-07-11 (QNAP demoted to secondary — its console had
+hung and the NAS is the slowest node). All nodes on Technitium 15.4.
 
 Blocklists: StevenBlack/hosts + Hagezi Pro (~265K). Local zone `home.disconnesso.com` →
 192.168.100.100. DNSSEC enabled.
@@ -203,12 +207,13 @@ dashboard was removed 2026-03-07 — use the `cscli` CLI.
 
 **Flatcar VM 100** (`ssh core@192.168.100.100`, stacks under `/srv/docker/`): Homepage dashboard;
 media stack (gluetun/ProtonVPN, prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr,
-seerr, tautulli, flaresolverr, watchtower [nickfedor fork], autoheal); Caddy; Technitium DNS
-(secondary, separate `dns-compose.yml`); Traefik (DMZ .7.119) + CrowdSec + cloudflared; Vaultwarden;
-Forgejo (private Git: dotfiles/configs); CouchDB (Obsidian LiveSync backend); Nextcloud (nginx + FPM
-+ Postgres + Redis); Immich (photo management + ML).
+seerr, tautulli, flaresolverr, profilarr + profilarr-parser, watchtower [nickfedor fork], autoheal);
+Caddy; Technitium DNS (secondary, separate `dns-compose.yml`); Traefik (DMZ .7.119) + CrowdSec +
+cloudflared; Vaultwarden; Forgejo (private Git: dotfiles/configs); CouchDB (Obsidian LiveSync
+backend); Nextcloud (nginx + FPM + Postgres + Redis + imaginary + appapi-harp); Immich (photo
+management + ML); Portainer.
 
-**QNAP NAS** (`192.168.100.254`): Technitium DNS (primary), MinIO S3, PBS VM, Watchtower (daily 4 AM).
+**QNAP NAS** (`192.168.100.254`): Technitium DNS (secondary), MinIO S3, PBS VM, Watchtower (daily 4 AM).
 
 ## Conditional rules (loaded on-demand by file pattern)
 
@@ -246,7 +251,8 @@ Infrastructure repo — no build/lint/test toolchain. Verify changes by:
   rsync/scp + `docker compose up -d`, no managed cache layer.
 - **Secrets:** plain gitignored `.env` per component; never commit, never echo to logs. The
   `varlock`/rbw references in older docs are obsolete (migrated off 2026-05-20).
-- **Restic env files** must be `chmod 0600` on the node; they are deployed manually, never committed.
+- **Restic env files** live at `/srv/docker/<app>/.restic-env` on VM 100 (root:root, `chmod 0600`);
+  deployed manually, never committed.
 - **Firewall rollout is deliberate** — `deploy-firewall.sh` never flips `enable:` without an explicit
   `--enable`/`--disable`; follow `hosts/firewall.md` (log-first, dwell, dead-man cron).
 - Commits: short imperative / Conventional Commits (`feat:`, `fix:`, `docs:`). End AI commits with a

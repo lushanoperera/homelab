@@ -1,8 +1,15 @@
-# Technitium Config Backup (Restic → Garage)
+# Technitium Config Backup (Restic) — DORMANT
 
-Per-node restic backup of the Technitium config directory to the Garage S3
-bucket `technitium-config` at `s3:http://192.168.200.211:3900`. Retention
-keeps daily 7 / weekly 4 / monthly 6.
+> **⚠ DORMANT (verified live 2026-07-11):** this backup was designed against Garage
+> (`192.168.200.211:3900`), which was **never deployed** (plan abandoned — see
+> `scripts/migrations/minio-to-garage/DEPRECATED.md`). No `technitium-backup.timer`
+> is active on any node. The env template (`apps/technitium/restic-env.example`)
+> has been retargeted to the live MinIO backend (`192.168.200.210:9000`); create the
+> `technitium-config` bucket there before activating. The Garage commands below are
+> kept for historical reference only.
+
+Per-node restic backup of the Technitium config directory to the S3 bucket
+`technitium-config`. Retention keeps daily 7 / weekly 4 / monthly 6.
 
 ## Paths per node
 

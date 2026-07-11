@@ -4,11 +4,12 @@
 
 The homelab uses multiple backup strategies:
 
-| Layer        | Tool            | Target    | Scope                      |
-| ------------ | --------------- | --------- | -------------------------- |
-| VM/Container | PBS             | QNAP NAS  | All VMs and LXC containers |
-| Application  | Restic          | MinIO S3  | Nextcloud, Immich data     |
-| Cross-site   | PBS sync (push) | nwlab PBS | Offsite copy to nwlab      |
+| Layer        | Tool            | Target    | Scope                              |
+| ------------ | --------------- | --------- | ---------------------------------- |
+| VM/Container | PBS             | QNAP NAS  | All VMs and LXC containers         |
+| Application  | Restic          | MinIO S3  | Nextcloud, Immich data             |
+| Application  | tar + rsync     | VM-local  | Vaultwarden (no offsite — flagged) |
+| Cross-site   | PBS sync (push) | nwlab PBS | Offsite copy to nwlab              |
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -29,7 +30,7 @@ The homelab uses multiple backup strategies:
 │                               homelab-sync datastore                   │
 │                               (receives homelab push)                  │
 │                                                                        │
-│  LXC 101, 103                                                          │
+│  Flatcar VM 100 (systemd timers)                                       │
 │  ┌──────────────┐   Restic   ┌─────────────────────────┐              │
 │  │ App Data     │ ─────────→ │ MinIO (192.168.200.210) │              │
 │  └──────────────┘            │ on QNAP TS-251+         │              │
@@ -62,13 +63,15 @@ PBS provides VM-level backups with deduplication and integrity verification.
 
 ### Scheduled Backup Jobs
 
-| Job ID               | Node     | VMIDs              | Schedule | Retention                                 |
-| -------------------- | -------- | ------------------ | -------- | ----------------------------------------- |
-| dd9d470e             | winston  | 103, 104, 105, 106 | 04:00    | keep-last=3, daily=7, weekly=4, monthly=2 |
-| 92d5a969             | winston  | 100, 101, 102      | 05:00    | (same)                                    |
-| backup-631cad5e-fea6 | reginald | 120                | 08:00    | (same)                                    |
+| Job ID               | Node     | VMIDs         | Schedule | Retention                                 |
+| -------------------- | -------- | ------------- | -------- | ----------------------------------------- |
+| dd9d470e             | winston  | 104, 105, 106 | 04:00    | keep-last=3, daily=7, weekly=4, monthly=2 |
+| 92d5a969             | winston  | 100, 102      | 05:00    | (same)                                    |
+| backup-631cad5e-fea6 | reginald | 120, 123      | 08:00    | (same)                                    |
 
 All jobs: storage `pbs-backupnas`, compress `zstd`, mode `snapshot`, mail on failure.
+(LXC 101/103 were folded into VM 100 as Docker stacks and dropped from the winston jobs;
+reginald's job picked up LXC 123 Samba. Verified live 2026-07-11.)
 
 **Backup gap (Oct 2025 – Mar 2026):** Winston vzdump jobs were lost during the
 October 2025 bare-metal rebuild (`/etc/pve/jobs.cfg` not preserved in pmxcfs).
@@ -117,14 +120,17 @@ Both sites push backups to each other for offsite redundancy:
 
 ## Restic Backups (Application-Level)
 
-### Container 101: Nextcloud
+Restic runs on **Flatcar VM 100** (LXC 101/103 no longer exist — their apps run as Docker
+stacks on the VM). Scripts deploy to `/opt/bin/`; env files are root:root 0600.
+
+### Nextcloud (Flatcar VM 100)
 
 | Setting    | Value                                                  |
 | ---------- | ------------------------------------------------------ |
 | Repository | `s3:http://192.168.200.210:9000/restic-nextcloud`      |
-| Schedule   | Daily at 00:00 (systemd timer)                         |
-| Script     | `/root/backup-nextcloud.sh`                            |
-| Config     | `/root/.restic-env`                                    |
+| Schedule   | Daily at 00:00 (systemd timer `nextcloud-backup.timer`)|
+| Script     | `/opt/bin/backup-nextcloud.sh` (repo: `apps/nextcloud/backup-nextcloud.sh`) |
+| Config     | `/srv/docker/nextcloud/.restic-env`                    |
 | Units      | `/etc/systemd/system/nextcloud-backup.{service,timer}` |
 
 **Backup Scope:**
@@ -142,14 +148,14 @@ Both sites push backups to each other for offsite redundancy:
 
 ---
 
-### Container 103: Immich
+### Immich (Flatcar VM 100)
 
 | Setting    | Value                                               |
 | ---------- | --------------------------------------------------- |
 | Repository | `s3:http://192.168.200.210:9000/restic-immich`      |
-| Schedule   | Daily at 00:00 (systemd timer)                      |
-| Script     | `/root/backup-immich.sh`                            |
-| Config     | `/root/.restic-env`                                 |
+| Schedule   | Daily at 00:00 (systemd timer `immich-backup.timer`)|
+| Script     | `/opt/bin/backup-immich.sh` (repo: `apps/immich/backup-immich.sh`) |
+| Config     | `/srv/docker/immich/.restic-env`                    |
 | Units      | `/etc/systemd/system/immich-backup.{service,timer}` |
 
 **Backup Scope:**
@@ -165,9 +171,22 @@ Both sites push backups to each other for offsite redundancy:
 - Two-phase backup (DB first, then media)
 - Weekly full integrity check (Sundays)
 
-**NFS scope note:** vzdump backs up LXC rootfs only. NFS-mounted data (`/mnt/database`, `/mnt/upload`) is covered by Restic, not vzdump. This is by design.
+**NFS scope note:** vzdump backs up the VM 100 disk only. NFS-mounted data (`/mnt/immich/*`, `/mnt/ncdata`) lives on reginald ZFS and is covered by Restic, not vzdump. This is by design.
 
 **Historical gap:** Restic backups had an ~11-month gap (2025-03-16 to 2026-02-27) due to a failed backup approach transition (per-PG-subdirectory → pg_dump). The backup script was redesigned and re-enabled in February 2026. Current approach is healthy.
+
+---
+
+### Vaultwarden (Flatcar VM 100)
+
+| Setting  | Value                                               |
+| -------- | --------------------------------------------------- |
+| Method   | tar + rsync to `$BACKUP_DIR/latest/` (file-level)   |
+| Schedule | Daily at ~03:00 (systemd timer `vaultwarden-backup.timer`) |
+| Script   | `/opt/vaultwarden/backup.sh` (repo: `apps/vaultwarden/backup.sh`) |
+
+**⚠ No offsite copy** — this backup stays on VM 100 (covered only indirectly by the VM's
+vzdump). Not restic, no S3. Known gap, tracked as a follow-up.
 
 ---
 
@@ -194,18 +213,16 @@ Garage plan (`docs/migrations/minio-to-garage.md`) is archived.
 
 ## Manual Operations
 
-### Restic (LXC containers)
+### Restic (Flatcar VM 100)
 
 ```bash
-# SSH to container
-ssh root@192.168.100.38
-pct exec 101 -- bash  # Nextcloud
-pct exec 103 -- bash  # Immich
+ssh core@192.168.100.100
 
-# Load environment
-source /root/.restic-env
+# Load environment (root-owned, needs sudo)
+sudo bash -c 'source /srv/docker/nextcloud/.restic-env; /opt/bin/restic snapshots'
+sudo bash -c 'source /srv/docker/immich/.restic-env;    /opt/bin/restic snapshots'
 
-# Common commands
+# Common commands (after sourcing the env)
 restic snapshots      # List snapshots
 restic check          # Verify integrity
 restic unlock         # Unlock stuck repo
@@ -215,12 +232,15 @@ restic unlock         # Unlock stuck repo
 
 ## Backup Summary
 
-| Service             | PBS | Restic   | File-level |
-| ------------------- | --- | -------- | ---------- |
-| flatcar-media (100) | ✅  | —        | —          |
-| Nextcloud (101)     | ✅  | ✅ Daily | —          |
-| homeassistant (102) | ✅  | —        | —          |
-| Immich (103)        | ✅  | ✅ Daily | —          |
-| WireGuard (104)     | ✅  | —        | —          |
-| Plex (105)          | ✅  | —        | —          |
-| PDM (106)           | ✅  | —        | —          |
+| Service                  | PBS | Restic   | File-level      |
+| ------------------------ | --- | -------- | --------------- |
+| flatcar-media (VM 100)   | ✅  | —        | —               |
+| Nextcloud (on VM 100)    | via VM | ✅ Daily | —            |
+| Immich (on VM 100)       | via VM | ✅ Daily | —            |
+| Vaultwarden (on VM 100)  | via VM | —     | ✅ Daily (local) |
+| homeassistant (VM 102)   | ✅  | —        | —               |
+| WireGuard (104)          | ✅  | —        | —               |
+| Plex (105)               | ✅  | —        | —               |
+| PDM (106)                | ✅  | —        | —               |
+| Technitium DNS (120)     | ✅  | —        | —               |
+| Samba (123)              | ✅  | —        | —               |

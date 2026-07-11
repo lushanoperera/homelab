@@ -10,7 +10,7 @@ This repository contains configurations, scripts, and documentation for:
 - **Flatcar Container Linux VMs** with Docker stacks
 - **DNS** (Technitium 3-node cluster)
 - **Reverse proxies** — Caddy (internal LAN) + Traefik (public DMZ) with CrowdSec
-- **S3 storage** (MinIO → Garage migration)
+- **S3 storage** (MinIO current → RustFS migration; Garage plan abandoned)
 - **Infrastructure automation** (Ansible, Terraform)
 
 ## Architecture
@@ -42,7 +42,7 @@ This repository contains configurations, scripts, and documentation for:
 │ - HA    │       │ Docker:   │      │ Server    │
 │         │       │ - Media   │      │           │
 │ LXC:    │       │ - Nextcloud      │ LXC 120:  │
-│ - Plex  │       │ - Immich  │      │ - DNS     │
+│ - Plex  │       │ - Immich  │      │ - DNS (P) │
 │ - WG    │       │ - Caddy   │      │           │
 │ - PDM   │       │ - Traefik │      │ LXC 123:  │
 │         │       │ - CrowdSec│      │ - Samba   │
@@ -59,7 +59,7 @@ This repository contains configurations, scripts, and documentation for:
       │               │
       │ - MinIO S3    │
       │ - PBS VM      │
-      │ - DNS (primary)│
+      │ - DNS (sec.)  │
       └───────────────┘
 ```
 
@@ -111,7 +111,8 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 │   └── watchtower/          # Auto-update all QNAP containers
 ├── storage/
 │   ├── minio/               # Current S3
-│   ├── garage/              # Target S3
+│   ├── rustfs/              # Target S3
+│   ├── garage/              # Abandoned S3 plan (kept for reference)
 │   └── nfs/                 # NFS config
 ├── scripts/                 # Automation & network discovery
 ├── automation/
@@ -142,9 +143,9 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 
 | Node     | IP              | Role      | Web UI |
 | -------- | --------------- | --------- | ------ |
-| QNAP     | 192.168.100.254 | Primary   | :5380  |
+| Reginald | 192.168.100.120 | Primary   | :5380  |
+| QNAP     | 192.168.100.254 | Secondary | :5380  |
 | Flatcar  | 192.168.100.100 | Secondary | :5380  |
-| Reginald | 192.168.100.120 | Secondary | :5380  |
 
 ### Flatcar VM 100 (Docker Stacks)
 
@@ -184,7 +185,7 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 ### Storage
 
 - MinIO S3 (192.168.200.210) - current
-- Garage S3 (192.168.200.211) - migration target
+- RustFS S3 (192.168.200.212) - migration target (not deployed yet)
 - Proxmox Backup Server (192.168.100.187)
 
 ## Hardware
@@ -195,8 +196,8 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 | --------- | ----------------------------------------------- |
 | Chassis   | Minisforum MS-01                                |
 | CPU       | Intel i9-13900H (14C/20T, up to 5.2 GHz)        |
-| RAM       | 32 GB                                           |
-| Proxmox   | 9.1.6                                           |
+| RAM       | 64 GB                                           |
+| Proxmox   | 9.2.2                                           |
 | Features  | SR-IOV GPU passthrough, Quick Sync HW transcode |
 | Thermal   | powersave governor, thermald                    |
 
@@ -207,17 +208,17 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 | Chassis   | Zimaboard 832                                        |
 | CPU       | Intel Celeron N3450 (4C/4T)                          |
 | RAM       | 8 GB                                                 |
-| Proxmox   | 9.1.6                                                |
+| Proxmox   | 9.2.4                                                |
 | Storage   | 7x SSD in ZFS RAIDZ2 (7.36 TB used / 1.94 TB free)   |
 | Role      | NFS server for media, Nextcloud, Immich, Vaultwarden |
 
 ### QNAP NAS (TS-251+)
 
-| Service    | IP              | Description           |
-| ---------- | --------------- | --------------------- |
-| Technitium | 192.168.100.254 | DNS primary (port 53) |
-| PBS VM     | 192.168.100.187 | Proxmox Backup Server |
-| MinIO      | 192.168.200.210 | S3-compatible storage |
+| Service    | IP              | Description             |
+| ---------- | --------------- | ----------------------- |
+| Technitium | 192.168.100.254 | DNS secondary (port 53) |
+| PBS VM     | 192.168.100.187 | Proxmox Backup Server   |
+| MinIO      | 192.168.200.210 | S3-compatible storage   |
 
 ## Documentation
 
@@ -225,6 +226,6 @@ ssh core@192.168.100.100 'docker ps --format "table {{.Names}}\t{{.Status}}"'
 - [Thermal Management](docs/thermal-management.md)
 - [GPU SR-IOV Guide](docs/sr-iov/igpu-guide.md)
 - [LXC to Docker Migration](docs/migrations/lxc-to-docker.md)
-- [MinIO to Garage Migration](docs/migrations/minio-to-garage.md)
+- [MinIO to RustFS Migration](docs/migrations/minio-to-rustfs.md)
 - [GPU Passthrough](docs/guides/gpu-passthrough.md)
 - [Flatcar Automation](docs/guides/flatcar-automation.md)

@@ -52,12 +52,12 @@ Config: `/etc/wireguard/wg-nwlab.conf`, service `wg-quick@wg-nwlab`. LXC 104 is 
 ## Backup Flow
 
 VM/LXC → PBS (.100.187) → pbs-backups + nwlab-backup datastores → push job over WG to nwlab PBS.
-LXC data → NFS (reginald) → CacheFS (winston) → Restic → MinIO S3 (migrating to Garage).
+App data (Flatcar VM 100, `/srv/docker/<app>/.restic-env`) → Restic → MinIO S3 (migrating to RustFS).
 
-| Service | IP              | Ports                               |
-| ------- | --------------- | ----------------------------------- |
-| MinIO   | 192.168.200.210 | 9000 (S3), 9001 (Console)           |
-| Garage  | 192.168.200.211 | 3900 (S3), 3902 (Web), 3903 (Admin) |
+| Service | IP              | Ports                                                |
+| ------- | --------------- | ---------------------------------------------------- |
+| MinIO   | 192.168.200.210 | 9000 (S3), 9001 (Console)                            |
+| RustFS  | 192.168.200.212 | 9000 (S3), 9001 (Console) — target, not deployed yet |
 
 ## DNS Operations
 
