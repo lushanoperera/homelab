@@ -34,7 +34,7 @@ handle @qnap {
 
 @technitium host technitium.home.disconnesso.com
 handle @technitium {
-	reverse_proxy 192.168.100.254:5380
+	reverse_proxy 192.168.100.120:5380
 }
 
 @pdm host pdm.home.disconnesso.com
@@ -46,13 +46,16 @@ handle @pdm {
 	}
 }
 
-# DoH endpoint — Technitium primary at 192.168.100.254:53443/dns-query.
+# DoH endpoint — Technitium primary at 192.168.100.120:443/dns-query
+# (reginald LXC 120, elevated to cluster primary 2026-07-11; DoH optional
+# protocol enabled with self-signed cert /etc/dns/doh.pfx — the web console
+# port 53443 no longer serves /dns-query on Technitium 15.x).
 # LAN-only: not exposed via Cloudflare Tunnel. Caddy → Technitium hop stays
 # on Storage/Infra LAN; tls_insecure_skip_verify needed because Technitium
-# serves a self-signed cert on 53443.
+# serves a self-signed cert on 443.
 @dns host dns.home.disconnesso.com
 handle @dns {
-	reverse_proxy https://192.168.100.254:53443 {
+	reverse_proxy https://192.168.100.120:443 {
 		transport http {
 			tls
 			tls_insecure_skip_verify

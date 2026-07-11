@@ -1,10 +1,10 @@
 #!/bin/bash
 # setup-reverse-zone.sh — create 100.168.192.in-addr.arpa primary zone on
-# Technitium QNAP primary, enable auto-PTR cluster-wide, seed static PTRs.
+# the Technitium primary (reginald .120), enable auto-PTR cluster-wide, seed static PTRs.
 # Idempotent: re-running is safe (creates skipped if exist, adds dedup'd).
 #
 # Env:
-#   TECHNITIUM_HOST           default: https://192.168.100.254:5380
+#   TECHNITIUM_HOST           default: https://192.168.100.120:5380
 #   TECHNITIUM_ADMIN_USER     default: admin
 #   TECHNITIUM_ADMIN_PASSWORD required (same var used by docker-compose .env)
 #
@@ -12,7 +12,7 @@
 
 set -euo pipefail
 
-HOST="${TECHNITIUM_HOST:-https://192.168.100.254:5380}"
+HOST="${TECHNITIUM_HOST:-https://192.168.100.120:5380}"
 USER="${TECHNITIUM_ADMIN_USER:-admin}"
 PASS="${TECHNITIUM_ADMIN_PASSWORD:?TECHNITIUM_ADMIN_PASSWORD required}"
 DOMAIN_SUFFIX="${TECHNITIUM_DOMAIN_SUFFIX:-home.disconnesso.com}"
@@ -78,4 +78,4 @@ for octet in "${!HOSTS[@]}"; do
       || log "WARN: failed PTR for $ptr_domain (continuing)"
 done
 
-log "Done. Verify: dig @192.168.100.254 -x 192.168.100.38 +short → winston.${DOMAIN_SUFFIX}."
+log "Done. Verify: dig @192.168.100.120 -x 192.168.100.38 +short → winston.${DOMAIN_SUFFIX}."

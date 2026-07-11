@@ -9,7 +9,7 @@
 # Env (loaded from /etc/dns-drift.env on the host):
 #   TECHNITIUM_ADMIN_PASSWORD  required — for primary stats API
 #   TECHNITIUM_ADMIN_USER      default: admin
-#   PRIMARY                    default: 192.168.100.254
+#   PRIMARY                    default: 192.168.100.120
 #   ZONE                       default: home.disconnesso.com
 #   OUT_FILE                   default: /srv/docker/homepage/data/dns-cluster.json
 
@@ -19,8 +19,8 @@ ENV_FILE="${DNS_DRIFT_ENV:-/etc/dns-drift.env}"
 # shellcheck disable=SC1090
 [[ -r $ENV_FILE ]] && source "$ENV_FILE"
 
-PRIMARY="${PRIMARY:-192.168.100.254}"
-SECONDARIES=("${SECONDARIES_OVERRIDE:-192.168.100.100 192.168.100.120}")
+PRIMARY="${PRIMARY:-192.168.100.120}"
+SECONDARIES=("${SECONDARIES_OVERRIDE:-192.168.100.100 192.168.100.254}")
 ZONE="${ZONE:-home.disconnesso.com}"
 OUT_FILE="${OUT_FILE:-/srv/docker/homepage/data/dns-cluster.json}"
 USER="${TECHNITIUM_ADMIN_USER:-admin}"

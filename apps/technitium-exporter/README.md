@@ -1,7 +1,7 @@
 # Technitium Prometheus Exporter
 
-Tiny stdlib-only Python exporter that scrapes the QNAP Technitium primary
-(`https://192.168.100.254:5380/api/dashboard/stats/get`) and exposes
+Tiny stdlib-only Python exporter that scrapes the Technitium primary on reginald
+(`https://192.168.100.120:5380/api/dashboard/stats/get`) and exposes
 `/metrics` on `:9628`. Deployed as a sidecar on Flatcar VM 100.
 
 ## Deploy
@@ -31,7 +31,7 @@ Append to `/opt/grafana/prometheus/prometheus.yml` on Flatcar (see
     static_configs:
       - targets: ["technitium-exporter:9628"]
         labels:
-          node: qnap-primary
+          node: reginald-primary
 ```
 
 Reload Prometheus:

@@ -1,6 +1,6 @@
-# Technitium DNS Server - QNAP NAS (Primary Node)
+# Technitium DNS Server - QNAP NAS (Secondary Node)
 # Part of 3-node Technitium cluster with native zone replication
-# Nodes: QNAP (primary), Flatcar VM 100 (secondary), Reginald LXC 120 (secondary)
+# Nodes: Reginald LXC 120 (primary, elevated 2026-07-11), QNAP (secondary), Flatcar VM 100 (secondary)
 
 services:
   technitium:

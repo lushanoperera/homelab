@@ -1,6 +1,7 @@
 # Technitium Prometheus exporter — sidecar on Flatcar VM 100.
-# Scrapes the QNAP primary API and exposes /metrics on :9628.
+# Scrapes the reginald primary API (.120) and exposes /metrics on :9628.
 # Deployed to /srv/docker/technitium-exporter/ via rsync.
+# NOTE: not currently running on VM 100 (verified 2026-07-11) — deploy on demand.
 
 services:
   technitium-exporter:
@@ -11,7 +12,7 @@ services:
     ports:
       - "127.0.0.1:9628:9628"
     environment:
-      - TECHNITIUM_HOST=https://192.168.100.254:5380
+      - TECHNITIUM_HOST=https://192.168.100.120:5380
       - TECHNITIUM_USER=admin
       - TECHNITIUM_PASS=${TECHNITIUM_ADMIN_PASSWORD}
       - LISTEN_PORT=9628
