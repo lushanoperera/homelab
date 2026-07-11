@@ -1,8 +1,9 @@
+# /var/log/temp-monitor.log is owned by /etc/logrotate.d/temp-monitor (daily) —
+# listing it here too makes logrotate abort the whole run with "duplicate log entry".
 /var/log/zimaboard-monitor.log
 /var/log/zfs-monitor.log
 /var/log/proxmox-monitoring/temperature.log
 /var/log/update-monitor.log
-/var/log/temp-monitor.log
 /var/log/log-monitor.log
 /var/log/immich-mounts.log {
     weekly
