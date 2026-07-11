@@ -88,9 +88,21 @@ dig @192.168.100.120 google.com +short   # Reginald primary
 dig @192.168.100.254 google.com +short   # QNAP secondary
 dig @192.168.100.100 google.com +short   # Flatcar secondary
 ```
-All three must answer. **Run from VLAN 100** (e.g. VM 100) — clients on other VLANs get
-their port-53 intercepted by the UniFi gateway, so a dig from the Mac tests the gateway
-resolver, not Technitium (this masked blocking during the 2026-07-11 health check). The compose healthcheck alone is NOT proof: Technitium fails-soft —
+All three must answer.
+
+**UniFi Content Filtering vs Technitium (resolved 2026-07-11):** UniFi CyberSecure
+"Content Filter" entries (FAMILY level, added ~2025-07) DNAT'd all port 53 from VLANs
+2/3/4/5/7 to the gateway's own coredns:1053 → dnscrypt-proxy (Cloudflare/Google) — so
+those VLANs never reached Technitium despite DHCP handing out all three node IPs, and
+digs from the Mac were silently answered by the gateway (masked blocking during the
+health check; a dig against a bogus IP like `dig @198.51.100.99 x.com` answering =
+intercept active). Fixed by DELETING the Content Filter entries for Trusted/Guests/IoT/
+Multimedia (UI refuses plain disable: "Filtering must be enabled when Ad Block is
+disabled" — delete the entry instead). DMZ keeps its filter deliberately. Enforcement
+state visible on the gateway: `ssh root@192.168.1.1 'ipset list dnsfilter'` (members =
+filtered subnets). Residual gap: hardcoded-DNS clients + browser DoH now bypass
+Technitium — optional follow-ups: per-VLAN DNAT :53 → 192.168.100.120 (Settings →
+Routing → NAT), block outbound 853. The compose healthcheck alone is NOT proof: Technitium fails-soft —
 the web UI on :5380 can be up while the :53 binding silently failed. That is why the
 healthcheck probes both ports (`</dev/tcp/localhost/53 && </dev/tcp/localhost/5380`) and why
 you still dig all three externally.
