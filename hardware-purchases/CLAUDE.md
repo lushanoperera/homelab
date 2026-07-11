@@ -2,15 +2,22 @@
 
 Tracking hardware research, price monitoring, and purchase decisions for homelab upgrades.
 
+**Active cart:** [3-node-ms01-ceph-cluster-cart.md](3-node-ms01-ceph-cluster-cart.md) — €4,552.24 total, finalized 2026-05-04.
+
 ## Cluster Architecture
 
 Building a **3-node Proxmox HA cluster with Ceph storage** interconnected via a Thunderbolt 4 ring:
 
-- **Node 1**: Winston (existing MS-01 i9-13900H, 32GB RAM, Proxmox VE 9.1.4)
+- **Node 1**: Winston (existing MS-01 i9-13900H, **64GB RAM**, Proxmox VE 9.2.2)
 - **Node 2**: New MS-01 i9-13900H barebones (to buy)
 - **Node 3**: New MS-01 i9-13900H barebones (to buy)
 
-**Networking**: 2.5GbE for client/public traffic, TB4 ring (40 Gbps per link) for Ceph replication.
+**Networking** (per node):
+
+- TB4 ring (40 Gbps full mesh) → Ceph **cluster network** (OSD↔OSD replication)
+- 1x SFP+ via 10GBASE-T transceiver (10 Gbps) → Ceph **public** + VM traffic (XG-8-PoE switch)
+- 1x 2.5GbE → corosync ring0 (XG-8-PoE)
+- 2nd 2.5GbE → corosync ring1 (optional, depends on free switch ports)
 
 ```
   Winston (Node A)
@@ -20,73 +27,88 @@ Building a **3-node Proxmox HA cluster with Ceph storage** interconnected via a 
 Node B ——TB4—— Node C
 ```
 
-Each node: 1x 256GB NVMe (boot) + 1x 1TB NVMe (Ceph OSD) + 64GB DDR5.
+Each node: 1x 250GB NVMe (boot) + 1x 2TB NVMe (Ceph OSD) + 64GB DDR5.
 
 **Winston's current NVMe drives:**
 
-- nvme2n1: SanDisk SSD Plus 250GB (boot) — PCIe 3.0, DRAM-less, stays as boot
-- nvme1n1: Kingston OM8PGP41024N-A0 1TB (VMs) — PCIe 4.0, DRAM, reuse as Ceph OSD
-- nvme0n1: ORICO J10 1TB (NFS cache) — PCIe 3.0, DRAM-less, retire (spare/sell)
+- nvme2n1: SanDisk SSD Plus 250GB (boot) — PCIe 3.0, DRAM-less, **stays as boot**
+- nvme1n1: Kingston OM8PGP41024N-A0 1TB (VMs) — PCIe 4.0, DRAM. Migrate VMs to Ceph, then **retire or repurpose as local scratch** (do NOT mix as OSD — asymmetric size hurts Ceph balance)
+- nvme0n1: ORICO J10 1TB (NFS cache) — PCIe 3.0, DRAM-less, **retire** (sell/spare)
 
-**NVMe strategy**: Keep Kingston 1TB as Winston's Ceph OSD. Buy 2x new 1TB with DRAM for new nodes. ORICO retired — DRAM-less drives unsuitable for Ceph write workload. NFS cache dropped — Reginald's 2.5GbE sufficient for media. ~1TB usable Ceph with 3 replicas. Upgrade to 2TB later if needed.
+**NVMe strategy (revised 2026-05-04):** Buy **3x WD Black SN850X 2TB** for symmetric Ceph OSD across all 3 nodes. ~1.7TB usable Ceph after replica 3/2. Future expansion: MS-01 has 3 M.2 slots → add 2nd OSD per node later (~3.4TB usable). Consumer TLC + DRAM acceptable given UPS-protected shutdown and homelab write rate (~5-30 TB/year per OSD).
 
-## Current Shopping List
+**Existing UPS:** Eaton 3S 850 DIN (850 VA / 510 W, 4x Schuko, USB HID `0463:ffff` MGE). NUT running on Reginald — **no Raspberry Pi NUT server needed**. Powers UCG-Fiber + Reginald + storage switch today (~70W). Add XG-8-PoE post-cluster (~95W total, ~20+ min runtime).
 
-| Item          | Target Specs                                | Budget        | Priority | Status                                 |
-| ------------- | ------------------------------------------- | ------------- | -------- | -------------------------------------- |
-| NAS HDDs      | 4-6TB CMR (Seagate Ironwolf / WD Red Plus)  | Best value    | High     | Prices found — ready to buy            |
-| DDR5 RAM x3   | 64GB (2x32GB) DDR5-5600 SO-DIMM per node    | ~€357-480     | High     | Prices rising — buy ASAP               |
-| MS-01 x2      | i9-13900H barebones (for cluster nodes 2+3) | ~€1,100-1,500 | High     | Research done — monitoring used market |
-| NVMe Boot x2  | 256GB M.2 2280 (new nodes only)             | ~€70-90       | Medium   | Research done                          |
-| NVMe Ceph x2  | 1TB M.2 2280 PCIe 4.0 with DRAM             | ~€160-200     | Medium   | Winston keeps Kingston; ORICO retired  |
-| TB4 Cables x3 | 0.8m passive or 1.8m active for ring        | ~€75-270      | Medium   | Research done                          |
-| Raspberry Pi  | Pi 4B/5 for NUT server (2x UPS via USB)     | ~€40-80       | High     | Needed — no UPS monitoring currently   |
+## Cluster Shopping List (finalized)
 
-## Quick Recommendations
+| Item                       | Qty | Unit € | Total €  | Status                     |
+| -------------------------- | --- | ------ | -------- | -------------------------- |
+| Minisforum MS-01 barebone  | 2   | 700    | 1,400    | Verify SKU + vPro          |
+| Crucial DDR5 64GB (2x32)   | 2   | 650    | 1,300    | Match Winston (CT2K32G56C46S5) |
+| Samsung 970 EVO 250GB used | 2   | 100    | 200      | Boot for new nodes (check SMART) |
+| WD Black SN850X 2TB        | 3   | 200    | 600      | Ceph OSD — TLC + DRAM      |
+| UniFi USW-Pro-XG-8-PoE     | 1   | 538.80 | 538.80   | EU UniFi store, VAT incl.  |
+| Mikrotik S+RJ10 transceiver| 3   | 50     | 150      | MS-01 SFP+ → switch RJ45   |
+| Lenovo TB4 0.7m 4X91K16968 | 4   | 21.86  | 87.44    | 3 ring + 1 spare           |
+| Cat6a 1m patch             | 6   | 5      | 30       | SFP+ + corosync runs       |
+| Eaton 5E Gen2 1600         | 1   | 220    | 220      | UPS for cluster (NUT)      |
+| C13 cord 1.5m              | 2   | 8      | 16       | MS-01 spares               |
+| Schuko→C13 cord 1.5m       | 1   | 10     | 10       | XG-8-PoE on existing 3S 850 |
+| **TOTAL**                  |     |        | **€4,552.24** | |
 
-| Item      | Pick                                     | Price (EUR)   | Why                                        |
-| --------- | ---------------------------------------- | ------------- | ------------------------------------------ |
-| NAS HDD   | Toshiba N300 6TB bulk OR WD Red Plus 6TB | ~178-187      | Best EUR/TB (~30/TB) for new CMR drives    |
-| DDR5 RAM  | 3x Crucial CT2K32G56C46S5 (2x32GB)       | ~357+ (3x119) | Pre-installed in MS-01, best compat        |
-| Shuck     | WD My Book 8TB (if CMR verified)         | ~170          | 21 EUR/TB — cheapest option                |
-| MS-01     | Barebones i9-13900H (new or used)        | ~400-700 each | Used from eBay EU ~€400-550; new ~€550-700 |
-| NVMe Boot | WD Blue SN580 256GB (or similar)         | ~30-35        | Budget boot, 2 new nodes only              |
-| NVMe Ceph | 2x Crucial T500 1TB or WD SN850X 1TB     | ~80-100 each  | PCIe 4.0 + DRAM; Kingston stays on Winston |
-| TB4 Cable | Cable Matters 0.8m passive               | ~25-35        | Budget pick for adjacent nodes             |
+## Separate Decisions (NOT in cluster cart)
+
+| Item     | Target                                     | Budget   | Status                   |
+| -------- | ------------------------------------------ | -------- | ------------------------ |
+| NAS HDDs | 4-6TB CMR (Toshiba N300 / WD Red Plus)     | ~€30/TB  | Independent of cluster   |
+| Shucked drives | WD My Book 8TB (verify CMR)         | ~€170    | Independent              |
 
 ## Buying Strategy (EU/Italy)
 
 - **Primary**: Amazon.it/.de/.fr/.es (cross-EU, no customs, 2-year EU warranty)
 - **Refurbished**: Amazon Warehouse, EU-based refurb sellers
 - **Used (MS-01)**: eBay.it/.de/.fr, Subito.it, Kleinanzeigen.de, Vinted, Facebook Marketplace
+- **UniFi**: eu.store.ui.com (XG-8-PoE official EU stock, VAT incl.)
 - **Price tracking**: Keepa (multi-region Amazon), Geizhals.de, idealo.it
 - **Avoid**: UK sellers (post-Brexit customs), non-EU international (import duties + VAT)
-- **Shucking**: WD My Book from Amazon EU — check r/DataHoarders for CMR models
-- **Timing**: Amazon Spring Sale active NOW (March 2026). DDR5 prices rising — buy sooner.
-- **Used MS-01 tips**: Check BIOS version, physical condition, accessories. Set eBay saved searches with alerts.
+- **TB4 cables**: China eBay sellers offer Lenovo OEM at ~€22 — order 4 (1 spare for counterfeit risk), iperf3 test before deploy
+- **Used MS-01 tips**: BIOS version, physical condition, accessories check. eBay saved searches with alerts.
 
 ## Key Constraints
 
-- Located in Italy — EU purchases strongly preferred
-- No customs duties within EU, VAT included, 2-year minimum warranty by law
-- CMR only for NAS drives (no SMR) — critical for RAID/ZFS reliability
-- DDR5 must be SO-DIMM (laptop form factor) for MS-01
-- NVMe must be M.2 2280 PCIe 4.0 (MS-01 has 2x 2280 slots)
-- Ceph drives need DRAM cache or HMB — avoid DRAM-less for write-intensive workloads
-- TB4 cables: passive up to 0.8m, active for longer distances
+- Italy — EU purchases preferred (no customs, 2-year warranty)
+- CMR only for NAS drives — critical for RAID/ZFS reliability
+- DDR5 must be SO-DIMM for MS-01
+- NVMe: M.2 2280 PCIe 4.0 (MS-01 has 1x 22110 + 2x 2280 slots)
+- Ceph drives: TLC + DRAM. **Avoid QLC** (P3, QVO, Green) and DRAM-less (SN770)
+- TB4 cables: passive up to 0.8m, active for longer
+- UPS for cluster: ≥900W output, ≥10 min runtime at full load, NUT-compatible
+- XG-8-PoE inlet = C14 → need C13 cord (or Schuko→C13 if on existing UPS)
+
+## Order Phasing
+
+1. **Phase 1 — Compute** (~€2,900): 2x MS-01 + 2x RAM + 2x boot drives → bring nodes up standalone
+2. **Phase 2 — Network** (~€806): XG-8-PoE + transceivers + cables + TB4 → cluster join
+3. **Phase 3 — Ceph OSD** (~€600): 3x SN850X 2TB → Ceph init
+4. **Phase 4 — Power safety** (~€246): Eaton 5E + cords → BEFORE Ceph production load
 
 ## Files
 
 ```
 hardware-purchases/
-├── CLAUDE.md                                        # This file
-├── HANDOFF.md                                       # Session handoff notes
+├── CLAUDE.md                                # This file
+├── 3-node-ms01-ceph-cluster-cart.md         # Active purchase cart (finalized 2026-05-04)
+├── HANDOFF.md                               # Session handoff notes
 ├── reports/
-│   ├── nas-hdd-buying-guide.md                      # HDD strategy + cost-per-TB analysis
-│   ├── ddr5-ms01-buying-guide.md                    # DDR5 compatibility + market context
-│   ├── ms01-buying-guide.md                         # MS-01 i9-13900H procurement guide (new + used)
-│   ├── nvme-buying-guide.md                         # NVMe boot + Ceph drive recommendations
-│   └── thunderbolt-ceph-ring-guide.md               # TB4 ring topology + cable guide + Linux setup
+│   ├── nas-hdd-buying-guide.md              # HDD strategy + cost-per-TB
+│   ├── ddr5-ms01-buying-guide.md            # DDR5 compatibility
+│   ├── ms01-buying-guide.md                 # MS-01 procurement (new + used)
+│   ├── nvme-buying-guide.md                 # NVMe boot + Ceph recommendations
+│   └── thunderbolt-ceph-ring-guide.md       # TB4 ring topology + cables + Linux setup
 └── research/
-    └── price-tracking.md                            # EU prices, sources, used marketplaces, purchase log
+    └── price-tracking.md                    # EU prices, sources, marketplaces, purchase log
 ```
+
+## Decision Log
+
+- **2026-05-04**: Cart finalized. Switched Ceph OSD from 1TB Kingston-mixed plan → 3x symmetric SN850X 2TB. Dropped Pi NUT plan (Reginald already runs NUT for Eaton 3S 850 DIN). Switch chosen: XG-8-PoE for single-box + UniFi UI + form factor next to UCG-Fiber. UPS: Eaton 5E Gen2 1600 (rejected UniFi UPS Tower undersized, UniFi UPS 2U sold out + only 4 outlets).
