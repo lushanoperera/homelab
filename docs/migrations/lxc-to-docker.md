@@ -11,7 +11,9 @@ Complete migration of 10 LXC containers from Proxmox to Docker containers on Fla
 ### Source Environment
 
 - **Proxmox Host**: 192.168.100.38
-- **Credentials**: root / 281188password
+- **Credentials**: user `root`; supply the password via the `PROXMOX_PASSWORD` environment
+  variable — never inline it here. This repo is public (see AGENTS.md Gotchas). No `.env.example`
+  declares this key yet; the migration scripts read it from the environment.
 - **Container Type**: LXC containers (Proxmox VE)
 - **Services**: Media management stack (Arr suite + downloaders)
 
@@ -258,7 +260,8 @@ sudo apt install -y sshpass rsync curl
 
 # Verify tools
 ssh core@192.168.100.100 "docker --version && docker compose version"
-sshpass -p "281188password" ssh root@192.168.100.38 "pct list"
+set -a; source .env; set +a
+sshpass -p "$PROXMOX_PASSWORD" ssh root@192.168.100.38 "pct list"
 ```
 
 ## 🚀 Execution Commands
@@ -287,7 +290,7 @@ sshpass -p "281188password" ssh root@192.168.100.38 "pct list"
 ```bash
 # Use custom settings
 export PROXMOX_HOST=192.168.100.38
-export PROXMOX_PASSWORD=281188password
+export PROXMOX_PASSWORD="$PROXMOX_PASSWORD"   # from the gitignored root .env — never inline it
 export FLATCAR_HOST=192.168.100.100
 export DRY_RUN=true  # For testing
 

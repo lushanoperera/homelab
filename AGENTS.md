@@ -232,9 +232,12 @@ Lessons learned live in `.claude/rules/`, auto-loaded when matching files are to
 | `.claude/rules/ops-reference.md`      | SSH, container ops, app management     | `vms/**`, `apps/**`, `scripts/**`, `homepage/**`, `networking/**`    |
 | `.claude/rules/network-services.md`   | Services map, NFS, WG, backup, DNS ops | `networking/**`, `dns/**`, `hosts/**`, `storage/nfs/**`              |
 
-Skills under `.claude/skills/` cover operational runbooks (backup-status, container-manage,
-deploy-compose, gpu-fix, media-health, media-remove, network-diagnostics, nfs-check, proxmox-manage,
-quality-manage, retrigger-downloads, traefik-crowdsec, vpn-status).
+Skills under `.claude/skills/` come in two families, both auto-routed by their own descriptions —
+do not maintain a list here. Single-verb runbooks (`backup-status`, `deploy-compose`, `nfs-check`,
+`vpn-status`, …) do one operational task. The `homelab-*` skills are the domain references
+(architecture contract, config-and-flags registry, run-and-operate, network-and-dns,
+storage-and-backup, kernel-gpu-sriov, debugging-playbook, validation-and-qa, failure-archaeology,
+firewall-rollout-campaign).
 
 ## Verification
 
@@ -249,6 +252,10 @@ Infrastructure repo — no build/lint/test toolchain. Verify changes by:
 
 - **Cloudways-style ops do not apply here** — these are self-managed Proxmox/Flatcar hosts; deploy is
   rsync/scp + `docker compose up -d`, no managed cache layer.
+- **This repo is PUBLIC on GitHub** (`github.com/lushanoperera/homelab`, verified 2026-08-06).
+  Every commit is world-readable. Internal RFC1918 IPs and hostnames are accepted here, but a
+  credential value that lands in a commit is published the moment it is pushed — and history
+  rewrites are the only way back. Treat any secret in a diff as a release blocker.
 - **Secrets:** plain gitignored `.env` per component; never commit, never echo to logs. The
   `varlock`/rbw references in older docs are obsolete (migrated off 2026-05-20).
 - **Restic env files** live at `/srv/docker/<app>/.restic-env` on VM 100 (root:root, `chmod 0600`);

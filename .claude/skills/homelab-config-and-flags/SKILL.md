@@ -35,7 +35,7 @@ which template to copy when standing up a component.
 | Turning the host firewall on/off, reading its stage flag | **this skill** §5 for the flag semantics; then the runbook `hosts/firewall.md` for the rollout |
 | Actually deploying/rsyncing config to a host, restarting a service | sibling skill **homelab-run-and-operate** (deploy anatomy, load pattern in context) |
 | Asking the general "why plain .env, why no vault" policy question | global rule **`~/.claude/rules/secrets-management.md`** (the authority — do not restate it here) |
-| Setting up NEW varlock/rbw secret management | **do not.** This repo migrated OFF varlock/rbw on 2026-05-20. The global `new-project-secrets` skill and any `varlock run --` wrapper are obsolete here (see §6 warnings). |
+| Standing up a plain `.env` for a NEW component | global skill **`new-project-secrets`** — it scaffolds the gitignored `.env` + committed `.env.example`. Any `varlock run --` wrapper is obsolete here (migrated off 2026-05-20; see §6 warnings). |
 
 ## 1. Secrets model (project delta only)
 

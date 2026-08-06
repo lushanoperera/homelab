@@ -318,13 +318,11 @@ are retained for comparison — **do not execute them.**
 
 ### 5.1 TWO BLOCKERS before you can resume the RustFS migration
 
-1. **The migration is UNCOMMITTED** — a bare-metal reinstall today would lose it.
-   Untracked in git (`git status`): `storage/rustfs/`,
-   `scripts/migrations/minio-to-rustfs/`, `docs/migrations/minio-to-rustfs.md`,
-   and `scripts/migrations/minio-to-garage/DEPRECATED.md`. This is the exact DR
-   trap that caused the §3.2 backup gap. **Commit these (stage explicit paths —
-   never `git add -A`, the tree runs chronically dirty) before doing migration
-   work.**
+1. **The migration is committed** (SETTLED 2026-07-11, `d976284`) — `storage/rustfs/`,
+   `scripts/migrations/minio-to-rustfs/`, `docs/migrations/minio-to-rustfs.md` and
+   `scripts/migrations/minio-to-garage/DEPRECATED.md` are all tracked, so the DR
+   trap behind the §3.2 backup gap is closed for these paths. Keep it that way:
+   commit migration work as you go, staging explicit paths — never `git add -A`.
 2. **`storage/rustfs/.env` is BLANKED** — all values were emptied during the
    2026-05-20 move off varlock/rbw, and the vault folder `Homelab/rustfs` was
    found empty. RustFS cannot start until these are repopulated as a plain
