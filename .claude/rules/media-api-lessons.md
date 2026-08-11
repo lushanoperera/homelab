@@ -31,6 +31,56 @@ recall:
 | Deleting multiple torrents | Pipe-separate hashes: `hashes=HASH1\|HASH2&deleteFiles=true` via `--post-data` to `/api/v2/torrents/delete` |
 | Torrent name matching | Names may use dots, spaces, or mixed case. Use regex: `test("title.pattern"; "i")` in jq |
 
+## Prowlarr behind gluetun (2026-08-10)
+
+Prowlarr, qBittorrent, sabnzbd, and flaresolverr all share gluetun's network namespace. Two
+failure modes follow from that, and both look like an application bug.
+
+**1 — The gluetun firewall drops LAN traffic.** `FIREWALL_OUTBOUND_SUBNETS` is empty and the
+compose file sets no `FIREWALL` variable. The bridge `172.23.0.0/16` is directly connected and
+passes. The LAN `192.168.100.0/20` is not, so it is dropped.
+
+| Direction | Address | Works |
+| --- | --- | --- |
+| prowlarr → *arr | `http://sonarr:8989` (container name) | yes |
+| prowlarr → *arr | `http://192.168.100.100:8989` (LAN IP) | **no — times out** |
+| *arr → prowlarr | `http://192.168.100.100:9696` | yes, gluetun publishes 9696 |
+| *arr → prowlarr | `http://gluetun:9696` | **no — `FIREWALL_INPUT_PORTS` is empty** |
+
+Symptom: health message "All applications are unavailable due to failures for more than 6 hours",
+with `Http request timed out` in the log. Fix the application `baseUrl` to a container name. Leave
+`prowlarrUrl` on the LAN IP. Adding the LAN to `FIREWALL_OUTBOUND_SUBNETS` also works, but it needs
+a full-stack recreate and it opens LAN egress from inside the tunnel.
+
+**2 — FlareSolverr must share the same exit IP.** Cloudflare binds the `cf_clearance` cookie to the
+IP that solved the challenge. With flaresolverr on the bridge it egressed via the home WAN while
+prowlarr egressed via the VPN, so every solved cookie was rejected. The logs are misleading:
+flaresolverr prints `Challenge solved!` and prowlarr still reports
+`blocked by CloudFlare Protection`. Compare the two IPs before believing either:
+
+```bash
+docker exec flaresolverr curl -s https://ipinfo.io/ip   # must equal the next line
+docker exec gluetun wget -qO- https://ipinfo.io/ip
+```
+
+Moving a container into the namespace needs three edits beyond `network_mode: "service:gluetun"`:
+drop `hostname:` (Docker rejects it with a shared namespace), move `ports:` to gluetun, and drop
+any `/etc/resolv.conf` bind (namespace members resolve through gluetun at `127.0.0.1`; a LAN
+resolver there leaks DNS outside the tunnel). Prowlarr then reaches it at `http://localhost:8191`,
+never `http://flaresolverr:8191`.
+
+### Prowlarr API gotchas
+
+| Issue | Solution |
+| --- | --- |
+| `apiKey` returns as `********` | The applications API masks it. Read the real key from each app (`docker exec sonarr sed -n "s\|.*<ApiKey>\(.*\)</ApiKey>.*\|\1\|p" /config/config.xml`) and include it in the PUT, or the stored key is at risk |
+| PUT an indexer returns 400 | Prowlarr validates on save. A live-unreachable indexer blocks its own config change. Use `?forceSave=true` |
+| No `-P` in busybox grep | The linuxserver images ship busybox. Use `sed -n "s\|...\|\1\|p"`, not `grep -oP` |
+| Errors right after restoring the app link | `429 TooManyRequests` and `Should be unique` are first-sync churn. Retest before chasing them |
+
+CAUTION: Any gluetun recreate re-runs NAT-PMP and changes the forwarded port. Run
+`/opt/bin/qbt-port-sync.sh` afterward. qBittorrent does not follow the new port on its own.
+
 ## Radarr / Sonarr API
 
 | Issue | Solution |
