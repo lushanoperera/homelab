@@ -39,6 +39,135 @@ recall:
 | Italian vs English titles | Radarr `.title` is usually English. Search with alternation: `test("english\|italian"; "i")` |
 | API key sourcing | Always `source /srv/docker/media-stack/.env` first. Keys: `SONARR_API_KEY`, `RADARR_API_KEY`, `SEERR_API_KEY` |
 
+## Italian audio — Radarr profile 8 "1080p Balanced ITA" (2026-08-04)
+
+Movies downloaded English-only from 2026-06-03. Cause: Profilarr imported the Dictionarry
+"1080p Balanced" profile (id 7) on 2026-05-27, and Seerr defaulted to it. Before that, profile 6
+(`Language: Italian`) produced ITA+ENG grabs. Profile 7 is English-by-construction.
+
+Profile 8 is a clone of 7 with the Italian-hostile parts neutralized. Never edit profile 7 — a
+Profilarr sync restores it. Point Seerr at 8 instead.
+
+| Blocker in profile 7 | Change in profile 8 | Why it matters for Italian |
+| --- | --- | --- |
+| CF `Not Original or English` = -999999 | 0 | Rejects every Italian dub outright |
+| CF `Banned Dual Audio Groups` = -999999 | 0 | Regex `\bDual[ ._-]?(Audio)?\b` hits ITA-ENG releases |
+| CF `x265` / `h265` = -999999 | 0 | MIRCrew / V3SP4EV3R releases are mostly x265 |
+| CF `Release Group (Missing)` = -999999 | 0 | Italian releases often have no parseable group |
+| CF `Italian Audio` (id 108, new) | **+900000** | Must exceed the English ceiling of ~861000 |
+| `minFormatScore` 200000 | **500000** | Junk floor — see below |
+| `cutoffFormatScore` 1000000 | 900000 | Any Italian grab meets cutoff and stops upgrading |
+
+Scoring rationale: profile 7 puts every quality in ONE group (id 1001), so quality comparison always
+ties and **custom format score alone ranks releases**. Its tier CFs (up to 861000) are curated
+English release-group lists that Italian releases never match, so an Italian release scores 0 on the
+ladder. Hence the flat +900000 bonus.
+
+**Gotcha — `allowed: false` is ignored inside a quality group.** Setting `allowed: false` on SDTV /
+DVD / 480p / 576p *inside* group 1001 does nothing; a DVD-rip still got grabbed (score 1100400).
+The qualities must be moved OUT of the group into top-level items with `allowed: false`. Verify with:
+
+```bash
+curl -s -H "X-Api-Key: $RADARR_API_KEY" http://localhost:7878/api/v3/qualityprofile/8 \
+  | jq -r '.items[]|if .quality then "TOP \(.allowed)\t\(.quality.name)" else "GRP \(.items|map(.quality.name)|join(","))" end'
+```
+
+Excluding SD is what keeps an Italian DVD rip from displacing an English 1080p file. Result:
+Italian wins at 720p and above, English remains the fallback below that.
+
+**`minFormatScore` is the junk filter — do not set it to 0.** Dictionarry uses it to reject releases
+that match no tier format. With the floor at 0, a cam rip mislabeled as HDTV-1080p
+(`Spider-Man: Brand New Day 2026.1080p.HQ Pre.Multi`, score 200) passed and was queued for grab.
+500000 is the correct floor:
+
+| Release | Score | Verdict |
+| --- | --- | --- |
+| Italian, any allowed quality | 900000+ | pass |
+| English 1080p WEB-DL | ~860000 | pass |
+| English 720p Bluray (lowest legit tier) | 540000 | pass |
+| Cam / telesync / "HQ Pre" junk | 0–400 | **reject** |
+| English HDTV with no tier match | 40000–80000 | reject (matches profile 7 behavior) |
+
+### Italian sources
+
+`ilCorSaRoNeRo` and `MIRCrew` indexers are dead in Prowlarr ("Indexers have no definition"). Their
+definitions were dropped upstream and no public Italian replacement exists — every `it-IT` option
+left is private or semi-private. **This does not matter**: MIRCrew ITA-ENG releases are indexed on
+The Pirate Bay, which is healthy and is where the working grabs come from.
+
+Known limit: Radarr searches the TMDb title and its alternate titles. Films listed on trackers under
+an Italian-only title (for example `Un Film Minecraft` for *A Minecraft Movie*) are unreachable,
+because TMDb carries no Italian alternate title for them. Add one on TMDb to fix a specific film.
+
+### Bazarr subtitles
+
+Language profile 3 `Italiano + English` is the movie default (`movie_default_enabled: true`). It
+applies to newly added movies only — existing movies need an explicit assignment:
+
+```bash
+curl -s -X POST -H "X-API-KEY: $BAZARR_API_KEY" \
+  "http://localhost:6767/api/movies?radarrid=<radarrId>&profileid=3"
+```
+
+CAUTION: Do not mass-assign the whole library. Only `opensubtitlescom` is enabled, and a free
+OpenSubtitles account allows about 20 downloads per day.
+
+## Italian audio — Sonarr profile 9 "TV 1080p ITA" (2026-08-04)
+
+Sonarr needs a different fix from Radarr. **Sonarr v4 has no language field on a quality profile**,
+so the language preference can only come from a custom format.
+
+Sonarr was never Italian, and Profilarr is not the cause here. Three separate blockers:
+
+| Blocker | Fix in profile 9 |
+| --- | --- |
+| All 9 series sat on profile 1 `Any`, whose cutoff is **SDTV** | Series moved to profile 9 |
+| Profile 8 `TV 1080p` disallows **HDTV-1080p** | Profile 9 allows it — see below |
+| CF `x265 (HD)` = -10000 | 0 |
+| No language preference existed | New CF `Italian Audio` (id 96) at **+2000** |
+
+Profile 1's `SDTV` cutoff makes Sonarr refuse every upgrade. The rejection reads
+`Existing file meets cutoff: SDTV`. Any series left on `Any` will never improve.
+
+**The HDTV-1080p trap.** Italian releases usually carry no source tag
+(`Severance.S02E05.1080p.ENG.ITA.H264-TheBlackKing.mkv`), so Sonarr parses them as **HDTV-1080p**,
+not WEBDL-1080p. The Profilarr `TV 1080p` profile disallows HDTV-1080p, so every such release is
+rejected as `HDTV-1080p is not wanted in profile`. Profile 9 puts HDTV-1080p in the top group.
+
+Quality ladder in profile 9, lowest first. SD is excluded, so an Italian SD rip cannot displace an
+HD file:
+
+```
+(disallowed) Unknown, Raw-HD, Remux, all 2160p, SDTV, DVD, Bluray-480p/576p, WEB 480p
+  group 1002 "HD 720p"   [HDTV-720p, WEBRip-720p, WEBDL-720p, Bluray-720p]
+  group 1001 "HD 1080p"  [HDTV-1080p, WEBRip-1080p, WEBDL-1080p, Bluray-1080p]   <- cutoff
+```
+
+Unlike Radarr, resolution is NOT flattened into one group. Sonarr ranks quality first, then custom
+format score, so grouping by resolution keeps Italian winning **within** a resolution without
+letting a 720p release outrank a 1080p one. TRaSH tier formats here (`WEB Tier 01` = 1700) are
+resolution-agnostic, so one flat group would cause resolution regressions.
+
+Scoring: best English observed = **1831** (`WEB Tier 01` 1700 + service 75 + audio). Italian at 2000
+wins. `cutoffFormatScore` = 2000, so any Italian grab meets cutoff and stops upgrading, while an
+English-only episode stays below cutoff and keeps looking for Italian.
+
+Sonarr's other -10000 formats are safe for Italian: `Bad Multis` only matches `\bJOiNED\b`, and the
+`LQ` formats are specific bad-group lists.
+
+**Gotcha — creating a custom format silently edits every existing profile.** Sonarr auto-adds the
+new format at score 0 to all profiles. Cloning a profile and then appending the format produces a
+DUPLICATE `formatItems` entry for the same `format` id (one at 0, one at your score). Deduplicate:
+
+```bash
+jq '.formatItems = (.formatItems | group_by(.format) | map(max_by(.score)))'
+# verify: dupes must be 0
+curl -s -H "X-Api-Key: $SONARR_API_KEY" http://localhost:8989/api/v3/qualityprofile/9 \
+  | jq '(.formatItems|length) - ([.formatItems[].format]|unique|length)'
+```
+
+Anime profile 7 is deliberately untouched — Seerr still routes anime to it via `animeTags`.
+
 ## Media Removal Order
 
 Always remove in this order to prevent re-requests or orphan data:
