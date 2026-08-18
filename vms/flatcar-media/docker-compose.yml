@@ -45,7 +45,10 @@ services:
   flaresolverr:
     image: flaresolverr/flaresolverr:latest
     container_name: flaresolverr
-    mem_limit: 256m
+    # Chromium needs headroom for interactive Cloudflare challenges. At 256m with
+    # the 64m default /dev/shm it died with "tab crashed" on ilcorsaroblu.org.
+    mem_limit: 1g
+    shm_size: 1gb
     environment:
       - PUID=${PUID}
       - PGID=${PGID}

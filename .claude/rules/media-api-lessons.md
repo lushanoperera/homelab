@@ -81,6 +81,48 @@ never `http://flaresolverr:8191`.
 CAUTION: Any gluetun recreate re-runs NAT-PMP and changes the forwarded port. Run
 `/opt/bin/qbt-port-sync.sh` afterward. qBittorrent does not follow the new port on its own.
 
+### A gluetun restart strands namespace members, and the healthcheck cannot see it (2026-08-18)
+
+Gluetun restarted and flaresolverr kept running inside the namespace gluetun abandoned. Docker
+still reported `healthy` for 5 days. The container's healthcheck curls `localhost:8191` from
+*inside* its own namespace, where loopback keeps working, so the probe can never detect this.
+Autoheal never fired. Meanwhile flaresolverr had no route out, and prowlarr got
+`Connection refused (localhost:8191)`.
+
+`HostConfig.NetworkMode` is the *configured* parent, not the live one — it still matched gluetun's
+ID, so the usual namespace check passed while the container was stranded. Probe across the
+namespace boundary instead, because only that distinguishes the two states:
+
+```bash
+docker exec gluetun wget -qO- --timeout=6 http://localhost:8191/   # authoritative
+docker exec flaresolverr curl -fs http://localhost:8191/health     # lies when stranded
+```
+
+Fix: `docker-compose up -d --force-recreate flaresolverr`. Prowlarr, qBittorrent, and sabnzbd
+survived the same restart, so treat the blast radius as per-container, not all-or-nothing.
+
+### FlareSolverr needs Chromium-sized memory
+
+An interactive Cloudflare challenge (ilcorsaroblu.org) died at `mem_limit: 256m` with the 64 MB
+default `/dev/shm`:
+
+```
+Error solving the challenge. Message: tab crashed (chrome=148.0.7778.178)
+```
+
+`mem_limit: 1g` plus `shm_size: 1gb` fixes it. EZTV's lighter challenge always fit in 256m, so the
+limit looks adequate until a harder tracker arrives.
+
+### Italian indexers
+
+Prowlarr carries 8 `it-IT` definitions. Seven are private (invite or account). **Il Corsaro Blu**
+(`ilcorsaroblu.org`) is the only semi-private one and needs a username and password, stored in
+Prowlarr runtime config — never in this repo, which is public. It sits behind Cloudflare, so it
+requires the flaresolverr tag.
+
+An Italian tracker does NOT fix the Italian-title problem below. Its results carry the Italian
+title too, so Radarr rejects them the same way.
+
 ## Radarr / Sonarr API
 
 | Issue | Solution |
@@ -124,6 +166,18 @@ curl -s -H "X-Api-Key: $RADARR_API_KEY" http://localhost:7878/api/v3/qualityprof
 
 Excluding SD is what keeps an Italian DVD rip from displacing an English 1080p file. Result:
 Italian wins at 720p and above, English remains the fallback below that.
+
+**Side effect — a 720p release can outrank a 1080p one (observed 2026-08-18 on *Twins*).** Because
+one group flattens quality, an Italian release that also matches a tier format wins on score alone:
+
+| Release | Score |
+| --- | --- |
+| `Twins 1988 720p ITA ENG BluRay x265 AAC V3SP4EV3R` | **1440200** |
+| `Twins 1988 BDMux ITA ENG 10bit 1080p x265 Paso77` | 900000 |
+
+Radarr grabbed the 720p. Check the resolution of the winner before accepting an automatic grab on
+this profile. To remove the trap for good, split 720p and 1080p into separate groups the way Sonarr
+profile 9 does — resolution then ranks first and Italian still wins inside each resolution.
 
 **`minFormatScore` is the junk filter — do not set it to 0.** Dictionarry uses it to reject releases
 that match no tier format. With the floor at 0, a cam rip mislabeled as HDTV-1080p
