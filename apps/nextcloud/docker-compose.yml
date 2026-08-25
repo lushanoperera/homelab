@@ -52,9 +52,6 @@ services:
     volumes:
       - /mnt/ncdata:/var/www/html/data
       - nextcloud-app:/var/www/html
-    devices:
-      - /dev/dri/renderD128:/dev/dri/renderD128
-      - /dev/dri/card0:/dev/dri/card0
     depends_on:
       nextcloud-db:
         condition: service_healthy

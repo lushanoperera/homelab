@@ -53,7 +53,7 @@ Mostly LAN-internal. Public services are exposed via Cloudflare Tunnel → Traef
 | QNAP NAS (TS-251+)              | 192.168.100.254 / .200.254                         | Storage (MinIO S3, NFS), DNS secondary, PBS host                       |
 | nwlab-thinkpad (remote)         | 10.21.21.99                                        | nwlab Proxmox VE 9.2.2 host (managed via WireGuard tunnel)             |
 
-**LXC (winston)**: 104 WireGuard, 105 Plex, 106 PDM.
+**LXC (winston)**: 104 WireGuard, 105 Plex, 106 PDM, 107 immich-ml (Docker, iGPU PF, 192.168.100.107).
 **LXC (reginald)**: 120 Technitium DNS, 123 Samba.
 
 ## Repo layout
@@ -72,7 +72,7 @@ networking/
   traefik/                  # Public reverse proxy + CrowdSec (DMZ macvlan .7.119)
   cloudflare-tunnel/        # Cloudflared tunnel config
 storage/{minio,garage,rustfs,nfs}/  # S3 (MinIO current → RustFS target; garage/ = abandoned plan) + NFS
-apps/{couchdb,forgejo,vaultwarden,nextcloud,immich,technitium}/  # Docker stacks + restic backup
+apps/{couchdb,forgejo,vaultwarden,nextcloud,immich,immich-ml,technitium}/  # Docker stacks + restic backup (immich-ml = LXC 107)
 homepage/                   # Homepage dashboard config
 scripts/{hosts,vms,network,migrations,monitoring,dns,backup}/    # Automation
 automation/{ansible,terraform}/  # Playbooks + IaC
@@ -151,7 +151,7 @@ Canonical secret files and their KEY NAMES (values are real only inside the giti
 | `scripts/vms/.env`                     | `SEERR_API_KEY`, `SONARR_API_KEY`, `RADARR_API_KEY`, `SEERR_URL`, `SONARR_URL`, `RADARR_URL`, `QBITTORRENT_URL` |
 | `networking/cloudflare-tunnel/.env`    | `TUNNEL_TOKEN`                                                  |
 | `networking/traefik/.env`              | `CROWDSEC_BOUNCER_API_KEY`, `TUNNEL_TOKEN`                     |
-| `apps/immich/.env`                     | `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE_NAME`, `IMMICH_VERSION`, `IMMICH_MACHINE_LEARNING_HARDWARE_ACCELERATION`, `TZ` |
+| `apps/immich/.env`                     | `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE_NAME`, `IMMICH_VERSION`, `TZ` |
 | `apps/nextcloud/.env`                  | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `NEXTCLOUD_VERSION`, `NEXTCLOUD_TRUSTED_DOMAINS`, `NEXTCLOUD_URL`, `TZ` |
 | `/srv/docker/<app>/.restic-env` (VM 100, root:root 0600) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `UPLOAD_LOCATION`, `DB_DATA_LOCATION`, `RESTIC_COMPRESSION` |
 
@@ -211,7 +211,7 @@ seerr, tautulli, flaresolverr, profilarr + profilarr-parser, watchtower [nickfed
 Caddy; Technitium DNS (secondary, separate `dns-compose.yml`); Traefik (DMZ .7.119) + CrowdSec +
 cloudflared; Vaultwarden; Forgejo (private Git: dotfiles/configs); CouchDB (Obsidian LiveSync
 backend); Nextcloud (nginx + FPM + Postgres + Redis + imaginary + appapi-harp); Immich (photo
-management + ML); Portainer.
+management; ML lives in LXC 107 on winston since 2026-08-25); Portainer.
 
 **QNAP NAS** (`192.168.100.254`): Technitium DNS (secondary), MinIO S3, PBS VM, Watchtower (daily 4 AM).
 

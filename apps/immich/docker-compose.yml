@@ -12,12 +12,11 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_DATABASE_NAME: ${DB_DATABASE_NAME:-immich}
       REDIS_HOSTNAME: immich_redis
+      # ML runs in LXC 107 on winston (apps/immich-ml/) — no GPU on VM 100 anymore
+      IMMICH_MACHINE_LEARNING_URL: ${IMMICH_MACHINE_LEARNING_URL:-http://192.168.100.107:3003}
       TZ: ${TZ:-Europe/Rome}
     volumes:
       - /mnt/immich/upload:/data
-    devices:
-      - /dev/dri/renderD128:/dev/dri/renderD128
-      - /dev/dri/card0:/dev/dri/card0
     networks:
       - default
       - traefik_internal
@@ -32,20 +31,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
-
-  immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
-    container_name: immich_machine_learning
-    mem_limit: 3g
-    restart: unless-stopped
-    environment:
-      IMMICH_MACHINE_LEARNING_HARDWARE_ACCELERATION: intel
-    volumes:
-      - /mnt/immich/upload:/data
-      - immich-model-cache:/cache
-    devices:
-      - /dev/dri/renderD128:/dev/dri/renderD128
-      - /dev/dri/card0:/dev/dri/card0
 
   immich_redis:
     image: docker.io/valkey/valkey:9@sha256:3eeb09785cd61ec8e3be35f8804c8892080f3ca21934d628abc24ee4ed1698f6
@@ -77,10 +62,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-volumes:
-  immich-model-cache:
-    driver: local
 
 networks:
   traefik_internal:

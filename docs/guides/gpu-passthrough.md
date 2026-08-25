@@ -17,13 +17,33 @@ This guide covers Intel iGPU SR-IOV Virtual Function (VF) assignment to LXC cont
 | Plex (LXC 105)      | PF 00:02.0   | card0 / renderD128 | Privileged LXC   | Working |
 | Nextcloud (LXC 101) | VF 1 00:02.2 | card2 / renderD130 | Unprivileged LXC | Working |
 | Immich (LXC 103)    | VF 2 00:02.3 | card3 / renderD131 | Unprivileged LXC | Working |
-| Flatcar (VM 100)    | VF 0 00:02.1 | card1 / renderD129 | VM (sysext)      | Working |
+| Immich ML (LXC 107) | PF 00:02.0   | card0 / renderD128 | Unprivileged LXC | Working |
+| Flatcar (VM 100)    | VF 0 00:02.1 | card1 / renderD129 | VM (sysext)      | No consumer since 2026-08-25 |
 | VF 0-6              | 00:02.1-7    | card4-7            | —                | Free    |
 
 ### What Works
 
 - **Privileged LXCs** (e.g., Plex): PF or VF, just set `dev0`/`dev1` + cgroup rules. Symlinks auto-created.
 - **Unprivileged LXCs** (e.g., Nextcloud, Immich): VFs only, requires udev rules + bind mounts (see below).
+
+### Immich ML on LXC 107 (PF, no VF) — 2026-08-25
+
+Immich machine learning moved from Flatcar VM 100 into unprivileged LXC 107 (`immich-ml`,
+192.168.100.107). It shares the host PF render node exactly like Plex, so a Flatcar kernel update
+cannot take it down. Immich server and Nextcloud on VM 100 no longer bind `/dev/dri` at all
+(`immich-server` transcodes in software, Nextcloud never used the GPU).
+
+- Create: `scripts/hosts/create-immich-ml-lxc.sh` (idempotent). Stack: `apps/immich-ml/`.
+- Devices: `dev0: /dev/dri/renderD128,gid=992`, `dev1: /dev/dri/card0,gid=44`. Pass the **resolved**
+  node path — a `by-path` path only creates `/dev/dri/by-path/...` inside the CT, and Docker
+  `devices:` needs the real `renderD128`/`card0` names. `gid=` is the CT's own group id
+  (Debian 13: `render` = 992, `video` = 44), not the host's (104).
+- Rootfs on `local-lvm` (ext4 thin LVM), so Docker gets overlay2 without the ZFS-subvol pitfall.
+  `local-lvm` needed `content images,rootdir` first (`pvesm set`).
+- Verify GPU use: `intel_gpu_top` fails on the host (no i915 PMU with the SR-IOV module). Use
+  `cat /sys/kernel/debug/dri/0/clients` during an ML job — the ML `python` process appears with
+  uid 100000. The ML log must show `OpenVINOExecutionProvider` first.
+- Wired from VM 100 via `IMMICH_MACHINE_LEARNING_URL=http://192.168.100.107:3003`.
 
 ### VM GPU Passthrough (Flatcar Sysext)
 

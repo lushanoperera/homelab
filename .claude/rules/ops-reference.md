@@ -62,7 +62,7 @@ ssh core@192.168.100.100 '/opt/bin/media-cleanup.sh --dry-run'
 
 **CouchDB**: `curl -s http://localhost:5984/_up` | `curl -s http://localhost:5984/obsidian-livesync | jq .doc_count`
 
-**Immich**: `/srv/docker/immich/`, photos `/mnt/immich/upload` (NFS), GPU VF 0 (`/dev/dri/renderD129`).
+**Immich**: `/srv/docker/immich/`, photos `/mnt/immich/upload` (NFS). No GPU on VM 100 since 2026-08-25. ML runs in LXC 107 on winston (`ssh root@192.168.100.107`, `/srv/docker/immich-ml/`, `http://192.168.100.107:3003/ping`).
 
 **Nextcloud**: `/srv/docker/nextcloud/`, data `/mnt/ncdata` (NFS), `php occ` via `docker exec -u www-data nextcloud-app`.
 

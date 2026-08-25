@@ -34,6 +34,7 @@ recall:
 
 | Issue                           | Solution                                                                                                                                            |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Immich/Nextcloud no longer bind `/dev/dri` (2026-08-25) | Immich ML moved to LXC 107 on winston (host PF render node, like Plex). `immich-server` and `nextcloud-app` have no `devices:` block, so a Flatcar kernel update cannot take them down anymore. VF 0 on VM 100 has no consumer — the sysext is optional |
 | GPU temporarily unavailable     | Comment out `devices:` in compose, `docker-compose up -d` to run without GPU. Re-enable when fixed                                                  |
 | Immich ML hardware acceleration | Set `IMMICH_MACHINE_LEARNING_HARDWARE_ACCELERATION=intel` in `.env` — base `release` image handles it, no `-openvino` tag needed in recent versions |
 | Docker compose on Flatcar       | Use `/opt/bin/docker-compose`, not `docker compose` (plugin not installed on read-only Flatcar)                                                     |

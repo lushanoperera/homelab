@@ -1,0 +1,23 @@
+services:
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}-openvino
+    container_name: immich_machine_learning
+    mem_limit: 4g
+    restart: unless-stopped
+    environment:
+      # The CT has 4 cores but ONNX Runtime sees the host's 20 and fails to set
+      # thread affinity ("pthread_setaffinity_np ... Invalid argument"). Explicit
+      # thread counts disable the affinity pinning.
+      MACHINE_LEARNING_MODEL_INTRA_OP_THREADS: 4
+      MACHINE_LEARNING_MODEL_INTER_OP_THREADS: 1
+    ports:
+      - "3003:3003"
+    volumes:
+      - immich-model-cache:/cache
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+      - /dev/dri/card0:/dev/dri/card0
+
+volumes:
+  immich-model-cache:
+    driver: local
