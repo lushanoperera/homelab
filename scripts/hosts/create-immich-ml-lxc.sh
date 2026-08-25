@@ -50,8 +50,11 @@ pct exec "$CTID" -- bash -c '
   set -e
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -q
-  apt-get install -y -q docker.io docker-compose intel-gpu-tools curl rsync
+  apt-get install -y -q docker.io docker-compose intel-gpu-tools curl rsync unattended-upgrades
   systemctl enable --now docker
+  # Debian security + stable updates daily; Docker images stay on watchtower/manual.
+  printf "APT::Periodic::Update-Package-Lists \"1\";\nAPT::Periodic::Unattended-Upgrade \"1\";\nAPT::Periodic::AutocleanInterval \"7\";\n" > /etc/apt/apt.conf.d/20auto-upgrades
+  systemctl enable --now unattended-upgrades apt-daily.timer apt-daily-upgrade.timer
   mkdir -p /srv/docker/immich-ml
   echo "render gid: $(getent group render | cut -d: -f3)  video gid: $(getent group video | cut -d: -f3)"
   echo "if render gid != 992: pct set '"$CTID"' --dev0 /dev/dri/renderD128,gid=<gid> && pct reboot '"$CTID"'"
