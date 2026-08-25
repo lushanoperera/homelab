@@ -65,7 +65,7 @@ qnap/watchtower/            # Auto-update QNAP Container Station services
 hosts/                      # Proxmox host firewall configs (common/cluster.fw, <host>/firewall/host.fw)
   firewall.md               # Host-firewall rollout runbook (log-first → drop-later)
 vms/
-  flatcar-media/            # VM 100: butane/, ignition/, sysext/, docker-compose.yml
+  flatcar-media/            # VM 100: butane/, ignition/, docker-compose.yml (i915 sysext retired 2026-08-25)
   pbs/                      # Proxmox Backup Server config
 networking/
   caddy/                    # Internal reverse proxy (*.home.disconnesso.com wildcard)
@@ -226,7 +226,7 @@ Lessons learned live in `.claude/rules/`, auto-loaded when matching files are to
 | `.claude/rules/dns-lessons.md`        | Technitium DNS cluster                 | `dns/**`, `**/dns-compose*`                                          |
 | `.claude/rules/infra-lessons.md`      | Proxmox networking, GPU SR-IOV, Garage | `hosts/**`, `networking/**`, `storage/garage/**`                     |
 | `.claude/rules/networking-lessons.md` | UniFi API, WiFi, mesh, Radio AI        | `scripts/network/**`, `networking/**`                                |
-| `.claude/rules/gpu-sriov-lessons.md`  | GPU SR-IOV build, deploy, containers   | `vms/flatcar-media/sysext/**`, `apps/immich/**`, `apps/nextcloud/**` |
+| `.claude/rules/gpu-sriov-lessons.md`  | GPU SR-IOV build, deploy, containers   | `apps/immich/**`, `apps/immich-ml/**`, `apps/nextcloud/**` |
 | `.claude/rules/deployment-lessons.md` | Compose deployment, SCP, verification  | `vms/flatcar-media/**`, `networking/**`, `apps/**`, `homepage/**`    |
 | `.claude/rules/media-api-lessons.md`  | Seerr CSRF, qBit via gluetun, *arr API | `vms/flatcar-media/**`, `scripts/vms/**`, `apps/**`                  |
 | `.claude/rules/ops-reference.md`      | SSH, container ops, app management     | `vms/**`, `apps/**`, `scripts/**`, `homepage/**`, `networking/**`    |

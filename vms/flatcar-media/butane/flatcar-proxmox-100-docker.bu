@@ -129,114 +129,6 @@ storage:
           [Install]
           WantedBy=multi-user.target
 
-    # i915 SR-IOV: Blacklist stock i915 to prevent udev auto-loading before sysext
-    - path: /etc/modprobe.d/i915-blacklist.conf
-      mode: 0644
-      contents:
-        inline: |
-          # Prevent udev auto-loading stock i915 before sysext is ready
-          # gpu-setup.service explicitly loads i915 after sysext activation
-          blacklist i915
-
-    # i915 SR-IOV: Module options for patched driver
-    - path: /etc/modprobe.d/i915-sriov.conf
-      mode: 0644
-      contents:
-        inline: |
-          options i915 enable_guc=3
-
-    # i915 SR-IOV: DRI device permissions for Docker GPU access
-    - path: /etc/udev/rules.d/70-dri-permissions.rules
-      mode: 0644
-      contents:
-        inline: |
-          SUBSYSTEM=="drm", KERNEL=="renderD*", MODE="0660", GROUP="render"
-          SUBSYSTEM=="drm", KERNEL=="card*", MODE="0660", GROUP="video"
-
-    # i915 SR-IOV: GPU verification script
-    - path: /opt/bin/verify-gpu.sh
-      mode: 0755
-      contents:
-        inline: |
-          #!/bin/bash
-          set -uo pipefail
-          FAIL=0
-          echo "=== Intel iGPU SR-IOV Verification ==="
-          echo ""
-          # PCI device
-          if lspci | grep -qi vga; then
-            echo "[PASS] VGA device found"
-            lspci | grep -i vga
-          else
-            echo "[FAIL] No VGA device found"
-            FAIL=1
-          fi
-          # DRI directory
-          if [ -d /dev/dri ]; then
-            echo "[PASS] /dev/dri exists"
-          else
-            echo "[FAIL] /dev/dri missing"
-            FAIL=1
-          fi
-          # renderD device
-          RENDER=$(ls /dev/dri/renderD* 2>/dev/null | head -1)
-          if [ -n "$RENDER" ]; then
-            echo "[PASS] Render device: $RENDER"
-            ls -la "$RENDER"
-          else
-            echo "[FAIL] No renderD device found"
-            FAIL=1
-          fi
-          # card device
-          if ls /dev/dri/card* >/dev/null 2>&1; then
-            echo "[PASS] Card device exists"
-          else
-            echo "[FAIL] No card device found"
-            FAIL=1
-          fi
-          # i915 module
-          if lsmod | grep -q "^i915 "; then
-            echo "[PASS] i915 module loaded"
-          else
-            echo "[FAIL] i915 module not loaded"
-            FAIL=1
-          fi
-          # Module path (sysext vs stock)
-          MOD_PATH=$(modinfo -F filename i915 2>/dev/null)
-          if echo "$MOD_PATH" | grep -q updates/; then
-            echo "[PASS] Module from sysext: $MOD_PATH"
-          else
-            echo "[WARN] Module path: $MOD_PATH (may be stock)"
-          fi
-          echo ""
-          if [ "$FAIL" -eq 0 ]; then
-            echo "=== GPU Status: READY ==="
-            exit 0
-          else
-            echo "=== GPU Status: FAILED ==="
-            exit 1
-          fi
-
-    # i915 SR-IOV: Rebuild script for kernel updates
-    - path: /opt/bin/i915-sriov-rebuild.sh
-      mode: 0755
-      contents:
-        inline: |
-          #!/bin/bash
-          set -euo pipefail
-          KERN=$(uname -r)
-          if [ -f "/usr/lib/modules/${KERN}/updates/i915/i915.ko" ]; then
-            echo "i915-sriov sysext matches kernel ${KERN}, no rebuild needed"
-            exit 0
-          fi
-          echo "Kernel mismatch - rebuilding i915-sriov sysext for ${KERN}..."
-          cd /opt/i915-sriov-build
-          ./build.sh "${KERN}"
-          cp -f "i915-sriov-${KERN}"*.raw /etc/extensions/i915-sriov.raw
-          systemd-sysext refresh
-          depmod -a
-          echo "Rebuild complete for kernel ${KERN}"
-
     # VM memory tuning: swappiness for zram
     - path: /etc/sysctl.d/90-vm-tuning.conf
       mode: 0644
@@ -723,56 +615,6 @@ systemd:
         [Install]
         WantedBy=timers.target
 
-    # i915 SR-IOV: Load patched i915 and setup GPU after sysext activation
-    - name: gpu-setup.service
-      enabled: true
-      contents: |
-        [Unit]
-        Description=Load patched i915 and setup GPU
-        After=systemd-sysext.service i915-sriov-rebuild.service
-        Wants=systemd-sysext.service
-        ConditionPathExists=/etc/extensions/i915-sriov.raw
-
-        [Service]
-        Type=oneshot
-        # Load i915 dependencies (depmod can't update indexes on read-only /lib/modules)
-        ExecStartPre=/usr/sbin/modprobe drm
-        ExecStartPre=/usr/sbin/modprobe drm_kms_helper
-        ExecStartPre=/usr/sbin/modprobe drm_display_helper
-        ExecStartPre=/usr/sbin/modprobe drm_buddy
-        ExecStartPre=/usr/sbin/modprobe ttm
-        ExecStartPre=/usr/sbin/modprobe drm_ttm_helper
-        ExecStartPre=/usr/sbin/modprobe video
-        ExecStartPre=/usr/sbin/modprobe intel-gtt
-        ExecStartPre=/usr/sbin/modprobe i2c-algo-bit
-        ExecStartPre=/usr/sbin/modprobe hwmon
-        # Load sysext i915 via insmod (modprobe would load stock module from stale index)
-        ExecStartPre=/bin/sh -c 'test -d /sys/module/i915 || /usr/sbin/insmod /usr/lib/modules/$(uname -r)/updates/i915/i915.ko enable_guc=3'
-        ExecStartPre=/usr/bin/udevadm control --reload-rules
-        ExecStartPre=/usr/bin/udevadm trigger --subsystem-match=drm
-        ExecStart=/opt/bin/verify-gpu.sh
-        RemainAfterExit=true
-
-        [Install]
-        WantedBy=multi-user.target
-
-    # i915 SR-IOV: Rebuild sysext if kernel changed (Flatcar auto-update)
-    - name: i915-sriov-rebuild.service
-      enabled: true
-      contents: |
-        [Unit]
-        Description=Rebuild i915-sriov sysext if kernel changed
-        After=docker.service systemd-sysext.service
-        Before=gpu-setup.service
-        ConditionPathExists=/etc/extensions/i915-sriov.raw
-
-        [Service]
-        Type=oneshot
-        ExecStart=/opt/bin/i915-sriov-rebuild.sh
-        RemainAfterExit=true
-        TimeoutStartSec=600
-
-        [Install]
         WantedBy=multi-user.target
 
     # Vaultwarden backup to NFS
@@ -809,7 +651,7 @@ systemd:
         [Unit]
         Description=Nextcloud Docker Compose Stack
         Requires=docker.service mnt-ncdata.mount
-        After=docker.service mnt-ncdata.mount gpu-setup.service
+        After=docker.service mnt-ncdata.mount
         Wants=network-online.target
         After=network-online.target
 
@@ -831,7 +673,7 @@ systemd:
         [Unit]
         Description=Immich Docker Compose Stack
         Requires=docker.service mnt-immich-upload.mount mnt-immich-database.mount
-        After=docker.service mnt-immich-upload.mount mnt-immich-database.mount gpu-setup.service
+        After=docker.service mnt-immich-upload.mount mnt-immich-database.mount
         Wants=network-online.target
         After=network-online.target
 

@@ -16,7 +16,9 @@ recall:
 
 # GPU SR-IOV Operational Lessons
 
-## Build & Deploy
+## Build & Deploy (Flatcar sysext — RETIRED 2026-08-25, historical)
+
+VM 100 has no GPU. The rows below apply only if a Flatcar guest gets a VF again.
 
 | Issue                                 | Solution                                                                                                                                                                                                                                                       |
 | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -40,7 +42,7 @@ recall:
 | Docker compose on Flatcar       | Use `/opt/bin/docker-compose`, not `docker compose` (plugin not installed on read-only Flatcar)                                                     |
 | GPU devices in container        | Both `renderD128` AND `card0` must be passed — some apps need card0 for capabilities enumeration                                                    |
 
-## Recovery Checklist (GPU broken after kernel update)
+## Recovery Checklist (GPU broken after kernel update) — RETIRED, historical
 
 1. Check if patched module exists: `ls /usr/lib/modules/$(uname -r)/updates/i915/i915.ko`
 2. If missing → rebuild: `cd /opt/i915-sriov-build && sudo ./build.sh $(uname -r)`

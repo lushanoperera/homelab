@@ -1,10 +1,14 @@
 ---
 name: gpu-fix
-description: Diagnose and fix SR-IOV GPU issues on Flatcar VM 100 - rebuild sysext, swap modules, re-enable containers
+description: RETIRED 2026-08-25 - VM 100 has no GPU anymore (hostpci0 + i915 sysext removed; Immich ML runs in LXC 107). Kept for history only; do not run these steps
 tools: Bash, Read
 ---
 
 # GPU SR-IOV Fix
+
+> **RETIRED 2026-08-25.** VM 100 no longer has `hostpci0`, the i915 sysext, `gpu-setup.service`, or
+> `i915-sriov-rebuild.service`. Immich ML runs in LXC 107 on winston (`apps/immich-ml/README.md`).
+> If a GPU is needed on a guest again, use an LXC with the host PF (Plex 105 / immich-ml 107 pattern).
 
 Diagnose and repair Intel iGPU SR-IOV on Flatcar VM 100. Covers the full chain: sysext build, module loading, and container GPU access.
 

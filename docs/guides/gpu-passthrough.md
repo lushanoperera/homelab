@@ -18,7 +18,7 @@ This guide covers Intel iGPU SR-IOV Virtual Function (VF) assignment to LXC cont
 | Nextcloud (LXC 101) | VF 1 00:02.2 | card2 / renderD130 | Unprivileged LXC | Working |
 | Immich (LXC 103)    | VF 2 00:02.3 | card3 / renderD131 | Unprivileged LXC | Working |
 | Immich ML (LXC 107) | PF 00:02.0   | card0 / renderD128 | Unprivileged LXC | Working |
-| Flatcar (VM 100)    | VF 0 00:02.1 | card1 / renderD129 | VM (sysext)      | No consumer since 2026-08-25 |
+| Flatcar (VM 100)    | —            | —                  | VM               | Retired 2026-08-25 (hostpci0 + sysext removed) |
 | VF 0-6              | 00:02.1-7    | card4-7            | —                | Free    |
 
 ### What Works
@@ -45,7 +45,12 @@ cannot take it down. Immich server and Nextcloud on VM 100 no longer bind `/dev/
   uid 100000. The ML log must show `OpenVINOExecutionProvider` first.
 - Wired from VM 100 via `IMMICH_MACHINE_LEARNING_URL=http://192.168.100.107:3003`.
 
-### VM GPU Passthrough (Flatcar Sysext)
+### VM GPU Passthrough (Flatcar Sysext) — RETIRED 2026-08-25
+
+Removed from VM 100 and from the Butane config (`hostpci0`, `/etc/extensions/i915-sriov.raw`,
+`gpu-setup.service`, `i915-sriov-rebuild.service`, `/opt/i915-sriov-build`). The build tree
+`vms/flatcar-media/sysext/i915-sriov/` lives in git history before commit "retire i915 sysext".
+The notes below are historical.
 
 - **Flatcar VM 100**: Uses `i915-sriov-dkms` compiled as a systemd-sysext image. VF 0 (00:02.1) passed through via `hostpci0`. The stock kernel's i915 cannot drive VFs (`MMIO returns 0xFFFFFFFF`) — the sysext overlays the patched module onto `/usr`.
 - **Build/deploy/test**: See `vms/flatcar-media/sysext/i915-sriov/`
