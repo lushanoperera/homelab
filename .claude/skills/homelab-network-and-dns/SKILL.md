@@ -110,11 +110,13 @@ you still dig all three externally.
 ### SOA drift check (are the secondaries in sync?)
 `scripts/dns/check-cluster-drift.sh` compares the SOA serial across all three nodes and
 writes `/srv/docker/homepage/data/dns-cluster.json` for the Homepage widget. Reads
-`TECHNITIUM_ADMIN_PASSWORD` from `/etc/dns-drift.env` on the host. **NOT currently deployed**
-(verified 2026-07-11: no `dns-drift-check.timer` on VM 100, no `/etc/dns-drift.env`) — treat
-as available tooling, not a running monitor. Note: `home.disconnesso.com` now lives only on
-the primary; the cluster-replicated zone to compare is `dns.disconnesso.home.arpa` (catalog
-zones answer only from 192.168.100.0/24).
+`TECHNITIUM_ADMIN_PASSWORD` from `/etc/dns-drift.env` on the host. **Deployed 2026-08-26**:
+`dns-drift-check.timer` runs every 5 min on VM 100, writes the JSON, and Homepage serves it
+at `http://localhost:3000/data/dns-cluster.json` (bind mount added to `homepage/docker-compose.yml`).
+`/etc/dns-drift.env` holds an empty password placeholder — fill it to enable the QPS/blocked
+stats (serial comparison works without it). Note: `home.disconnesso.com` lives only on
+the primary; the script default zone is `dns.disconnesso.home.arpa`, the only zone replicated
+to all nodes (catalog zones answer only from 192.168.100.0/24).
 
 ## 2. Technitium hardening deltas (the phase-7 burst, 2026-05)
 

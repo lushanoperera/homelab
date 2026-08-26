@@ -24,6 +24,8 @@ recall:
 | Radio AI           | `rest/setting/radio_ai` manages channel optimization. `exclude_devices` takes MAC array. No manual trigger — runs on cron.                            |
 | Satisfaction Field | -1 means insufficient samples (display as N/A)                                                                                                        |
 | SSO vs Local       | SSO accounts require MFA — create a **local-only admin** (Restrict to Local Access Only) for API automation                                           |
+| UCG SSH            | UniFi OS 5.1 offers SSH by password only (Console → Control Plane → SSH). Password in `scripts/network/.env` as `UCG_SSH_PASS`; `ssh-copy-id root@192.168.1.1` once, then key auth works |
+| IPv6 PD withdrawn  | Symptom: phones "cannot browse" while IPv4 is fine (2026-08-26). ISP rotated the WAN /64 and withdrew the delegated /56 (`preferred_lft 0`); `odhcp6c` kept the dead lease for 45 days and every VLAN advertised a deprecated prefix, so client IPv6 died upstream. Diagnose on the gateway: `ip -6 addr show br2` shows `deprecated`, `curl -6 https://www.google.com` times out. Fix without reboot: `kill -USR2 $(pgrep odhcp6c); sleep 3; kill -USR1 $(pgrep odhcp6c)` (release + re-solicit), then check `br2` has a preferred address and `/data/udapi-config/pd.leases` has a new /56 |
 
 ## Script Reference
 

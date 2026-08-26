@@ -37,6 +37,7 @@ services:
       - ./config:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /srv/docker/resolv.conf:/etc/resolv.conf:ro
+      - /srv/docker/homepage/data:/app/public/data:ro   # dns-drift-check.timer writes dns-cluster.json here
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
