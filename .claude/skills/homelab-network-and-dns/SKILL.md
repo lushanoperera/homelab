@@ -237,6 +237,25 @@ AllowedIPs `10.0.0.0/24, 10.21.21.0/24`, MTU 1420. PDM has a static route
 push 04:00, PBS sync reverse 21:00, and PDM → nwlab PVE API `10.21.21.99:8006`. Debug generically
 with `wg show` (see global **infra-runbook**).
 
+### Remote clients → nwlab office LAN (added 2026-08-25)
+LXC 104 (`192.168.100.104`) carries a static route `10.21.21.0/24 via 192.168.100.38` in
+`/etc/network/interfaces` (`post-up`/`pre-down` lines, backup `interfaces.bak-claude-20260825`).
+Path: WG client (`10.8.0.x`) → LXC 104 MASQUERADE → winston → `wg-nwlab` MASQUERADE (`10.0.0.5`) →
+nwlab gateway → office host. Verified with `ping -I 10.8.0.1 10.21.21.63` and the SSH banner of the
+CachyOS MacBook (`10.21.21.63`). Only works while the target sits on the office LAN. **CAUTION:**
+Proxmox rewrites `/etc/network/interfaces` inside the container when `net0` changes — re-add the
+lines after any `pct set 104 -net0 ...`.
+
+### LXC 104 peers (2026-08-25)
+`10.8.0.2` old client (stale 75 d), `10.8.0.3` macOS laptop (WireGuard.app), `10.8.0.4` CachyOS
+T2 MacBook (`wg-quick@wg0`, PSK, split tunnel `10.8.0.0/24 + 192.168.100.0/24`, keepalive 25,
+endpoint = home public static IP `195.182.211.44:51820`). Added with `wg set` + `wg-quick save wg0`;
+backup `wg0.conf.bak-claude-20260825`. WGDashboard (`wg-dashboard.service`) reads the same
+`wg0.conf`. Peer-to-peer (`10.8.0.3 ↔ 10.8.0.4`) is allowed by the existing `FORWARD -i/-o wg0 ACCEPT`.
+Mac-side trap (fixed 2026-08-26): the WireGuard.app "Casa" profile had no `10.8.0.0/24` in
+`AllowedIPs`, so `10.8.0.x` left via `en0` and never answered although the handshake was fresh.
+AllowedIPs now: `10.8.0.0/24, 192.168.100.0/24, 10.21.21.0/24`. Verified Mac → `10.8.0.4` SSH 39 ms.
+
 ### macOS zombie utun4 (OPEN, cosmetic)
 After the macOS WireGuard app quits, an orphaned `utun4` + stale `0.0.0.0/0` route can block
 LiveSync to the LAN. **Workaround** (more-specific route wins):
