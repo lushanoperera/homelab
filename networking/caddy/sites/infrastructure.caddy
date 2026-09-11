@@ -3,6 +3,9 @@
 @winston host winston.home.disconnesso.com
 handle @winston {
 	reverse_proxy https://192.168.100.38:8006 {
+		# Caddy 2.11.1 rewrites Host to the upstream address for https:// upstreams.
+		# Backends here were addressed by their public name before the upgrade.
+		header_up Host {host}
 		transport http {
 			tls_insecure_skip_verify
 		}
@@ -12,6 +15,9 @@ handle @winston {
 @reginald host reginald.home.disconnesso.com
 handle @reginald {
 	reverse_proxy https://192.168.100.4:8006 {
+		# Caddy 2.11.1 rewrites Host to the upstream address for https:// upstreams.
+		# Backends here were addressed by their public name before the upgrade.
+		header_up Host {host}
 		transport http {
 			tls_insecure_skip_verify
 		}
@@ -21,6 +27,9 @@ handle @reginald {
 @pbs host pbs.home.disconnesso.com
 handle @pbs {
 	reverse_proxy https://192.168.100.187:8007 {
+		# Caddy 2.11.1 rewrites Host to the upstream address for https:// upstreams.
+		# Backends here were addressed by their public name before the upgrade.
+		header_up Host {host}
 		transport http {
 			tls_insecure_skip_verify
 		}
@@ -40,6 +49,9 @@ handle @technitium {
 @pdm host pdm.home.disconnesso.com
 handle @pdm {
 	reverse_proxy https://192.168.100.106:8443 {
+		# Caddy 2.11.1 rewrites Host to the upstream address for https:// upstreams.
+		# Backends here were addressed by their public name before the upgrade.
+		header_up Host {host}
 		transport http {
 			tls_insecure_skip_verify
 		}
@@ -56,6 +68,9 @@ handle @pdm {
 @dns host dns.home.disconnesso.com
 handle @dns {
 	reverse_proxy https://192.168.100.120:443 {
+		# Caddy 2.11.1 rewrites Host to the upstream address for https:// upstreams.
+		# Backends here were addressed by their public name before the upgrade.
+		header_up Host {host}
 		transport http {
 			tls
 			tls_insecure_skip_verify

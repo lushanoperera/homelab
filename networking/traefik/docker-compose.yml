@@ -1,8 +1,6 @@
-version: "3.9"
-
 services:
   traefik:
-    image: traefik:v3.3
+    image: traefik:v3.7.13
     container_name: traefik
     mem_limit: 192m
     restart: unless-stopped
@@ -19,10 +17,23 @@ services:
       - "--providers.file.directory=/etc/traefik"
       - "--providers.file.watch=true"
       - "--entrypoints.web.address=:80"
+      # Trust X-Forwarded-For from cloudflared on traefik_internal, otherwise every
+      # public visitor is logged/bounced as the cloudflared container IP (172.20.0.5).
+      - "--entrypoints.web.forwardedHeaders.trustedIPs=172.20.0.0/16"
+      # Traefik 3.7 warns that alias headers (X_Auth_User for X-Auth-User) are spoofable
+      # against backends that derive variable names from header names (nginx + PHP-FPM).
+      - "--entrypoints.web.http.aliasHeadersStrategy=delete"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.forwardedHeaders.trustedIPs=172.20.0.0/16"
+      - "--entrypoints.websecure.http.aliasHeadersStrategy=delete"
       - "--entrypoints.traefik.address=:8080"
+      - "--entrypoints.traefik.http.aliasHeadersStrategy=delete"
       - "--accesslog=true"
       - "--accesslog.filepath=/logs/access.log"
+      # JSON, not the default CLF. The CLF branch of crowdsecurity/traefik-logs groks the
+      # backend URL with a hostname pattern that rejects underscores, so every
+      # http://immich_server:2283 line was unparsable. The JSON branch does not grok it.
+      - "--accesslog.format=json"
       - "--entrypoints.websecure.http.tls=true"
       - "--log.level=INFO"
       - "--ping=true"
@@ -52,6 +63,11 @@ services:
     environment:
       - GID=1000
       - COLLECTIONS=crowdsecurity/traefik crowdsecurity/http-cve
+      # syslog-logs carries the s00-raw fallback node that copies a non-syslog line into
+      # evt.Parsed.message and sets evt.Parsed.program from the acquis "type" label.
+      # Without it every Traefik line dies in s00-raw and never reaches traefik-logs.
+      # whitelists keeps RFC1918 sources from being banned once real client IPs arrive.
+      - PARSERS=crowdsecurity/syslog-logs crowdsecurity/whitelists
     volumes:
       - ../crowdsec/db:/var/lib/crowdsec/data
       - ../crowdsec/config:/etc/crowdsec
@@ -75,7 +91,7 @@ services:
           - bouncer
     environment:
       - CROWDSEC_BOUNCER_API_KEY=${CROWDSEC_BOUNCER_API_KEY}
-      - CROWDSEC_AGENT_HOST=crowdsec:8080
+      - CROWDSEC_AGENT_HOST=crowdsec:8081
       - GIN_MODE=release
       - PORT=8082
       - CROWDSEC_BOUNCER_LOG_LEVEL=1

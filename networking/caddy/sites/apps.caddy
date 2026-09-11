@@ -23,6 +23,9 @@ handle @vaultwarden {
 @portainer host portainer.home.disconnesso.com
 handle @portainer {
 	reverse_proxy https://localhost:9443 {
+		# Caddy 2.11.1 rewrites Host to the upstream address for https:// upstreams.
+		# Backends here were addressed by their public name before the upgrade.
+		header_up Host {host}
 		transport http {
 			tls_insecure_skip_verify
 		}
@@ -52,6 +55,9 @@ handle @forgejo {
 @cockpit host cockpit.home.disconnesso.com
 handle @cockpit {
 	reverse_proxy https://192.168.100.123:9090 {
+		# Caddy 2.11.1 rewrites Host to the upstream address for https:// upstreams.
+		# Backends here were addressed by their public name before the upgrade.
+		header_up Host {host}
 		transport http {
 			tls_insecure_skip_verify
 		}

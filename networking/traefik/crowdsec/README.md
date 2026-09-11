@@ -6,8 +6,12 @@ CrowdSec intrusion detection and prevention for Traefik.
 
 | Container        | Port | Purpose              |
 | ---------------- | ---- | -------------------- |
-| crowdsec         | 8080 | Main CrowdSec engine |
-| crowdsec-bouncer | 8082 | Traefik ForwardAuth  |
+| crowdsec         | 8081 | Local API (`api.server.listen_uri` in `config/config.yaml`) |
+| crowdsec-bouncer | 8082 | Traefik ForwardAuth |
+
+> The bouncer reaches the Local API through `CROWDSEC_AGENT_HOST`. That value must match
+> `api.server.listen_uri` above. A mismatch is silent: the bouncer answers every request
+> with 403 and `cscli bouncers list` shows a frozen "Last API pull".
 
 > **Note:** Metabase dashboard was removed (2026-03-07, saved ~2 GB RAM). Use `cscli` CLI for ad-hoc queries — see commands below.
 

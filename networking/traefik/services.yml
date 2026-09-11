@@ -109,3 +109,6 @@ http:
       forwardAuth:
         address: "http://bouncer:8082/api/v1/forwardAuth"
         trustForwardHeader: true
+        # Traefik 3.7 warns that an unbounded auth response body is a DoS vector.
+        # The bouncer answers with a few bytes; 64 KiB is far above any real reply.
+        maxResponseBodySize: 65536
