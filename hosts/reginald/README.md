@@ -38,12 +38,24 @@ Primary NFS server for media, Nextcloud, Immich, and Vaultwarden data. Storage L
 See [lxc-120-technitium.md](lxc-120-technitium.md) for Technitium DNS setup details.
 See [lxc-123-samba.md](lxc-123-samba.md) for Samba file server setup details.
 
-### Runtime state notes (2026-09-11)
+### LXC 123 restored to running (2026-09-11)
 
-- **LXC 123 intended state: RUNNING, `onboot: 1`** (user decision 2026-09-11). It had been
-  stopped with `onboot: 0` since ~2026-04-15 without a record; that broke the Nextcloud `/NAS`
-  SMB external storage (`occ setupchecks` error, hundreds of log entries). Started and set
-  `--onboot 1` on 2026-09-11.
+LXC 123 was found stopped with `onboot: 0`, with no PVE start record since 2026-04-15. The intended
+state is RUNNING (user decision 2026-09-11), and it is now running with `onboot: 1`:
+
+- The cutover procedure in [lxc-123-samba.md](lxc-123-samba.md) sets `--onboot 1`, and nothing in
+  that document retires or deprecates the container.
+- Nextcloud on VM 100 depends on it. `occ setupchecks` had exactly one error, the `/NAS` external
+  storage mount that points at this Samba share, with 828 log entries across 2026-09-10 and -11.
+
+Verified after the start: `smbd` active (Samba 4.22.10), port 445 reachable, both `[Media]` and
+`[Lushano]` shares present with their paths intact. The container was 153 packages behind (89 of
+them security) and is now fully patched with zero failed units. The Nextcloud mount then failed
+with "Storage unauthorized" (stale SMB password); the user re-entered the password in Nextcloud and
+`occ files_external:verify 2` returns ok.
+
+Open item: `/rpool/shared/media` is owned by UID/GID 100000, unlike `/rpool/shared/lushano` which is
+`lushano:mediauser`. The `[Media]` share may misbehave for `mediauser`. Not investigated here.
 
 ## Services
 

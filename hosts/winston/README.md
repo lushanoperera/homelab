@@ -69,41 +69,57 @@ Flatcar VM 100 shares VF 0 across Nextcloud, Immich, and media stack containers 
 
 ## LXC 105 (Plex) — rootfs UID-shift inconsistency (found 2026-09-11)
 
-`pct config 105` reports `unprivileged: 0` (privileged), but most of the rootfs is still owned by
-UID/GID **100000** — the unprivileged ID-map base. The container was converted from unprivileged to
-privileged (to reach the iGPU PF) without shifting rootfs ownership back to UID 0.
+`pct config 105` reports `unprivileged: 0` (privileged), but part of the rootfs is still owned by
+UID/GID **100000** and its derivatives — the unprivileged ID-map base. The container was converted
+from unprivileged to privileged (to reach the iGPU PF) without remapping rootfs ownership.
 
-The split widens with every upgrade: packages installed since the conversion write UID 0, the
-original files stay at 100000. Measured in `/etc` on 2026-09-11: 402 entries at UID 0, 1070 at
-UID 100000.
+Census taken 2026-09-11 with `find / -xdev -printf '%U\n' | sort | uniq -c`:
 
-Three services fail from this single cause:
+| UID | Files | Correct? |
+| --- | --- | --- |
+| 0 | 34,901 | yes |
+| 999 (plex) | 15,021 | yes |
+| **100000** | **3,102** | **no — shifted root** |
+| 100101 / 100102 | 48 | no — shifted 101 / 102 |
 
-| Unit | Error |
+So roughly 6% of the rootfs is misowned, and the split widens with every upgrade: packages
+installed since the conversion write UID 0, the originals stay at 100000.
+
+### Fixed 2026-09-11 with targeted, minimal changes
+
+All five failed units are now resolved and the container reports zero failed units.
+
+| Unit | Cause | Fix applied |
+| --- | --- | --- |
+| `logrotate.service` | `Ignoring /etc/logrotate.conf because the file owner is wrong` — logs had not rotated since at least Sep 8 | `chown 0:0` on `/etc/logrotate.conf`, `/etc/logrotate.d` and its 9 files. Service now exits 0 |
+| `postfix.service` | `postsuper: fatal: scan_dir_push: open directory hold: Permission denied`, then `open lock file /var/lib/postfix/master.lock: Permission denied` | `postfix set-permissions`, then `chown 102:109 /var/lib/postfix/master.lock` (it was 100102:100109). Service now active |
+| `motd-news.service` | `Unable to locate executable /etc/update-motd.d/50-motd-news: Permission denied` — files were 100000-owned AND mode 644 | `chown 0:0` plus `chmod 0755`. The 0755 mode is the packaged one, verified against `dpkg -c` on `base-files` and `update-notifier-common`, not invented |
+| `apparmor.service` | `apparmor_parser: Access denied. You need policy admin privileges to manage profiles` | Masked. AppArmor policy belongs to the host; this is permanent, not a symptom of the UID split |
+| `netplan-configure.service` | `udevadm: Failed to send reload request: No such file or directory` | Masked. No udev in an LXC, and networking here is set by PVE through `pct config`, not netplan |
+
+### Resolved 2026-09-11 — offline selective remap
+
+After a PBS backup (`vzdump 105 --mode snapshot`, notes `pre-uidshift-fix`) and a ZFS snapshot
+`vmpool/subvol-105-disk-2@pre-uidshift-202609111634` (rollback point), the container was stopped and
+every entry with a UID or GID in `100000..165535` was shifted down by 100000 on the rootfs dataset
+(`chown -h` / `chgrp -h`, so symlink ownership was fixed without following links). Setuid/setgid
+modes (26 files) were recorded before and restored after, because `chown` clears them.
+
+| Shift | Entries |
 | --- | --- |
-| `logrotate.service` | `Ignoring /etc/logrotate.conf because the file owner is wrong` — **logs are not rotating** |
-| `motd-news.service` | `Unable to locate executable /etc/update-motd.d/50-motd-news: Permission denied` |
-| `postfix.service` | `postsuper: fatal: scan_dir_push: open directory hold: Permission denied` |
+| uid 100000 → 0 | 3098 |
+| uid 100101 → 101, 100105 → 105 | 19 |
+| gid 100000 → 0 | 3088 |
+| gid 100004/8/42/43/50/104/112/113 → −100000 | 86 |
 
-Plex itself is unaffected (`/var/lib/plexmediaserver` is 999:999 and the service answers HTTP 200).
+Result: 0 shifted entries remain, 26 setuid files intact, zero failed units, `logrotate` and
+`motd-news` run with `Result=success`, postfix active, Plex HTTP 200 with `/dev/dri` present, no
+permission errors in the journal since boot. The script is kept at `/root/lxc105-uidshift-fix.sh`
+on winston. Delete the ZFS snapshot after a few clean days: `zfs destroy
+vmpool/subvol-105-disk-2@pre-uidshift-202609111634`.
 
-**Do not run a blanket `chown -R 0:0`** — that would also rewrite the 402 entries that are already
-correct. The remediation is to shift only the 100000-owned entries, from a PBS restore or offline:
+CAUTION: Do not run a blanket `chown -R 0:0` on this container. It would rewrite the 15,021 files
+that must stay owned by UID 999 (plex).
 
-```bash
-pct stop 105
-# on the rootfs, shift ONLY the entries still at the unprivileged base
-find <rootfs> -uid 100000 -exec chown -h 0 {} +
-find <rootfs> -gid 100000 -exec chgrp -h 0 {} +
-pct start 105
-```
-
-Take a PBS backup first. This has not been done — the three units above remain failed.
-
-`apparmor.service` and `netplan-configure.service` were masked on 2026-09-11 for a different,
-permanent reason: both are inapplicable inside an LXC. AppArmor policy is owned by the host
-(`apparmor_parser: Access denied. You need policy admin privileges to manage profiles`) and
-`netplan-configure` calls `udevadm`, which has no udev to talk to (`Failed to send reload request`).
-Networking for this container is set by PVE through `pct config`, not netplan.
 
 See `../../docs/thermal-management.md` for thermal configuration.
