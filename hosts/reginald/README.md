@@ -40,11 +40,10 @@ See [lxc-123-samba.md](lxc-123-samba.md) for Samba file server setup details.
 
 ### Runtime state notes (2026-09-11)
 
-- **LXC 123 is stopped with `onboot: 0`.** This contradicts the cutover step in
-  [lxc-123-samba.md](lxc-123-samba.md), which sets `--onboot 1`. No PVE task record of a start
-  since 2026-04-15. The intended standing state is UNRESOLVED — the container was deliberately
-  left stopped at some point and the change was never documented. Decide and record the intent
-  before starting it; do not start it on the strength of the cutover doc alone.
+- **LXC 123 intended state: RUNNING, `onboot: 1`** (user decision 2026-09-11). It had been
+  stopped with `onboot: 0` since ~2026-04-15 without a record; that broke the Nextcloud `/NAS`
+  SMB external storage (`occ setupchecks` error, hundreds of log entries). Started and set
+  `--onboot 1` on 2026-09-11.
 
 ## Services
 
