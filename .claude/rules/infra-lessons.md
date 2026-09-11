@@ -149,4 +149,5 @@ Reginald is hardware-constrained: Celeron N3450, **8 GB LPDDR4 soldered**, 7-dri
 | Keep `rpool/swap` zvol as failsafe  | 0 B used, but zram is only 1.2 GB. If zram fills, zvol is the OOM cushion. Don't remove just because it looks idle.                                        |
 | autotrim on all-SSD pools           | Must be explicitly enabled (`zpool set autotrim=on`). Not the default. Critical >70% capacity to keep SSD FTL healthy.                                     |
 | Hardlinks across media datasets     | Sonarr/Radarr/Lidarr hardlink from `/media/downloads` to movies/tv/music. `du` on downloads overstates real usage. `zfs list` USED on parent is truthful.  |
-| ORICO SSD on JMB58x flaky           | `sdg` has recurring READ/CKSUM errors. Before replacing the disk, swap to a different JMB58x port — the HBA controller may be the fault, not the drive.   |
+| ORICO SSD (`sdg`) is wearing out    | 2026-09-11 diagnosis: the 5 READ errors are NAND media (Pending 3, Offline_Uncorrectable 14, medium error 2026-07-01 with clean SATA link), 0 CKSUM. Plan a replacement; do not `zpool clear` before a post-reboot clean scrub. |
+| JMB58x SATA links downgrade to 3 Gb | ata4/ata6/ata7 (`sdd`, `sdf`, `sdg`) log BadCRC and drop to 3.0 Gbps; `sdf` CRC count 179, zero ZFS errors. Reseat/replace those cables (pause the scrub first). Separate from the `sdg` wear. |

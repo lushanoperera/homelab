@@ -22,8 +22,8 @@ Mostly LAN-internal. Public services are exposed via Cloudflare Tunnel → Traef
 | Immich (public)      | https://immich.lushanoperera.com             | Traefik + CF Tunnel (Flatcar VM)  |
 | Technitium DNS (web) | http://192.168.100.120:5380 (primary)        | Native, Debian LXC 120 (reginald) |
 | Homepage dashboard   | Flatcar VM `/srv/docker/homepage/`           | Caddy (internal)                  |
-| Proxmox VE (winston) | https://192.168.100.38:8006                  | Proxmox VE 9.2.2                  |
-| Proxmox VE (reginald)| https://192.168.100.4:8006                   | Proxmox VE 9.2.4                  |
+| Proxmox VE (winston) | https://192.168.100.38:8006                  | Proxmox VE 9.2.18                 |
+| Proxmox VE (reginald)| https://192.168.100.4:8006                   | Proxmox VE 9.2.18                 |
 | Proxmox Backup Server| https://192.168.100.187:8007                 | PBS VM on QNAP                     |
 
 ### Network architecture
@@ -43,14 +43,14 @@ Mostly LAN-internal. Public services are exposed via Cloudflare Tunnel → Traef
 
 | Host/VM                         | IP                                                 | Role                                                                   |
 | ------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------- |
-| UniFi Fiber Gateway (UCG-Fiber) | 192.168.1.1                                        | Router, firewall, UniFi OS 10.1 controller                             |
-| winston                         | 192.168.100.38 / .200.38                           | Primary Proxmox VE 9.2.2 host (64 GB, SR-IOV active: 7 VFs)             |
-| reginald                        | 192.168.100.4 / .200.4                             | Secondary Proxmox VE 9.2.4 host (8 GB, ZFS NFS server)                 |
+| UniFi Fiber Gateway (UCG-Fiber) | 192.168.1.1                                        | Router, firewall, UniFi OS 5.1.31, Network app 10.6.101                |
+| winston                         | 192.168.100.38 / .200.38                           | Primary Proxmox VE 9.2.18 host (64 GB, SR-IOV active: 7 VFs)            |
+| reginald                        | 192.168.100.4 / .200.4                             | Secondary Proxmox VE 9.2.18 host (8 GB, ZFS NFS server)                |
 | flatcar-media (VM 100)          | .100.100 / .101 / .103 / .7.119 / .200.100         | Media stack + Nextcloud + Immich + reverse proxies                     |
 | homeassistant (VM 102)          | .100.102 / .4.102 / .5.102                         | Home Assistant (multi-VLAN: Infra+IoT+Multimedia)                      |
 | PBS                             | 192.168.100.187                                    | Proxmox Backup Server (VM on QNAP). Datastores `pbs-backups`/`nwlab-backup` on local virtio disks |
 | PDM (LXC 106)                   | 192.168.100.106                                    | Proxmox Datacenter Manager (manages winston, reginald, nwlab-thinkpad) |
-| QNAP NAS (TS-251+)              | 192.168.100.254 / .200.254                         | Storage (MinIO S3, NFS), DNS secondary, PBS host                       |
+| QNAP NAS (TS-251+)              | 192.168.100.254 / .200.254                         | Storage (MinIO S3, NFS), DNS secondary, PBS host; SSH as `admin`      |
 | nwlab-thinkpad (remote)         | 10.21.21.99                                        | nwlab Proxmox VE 9.2.2 host (managed via WireGuard tunnel)             |
 
 **LXC (winston)**: 104 WireGuard, 105 Plex, 106 PDM, 107 immich-ml (Docker, iGPU PF, 192.168.100.107).
