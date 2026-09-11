@@ -9,7 +9,7 @@
 | RAM       | 8 GB                        |
 | Expansion | SATA PCIe controller card   |
 | Storage   | 7x SSD in ZFS RAIDZ2 pool   |
-| Proxmox   | 9.1.6 (Kernel 6.17.9-1-pve) |
+| Proxmox   | 9.2.18 (Kernel 7.0.14-16-pve) |
 
 ## Network
 
@@ -37,6 +37,29 @@ Primary NFS server for media, Nextcloud, Immich, and Vaultwarden data. Storage L
 
 See [lxc-120-technitium.md](lxc-120-technitium.md) for Technitium DNS setup details.
 See [lxc-123-samba.md](lxc-123-samba.md) for Samba file server setup details.
+
+### Runtime state notes (2026-09-11)
+
+- **LXC 123 is stopped with `onboot: 0`.** This contradicts the cutover step in
+  [lxc-123-samba.md](lxc-123-samba.md), which sets `--onboot 1`. No PVE task record of a start
+  since 2026-04-15. The intended standing state is UNRESOLVED — the container was deliberately
+  left stopped at some point and the change was never documented. Decide and record the intent
+  before starting it; do not start it on the strength of the cutover doc alone.
+
+## Services
+
+### openipmi — intentionally masked (2026-09-11)
+
+`openipmi.service` failed continuously since 2026-05-22. The Zimaboard 832 has no BMC:
+`ipmi_si: Unable to find any System Interface(s)` at boot, no `/dev/ipmi*` node, and
+`dmidecode -t 38` returns no IPMI Device Information record. The intended state is therefore
+disabled, not repaired:
+
+```bash
+systemctl disable openipmi && systemctl mask openipmi
+```
+
+Unmask only if reginald is ever replaced by hardware that has a BMC.
 
 ## ZFS Pool
 
