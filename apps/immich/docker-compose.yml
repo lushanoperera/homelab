@@ -1,9 +1,25 @@
+# Immich is EXCLUDED from Watchtower auto-updates (2026-09-11).
+#
+# The server lives here on VM 100 and the machine-learning service lives in LXC 107 on
+# winston (apps/immich-ml/). Immich requires both to run the SAME version, and the VM 100
+# Watchtower cannot see or update the LXC 107 container. An unattended server bump would
+# therefore leave server and ML on different versions.
+#
+# It also removes the nightly GHCR poll that failed on 2026-09-11 04:00 UTC with
+# "registry rate limited ... allowed 44000 per 1m0s" on ghcr.io/immich-app/immich-server.
+#
+# Upgrade procedure (manual, both hosts, same version):
+#   1. docker pull the server image on VM 100 AND the -openvino ML image in LXC 107
+#   2. set IMMICH_VERSION=vX.Y.Z in /srv/docker/immich/.env and /srv/docker/immich-ml/.env
+#   3. /opt/bin/docker-compose up -d here, then docker compose up -d in LXC 107
 services:
   immich-server:
     image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
     container_name: immich_server
     mem_limit: 1g
     restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
     ports:
       - "192.168.100.103:2283:2283"
     environment:
@@ -37,6 +53,8 @@ services:
     container_name: immich_redis
     mem_limit: 128m
     restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping || exit 1"]
       interval: 10s
@@ -50,6 +68,8 @@ services:
     mem_limit: 512m
     restart: unless-stopped
     shm_size: 128mb
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_USER: ${DB_USERNAME:-postgres}

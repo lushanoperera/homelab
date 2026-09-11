@@ -152,6 +152,30 @@ storage:
 
 systemd:
   units:
+    # Mask systemd-sysupdate-reboot (2026-09-11).
+    #
+    # Upstream systemd symlinks both sysupdate timers into
+    # /usr/lib/systemd/system/timers.target.wants/, so they start even though
+    # `systemctl is-enabled` reports "disabled" (that only inspects /etc).
+    #
+    # The only transfer definition Flatcar ships is /usr/lib/sysupdate.d/noop.transfer,
+    # a placeholder whose MatchPattern is "invalid@v.raw" and can never match. So
+    # `systemd-sysupdate update` correctly prints "No update needed" and exits 0, while
+    # `systemd-sysupdate reboot` inspects INSTALLED versions, finds none, and exits 1 with
+    # "Couldn't find any suitable installed versions" — a daily failed unit for nothing.
+    #
+    # This is upstream noise, NOT a leftover of the i915 SR-IOV sysext retired 2026-08-25.
+    # /etc/extensions holds only Flatcar's own containerd/docker/oem-qemu sysexts, and
+    # those ship with the OS image.
+    #
+    # The Flatcar OS itself updates through update_engine + locksmithd, which are
+    # untouched by this mask. systemd-sysupdate.timer is left running: it is harmless and
+    # becomes useful if a real sysext transfer is ever added here.
+    - name: systemd-sysupdate-reboot.timer
+      mask: true
+    - name: systemd-sysupdate-reboot.service
+      mask: true
+
     # Zram swap — compressed RAM swap for OOM protection (29 containers, no disk swap)
     - name: zram-swap.service
       enabled: true

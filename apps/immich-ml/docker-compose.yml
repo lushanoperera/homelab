@@ -1,3 +1,6 @@
+# IMMICH_VERSION here MUST equal the one in /srv/docker/immich/.env on VM 100 — Immich
+# refuses to run a server and an ML service on different versions. Upgrade both together.
+# No Watchtower runs in this CT, so nothing bumps this image on its own.
 services:
   immich-machine-learning:
     image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}-openvino

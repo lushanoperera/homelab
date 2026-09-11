@@ -458,6 +458,25 @@ services:
       retries: 3
       start_period: 60s
 
+  # Watchtower scans EVERY container on VM 100, not only this stack (it reads the whole
+  # Docker socket). Opt a container out with the label
+  # "com.centurylinklabs.watchtower.enable=false" on its own service.
+  #
+  # Opted out on purpose:
+  #   - gluetun, qbittorrent (below) — a recreate re-runs NAT-PMP and changes the
+  #     forwarded port, which strands the namespace dependents
+  #   - the whole Immich stack (apps/immich/docker-compose.yml, 2026-09-11) — the Immich
+  #     ML service runs in LXC 107 on winston, out of this Watchtower's reach, and Immich
+  #     requires server and ML on the SAME version. This also removes the nightly GHCR
+  #     poll that failed on 2026-09-11 with "registry rate limited" on immich_server.
+  #     Immich is upgraded by hand on both hosts together.
+  #
+  # Nextcloud needs no label: nextcloud-app/-cron run the locally built image
+  # nextcloud-custom:<ver>-fpm, which has no registry to poll. Bumping Nextcloud means
+  # rebuilding that image with `docker-compose build --pull nextcloud-app`.
+  #
+  # No registry credentials are configured. If an authenticated GHCR pull is ever needed,
+  # it takes a user-supplied token in ~/.docker/config.json on VM 100 — do not invent one.
   watchtower:
     image: nickfedor/watchtower:latest
     container_name: watchtower
@@ -474,6 +493,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
 
+  # NOTE (2026-09-11): this service is DEFINED but NOT RUNNING on VM 100 — `docker ps -a`
+  # lists no watchtower-weekly container. Nothing consumes the "weekly" scope today, so
+  # the gluetun/qbittorrent scope labels are inert and only their enable=false matters.
+  # Decide whether to start it or drop it; do not `up -d` the whole stack to find out.
   watchtower-weekly:
     image: nickfedor/watchtower:latest
     container_name: watchtower-weekly
