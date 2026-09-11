@@ -7,7 +7,7 @@
 | Chassis   | Minisforum MS-01                         |
 | CPU       | Intel i9-13900H (14C/20T, up to 5.2 GHz) |
 | RAM       | 32 GB                                    |
-| Proxmox   | 9.1.6 (Kernel 6.17.13-1-pve)             |
+| Proxmox   | 9.2.18 (running 7.0.2-6-pve; 7.0.14-16-pve installed, pending reboot) |
 
 ## Network
 
@@ -66,5 +66,44 @@ Flatcar VM 100 shares VF 0 across Nextcloud, Immich, and media stack containers 
 | 104  | WireGuard | 192.168.100.104 | 1   | 512 MB | 4.3 GB  | Debian 12       |
 | 105  | Plex      | 192.168.100.105 | 4   | 3 GB   | 12.9 GB | Ubuntu 26.04    |
 | 106  | PDM       | 192.168.100.106 | 1   | 512 MB | 10 GB   | Debian 12       |
+
+## LXC 105 (Plex) — rootfs UID-shift inconsistency (found 2026-09-11)
+
+`pct config 105` reports `unprivileged: 0` (privileged), but most of the rootfs is still owned by
+UID/GID **100000** — the unprivileged ID-map base. The container was converted from unprivileged to
+privileged (to reach the iGPU PF) without shifting rootfs ownership back to UID 0.
+
+The split widens with every upgrade: packages installed since the conversion write UID 0, the
+original files stay at 100000. Measured in `/etc` on 2026-09-11: 402 entries at UID 0, 1070 at
+UID 100000.
+
+Three services fail from this single cause:
+
+| Unit | Error |
+| --- | --- |
+| `logrotate.service` | `Ignoring /etc/logrotate.conf because the file owner is wrong` — **logs are not rotating** |
+| `motd-news.service` | `Unable to locate executable /etc/update-motd.d/50-motd-news: Permission denied` |
+| `postfix.service` | `postsuper: fatal: scan_dir_push: open directory hold: Permission denied` |
+
+Plex itself is unaffected (`/var/lib/plexmediaserver` is 999:999 and the service answers HTTP 200).
+
+**Do not run a blanket `chown -R 0:0`** — that would also rewrite the 402 entries that are already
+correct. The remediation is to shift only the 100000-owned entries, from a PBS restore or offline:
+
+```bash
+pct stop 105
+# on the rootfs, shift ONLY the entries still at the unprivileged base
+find <rootfs> -uid 100000 -exec chown -h 0 {} +
+find <rootfs> -gid 100000 -exec chgrp -h 0 {} +
+pct start 105
+```
+
+Take a PBS backup first. This has not been done — the three units above remain failed.
+
+`apparmor.service` and `netplan-configure.service` were masked on 2026-09-11 for a different,
+permanent reason: both are inapplicable inside an LXC. AppArmor policy is owned by the host
+(`apparmor_parser: Access denied. You need policy admin privileges to manage profiles`) and
+`netplan-configure` calls `udevadm`, which has no udev to talk to (`Failed to send reload request`).
+Networking for this container is set by PVE through `pct config`, not netplan.
 
 See `../../docs/thermal-management.md` for thermal configuration.
