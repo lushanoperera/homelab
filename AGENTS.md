@@ -37,6 +37,7 @@ Mostly LAN-internal. Public services are exposed via Cloudflare Tunnel → Traef
 | Multimedia  | 192.168.5.0/24   | 5    | Sonos, Sky Q, media players               |
 | Infra       | 192.168.100.0/20 | 100  | Proxmox hosts, VMs, LXCs, services        |
 | DMZ         | 192.168.7.0/24   | 7    | Internet-facing services (Traefik)        |
+| NetBird     | 192.168.8.0/24   | 8    | NetBird server VM 109 only (own UniFi zone, no LAN access) |
 | Storage LAN | 192.168.200.0/24 | —    | Dedicated NFS/backup traffic (not on UFG) |
 
 ### Hosts & VMs
@@ -51,9 +52,10 @@ Mostly LAN-internal. Public services are exposed via Cloudflare Tunnel → Traef
 | PBS                             | 192.168.100.187                                    | Proxmox Backup Server (VM on QNAP). Datastores `pbs-backups`/`nwlab-backup` on local virtio disks |
 | PDM (LXC 106)                   | 192.168.100.106                                    | Proxmox Datacenter Manager (manages winston, reginald, nwlab-thinkpad) |
 | QNAP NAS (TS-251+)              | 192.168.100.254 / .200.254                         | Storage (MinIO S3, NFS), DNS secondary, PBS host; SSH as `admin`      |
-| nwlab-thinkpad (remote)         | 10.21.21.99                                        | nwlab Proxmox VE 9.2.2 host (managed via WireGuard tunnel)             |
+| netbird (VM 109, winston)       | 192.168.8.109                                      | NetBird v0.80 self-hosted server, `https://vpn.disconnesso.com` (Debian 13) |
+| nwlab-thinkpad (remote)         | 10.21.21.99                                        | nwlab Proxmox VE 9.2.2 host (WireGuard tunnel; NetBird migration in progress) |
 
-**LXC (winston)**: 104 WireGuard, 105 Plex, 106 PDM, 107 immich-ml (Docker, iGPU PF, 192.168.100.107).
+**LXC (winston)**: 104 WireGuard (retires in NetBird Phase 5), 105 Plex, 106 PDM, 107 immich-ml (Docker, iGPU PF, 192.168.100.107), 108 netbird-gw (NetBird routing peer for 192.168.100.0/24).
 **LXC (reginald)**: 120 Technitium DNS, 123 Samba.
 
 ## Repo layout
@@ -185,6 +187,17 @@ in `hosts/firewall.md`. Rollout is log-first → drop-later with a dead-man cron
 the perimeter; intra-VLAN-100 traffic is unfiltered until the FW is flipped live. Public services
 reach the LAN only through Cloudflare Tunnel → Traefik (DMZ) → CrowdSec.
 
+**NetBird (migration from WireGuard, started 2026-10-04).** Server VM 109 in its own VLAN 8 / UniFi
+zone: it reaches only the internet; the LAN reaches it on TCP 443 + UDP 3478 only. Routing peers:
+LXC 108 (home, 192.168.100.0/24) and nwlab LXC 105 (office, 10.21.21.0/24). Access is deny-by-default
+NetBird policies per group (`owner-devices`, `owner-phone`, `family`, `team`, `router-*`). Login:
+Google SSO with user approval, plus a local owner account with MFA as break-glass. Nightly
+consistent archive on VM 109 (02:30), checked by winston (07:30, ntfy alert). WireGuard (LXC 104,
+`wg-nwlab`) stays until Phase 5. UCG port forwards: UDP 51820 → LXC 104 (WireGuard, until Phase 5),
+TCP 443 + UDP 3478 → VM 109, UDP 51821 → LXC 108 (gives the home router a public ICE candidate).
+UniFi "Direct Remote Connection" is off (it held public TCP 443). Plan and runbook live in the
+gitignored `.claude/plans/2026-10-03-netbird/`.
+
 ## DNS architecture (Technitium cluster)
 
 3-node cluster with native zone replication (replaced Pi-hole + Nebula Sync).
@@ -220,7 +233,9 @@ backend; stopped 2026-10-04, `couchdb-stack.service` disabled, data kept in
 management; ML lives in LXC 107 on winston since 2026-08-25); Portainer; aim (central
 knowledge-graph MCP behind Caddy, `192.168.100.100:18282`, `apps/aim/`); Syncthing hub (vault +
 aim store, port 22000, `apps/syncthing/`). Ports 18282 and 22000 accept only the WireGuard source
-(LXC 104 masquerade) and the macbook (`scripts/vms/aim-fw.sh`).
+(LXC 104 masquerade), the NetBird home router (LXC 108 masquerade) and the macbook
+(`scripts/vms/aim-fw.sh`). After a device moves from WireGuard to NetBird, pause/resume it on the
+Syncthing hub: the hub keeps the dead .104 connection and ignores the new one.
 
 **QNAP NAS** (`192.168.100.254`): Technitium DNS (secondary), MinIO S3, PBS VM, Watchtower (daily 4 AM).
 

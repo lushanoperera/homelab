@@ -49,6 +49,15 @@ PDM (.100.106) → winston MASQUERADE (10.0.0.5) → wg-nwlab tunnel → nwlab w
 
 Config: `/etc/wireguard/wg-nwlab.conf`, service `wg-quick@wg-nwlab`. LXC 104 is the separate personal WG server.
 
+## NetBird (replaces both WireGuard paths; migration in progress since 2026-10-04)
+
+Server: VM 109 `192.168.8.109` (VLAN 8), `https://vpn.disconnesso.com`, compose in `/home/lushano/netbird/` (SSH `lushano@`).
+Routing peers: LXC 108 `netbird-gw` (192.168.100.108, NetBird WG port 51821, `--external-ip-map
+195.182.211.44`) and nwlab LXC 105 `netbird-gw` (10.21.21.105). Site link is P2P.
+Gotcha: Technitium answers `vpn.disconnesso.com` with 192.168.8.109, and UCG NAT loopback keeps the LAN
+source, so a home-LAN peer's STUN returns its private IP. LXC 108 fixes this with the 51821 forward +
+external IP map. PBS and PDM still use WireGuard until Phase 4.
+
 ## Backup Flow
 
 VM/LXC → PBS (.100.187) → pbs-backups + nwlab-backup datastores → push job over WG to nwlab PBS.
