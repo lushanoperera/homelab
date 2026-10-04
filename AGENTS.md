@@ -214,8 +214,8 @@ dashboard was removed 2026-03-07 — use the `cscli` CLI.
 media stack (gluetun/ProtonVPN, prowlarr, qbittorrent, sabnzbd, radarr, sonarr, lidarr, bazarr,
 seerr, tautulli, flaresolverr, profilarr + profilarr-parser, watchtower [nickfedor fork], autoheal);
 Caddy; Technitium DNS (secondary, separate `dns-compose.yml`); Traefik (DMZ .7.119) + CrowdSec +
-cloudflared; Vaultwarden; Forgejo (private Git: dotfiles/configs); CouchDB (Obsidian LiveSync
-backend); Nextcloud (nginx + FPM + Postgres + Redis + imaginary + appapi-harp); Immich (photo
+cloudflared; Vaultwarden; Forgejo (private Git: dotfiles/configs); CouchDB (former Obsidian LiveSync
+backend; LiveSync off since 2026-10-04, the vault syncs through the Syncthing hub); Nextcloud (nginx + FPM + Postgres + Redis + imaginary + appapi-harp); Immich (photo
 management; ML lives in LXC 107 on winston since 2026-08-25); Portainer; aim (central
 knowledge-graph MCP behind Caddy, `192.168.100.100:18282`, `apps/aim/`); Syncthing hub (vault +
 aim store, port 22000, `apps/syncthing/`). Ports 18282 and 22000 accept only the WireGuard source
