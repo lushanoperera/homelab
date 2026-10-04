@@ -228,6 +228,11 @@
         href: https://wireguard.home.disconnesso.com
         description: VPN server
         ping: 192.168.100.104
+    - NetBird:
+        icon: netbird.png
+        href: https://vpn.disconnesso.com
+        description: VPN control plane (VM 109)
+        siteMonitor: https://vpn.disconnesso.com
 
 - Storage:
     - Samba:
