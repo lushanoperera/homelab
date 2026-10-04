@@ -25,7 +25,6 @@ recall:
 | Immich            | immich.lushanoperera.com           | immich_server:2283     | localhost:2283  |
 | Nextcloud         | nextcloud.lushanoperera.com        | nextcloud-web:80       | localhost:11000 |
 | Traefik Dashboard | traefik.lushanoperera.com          | api@internal           | —               |
-| CouchDB (former Obsidian LiveSync; unused since 2026-10-04) | obsidian-sync.home.disconnesso.com | — | localhost:5984 |
 | Syncthing hub (Obsidian vault since 2026-10-04) | 192.168.100.100:22000 (no hostname) | — | — |
 | Homepage          | homepage.home.disconnesso.com      | —                      | localhost:3000  |
 | Forgejo           | forgejo.home.disconnesso.com       | —                      | localhost:3100  |

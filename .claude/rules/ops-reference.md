@@ -60,7 +60,7 @@ ssh core@192.168.100.100 '/opt/bin/media-cleanup.sh --dry-run'
 
 **Forgejo**: Web `https://forgejo.home.disconnesso.com`, SSH `forgejo:` alias, admin `lushano`, SQLite, registration disabled.
 
-**CouchDB**: `curl -s http://localhost:5984/_up` | `curl -s http://localhost:5984/obsidian-livesync | jq .doc_count`
+**CouchDB**: stopped 2026-10-04 (former LiveSync backend; Caddy route removed). Data kept in `/srv/docker/couchdb/data`. Restart for a rollback: `sudo systemctl enable --now couchdb-stack.service`, then restore the `@obsidian-sync` block in `networking/caddy/sites/apps.caddy`.
 
 **Immich**: `/srv/docker/immich/`, photos `/mnt/immich/upload` (NFS). No GPU on VM 100 since 2026-08-25. ML runs in LXC 107 on winston (`ssh root@192.168.100.107`, `/srv/docker/immich-ml/`, `http://192.168.100.107:3003/ping`).
 
