@@ -1,0 +1,19 @@
+# aim front door: bearer check, 4 MB body cap, no access log. AIM_TOKEN from .env.
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	request_body {
+		max_size 4MB
+	}
+	@authorized header Authorization "Bearer {$AIM_TOKEN}"
+	handle @authorized {
+		# The token stops here: mcp-proxy and the aim server never see it.
+		reverse_proxy aim:8080 {
+			header_up -Authorization
+		}
+	}
+	respond 401
+}

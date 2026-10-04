@@ -1,0 +1,12 @@
+[Unit]
+Description=Source allow-list for aim KG and Syncthing hub (DOCKER-USER)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/bin/aim-fw.sh
+
+[Install]
+WantedBy=multi-user.target

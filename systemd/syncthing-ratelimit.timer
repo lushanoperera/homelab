@@ -1,0 +1,10 @@
+[Unit]
+Description=Syncthing hub rate limit 03:30-05:30 Europe/Rome
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 Europe/Rome
+OnCalendar=*-*-* 05:30:00 Europe/Rome
+OnBootSec=5min
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,9 @@
+[Unit]
+Description=Check the aim KG history job on VM 100 every 15 minutes
+
+[Timer]
+OnCalendar=*:07/15
+Persistent=true
+
+[Install]
+WantedBy=timers.target

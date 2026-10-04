@@ -1,0 +1,10 @@
+[Unit]
+Description=Hourly aim KG history commit
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

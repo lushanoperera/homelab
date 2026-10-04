@@ -97,6 +97,11 @@ hardware-purchases/         # Hardware planning notes (e.g. 3-node MS01 Ceph clu
 | `systemd/*.mount`                            | `/etc/systemd/system/`                       | Ignition or manual      |
 | `apps/*/restic-env.example`                  | `/srv/docker/<app>/.restic-env` (VM 100)     | manual, chmod 0600      |
 | `hosts/common/cluster.fw`, `hosts/<h>/firewall/host.fw` | `/etc/pve/...` on the host        | `scripts/hosts/deploy-firewall.sh` |
+| `apps/aim/` (`compose.yaml`, `Caddyfile`)    | `/srv/docker/aim-stack/` (data: `/srv/docker/aim/`) | rsync/scp; see `apps/aim/README.md` |
+| `apps/syncthing/compose.yaml`                | `/srv/docker/syncthing/compose.yaml`         | rsync/scp; see `apps/syncthing/README.md` |
+| `scripts/vms/aim-fw.sh`, `scripts/vms/syncthing-ratelimit.sh` | `/opt/bin/`                 | `install -m 0755` (not in deploy-media-scripts.sh) |
+| `systemd/aim-*`, `systemd/syncthing-ratelimit.*` | `/etc/systemd/system/`                   | manual + `systemctl enable --now` |
+| `scripts/hosts/winston/aim-history-watch.sh` (+ `systemd/`) | winston `/usr/local/bin/`, `/etc/systemd/system/` | manual |
 
 ## Local development
 
@@ -211,7 +216,10 @@ seerr, tautulli, flaresolverr, profilarr + profilarr-parser, watchtower [nickfed
 Caddy; Technitium DNS (secondary, separate `dns-compose.yml`); Traefik (DMZ .7.119) + CrowdSec +
 cloudflared; Vaultwarden; Forgejo (private Git: dotfiles/configs); CouchDB (Obsidian LiveSync
 backend); Nextcloud (nginx + FPM + Postgres + Redis + imaginary + appapi-harp); Immich (photo
-management; ML lives in LXC 107 on winston since 2026-08-25); Portainer.
+management; ML lives in LXC 107 on winston since 2026-08-25); Portainer; aim (central
+knowledge-graph MCP behind Caddy, `192.168.100.100:18282`, `apps/aim/`); Syncthing hub (vault +
+aim store, port 22000, `apps/syncthing/`). Ports 18282 and 22000 accept only the WireGuard source
+(LXC 104 masquerade) and the macbook (`scripts/vms/aim-fw.sh`).
 
 **QNAP NAS** (`192.168.100.254`): Technitium DNS (secondary), MinIO S3, PBS VM, Watchtower (daily 4 AM).
 

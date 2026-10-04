@@ -1,0 +1,6 @@
+[Unit]
+Description=Alert on a failed or stale aim KG history job on VM 100 (ntfy)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/aim-history-watch.sh

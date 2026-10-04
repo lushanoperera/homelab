@@ -1,0 +1,24 @@
+# Syncthing hub v2.1.5. Config: /srv/docker/syncthing/config. Folders: brain (send-receive,
+# /srv/docker/syncthing/brain), aim (send-only, /srv/docker/aim/store, mounted read-only).
+# Sync 22000 tcp+udp on 192.168.100.100 only; source allow-list in aim-fw.service.
+# GUI on host 127.0.0.1:8384 only (ssh -L 8384:127.0.0.1:8384 core@192.168.100.100).
+# Relays, global/local discovery and NAT traversal are off: clients dial the hub.
+name: syncthing
+services:
+  syncthing:
+    image: syncthing/syncthing:2.1.5@sha256:397aa00b92b48d65540ea3ae3cbf271b87bdccbe07a0b7bd7d2debc3a7b29138
+    restart: unless-stopped
+    hostname: homelab-hub
+    environment:
+      PUID: "500"
+      PGID: "500"
+      HOME: /srv/docker/syncthing
+      STHOMEDIR: /srv/docker/syncthing/config
+      STNOUPGRADE: "1"
+    ports:
+      - "192.168.100.100:22000:22000/tcp"
+      - "192.168.100.100:22000:22000/udp"
+      - "127.0.0.1:8384:8384/tcp"
+    volumes:
+      - /srv/docker/syncthing:/srv/docker/syncthing
+      - /srv/docker/aim/store:/srv/docker/aim/store:ro

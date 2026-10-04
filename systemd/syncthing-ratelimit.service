@@ -1,0 +1,8 @@
+[Unit]
+Description=Syncthing hub rate limit for the PBS push window
+After=docker.service
+
+[Service]
+Type=oneshot
+User=core
+ExecStart=/opt/bin/syncthing-ratelimit.sh

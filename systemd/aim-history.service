@@ -1,0 +1,9 @@
+[Unit]
+Description=aim KG history commit (memory*.jsonl in /srv/docker/aim/store)
+
+[Service]
+Type=oneshot
+User=core
+Group=core
+Environment=AIM_ROOT=/srv/docker/aim
+ExecStart=/srv/docker/aim-src/mcp/knowledge-graph/aim-history.sh

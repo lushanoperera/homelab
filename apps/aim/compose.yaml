@@ -1,0 +1,27 @@
+# aim KG hub: Caddy (bearer check, 4 MB cap) -> aim server (internal network, no published port).
+# Data: /srv/docker/aim/{store,run}. Token: .env (mode 600, AIM_TOKEN=...).
+# Reachability: 192.168.100.100:18282 only; DOCKER-USER (aim-fw.service) allows WireGuard
+# (LXC 104 masquerade, 192.168.100.104) and the macbook (192.168.2.245), rejects the rest.
+# Restore note: after a whole-VM restore, delete /srv/docker/aim/run/MAINTENANCE if it came back,
+# or aim refuses to start (exit 75).
+name: aim
+services:
+  aim:
+    image: aim-server:ce38185
+    restart: unless-stopped
+    user: "500:500"
+    volumes: [/srv/docker/aim:/data]
+    networks: [internal]
+  caddy:
+    image: caddy:2.11.4-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b
+    restart: unless-stopped
+    env_file: .env
+    ports: ["192.168.100.100:18282:8080"]
+    volumes: [./Caddyfile:/etc/caddy/Caddyfile:ro]
+    networks: [internal, edge]
+networks:
+  # inhibit_ipv4: the VM host gets no address on this bridge, so it cannot reach aim:8080.
+  internal:
+    internal: true
+    driver_opts: { com.docker.network.bridge.inhibit_ipv4: "true" }
+  edge: {}
