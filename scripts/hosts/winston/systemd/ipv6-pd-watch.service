@@ -1,0 +1,6 @@
+[Unit]
+Description=Check home IPv6 through the Navigabene delegated prefix (ntfy)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ipv6-pd-watch.sh
