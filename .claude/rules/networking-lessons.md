@@ -8,6 +8,9 @@ recall:
   - radio ai
   - mesh
   - channel
+  - ucg
+  - gateway
+  - ipv6
 ---
 
 # Networking Lessons (UniFi / WiFi)
@@ -24,6 +27,7 @@ recall:
 | Radio AI           | `rest/setting/radio_ai` manages channel optimization. `exclude_devices` takes MAC array. No manual trigger — runs on cron.                            |
 | Satisfaction Field | -1 means insufficient samples (display as N/A)                                                                                                        |
 | SSO vs Local       | SSO accounts require MFA — create a **local-only admin** (Restrict to Local Access Only) for API automation                                           |
+| UCG access (agents)| Read gateway state over SSH, not the API: `ssh -J root@192.168.100.38 root@192.168.1.1` (key auth). From the macbook over NetBird, 192.168.1.1 is not routed (only 192.168.100.0/24): direct curl/ssh waits 75 s and times out. `unifi-inventory.sh` with the `.env` SSO account fails with `MFA_AUTH_REQUIRED` (HTTP 499). Sources: `ip -6 addr`, `/var/log/daemon.log`, `/run/dnsmasq.dhcp.conf.d/`, `/data/udapi-config/ubios-udapi-server/ubios-udapi-server.state` (2026-10-07) |
 | UCG SSH            | UniFi OS 5.1 offers SSH by password only (Console → Control Plane → SSH). Password in `scripts/network/.env` as `UCG_SSH_PASS`; `ssh-copy-id root@192.168.1.1` once, then key auth works |
 | IPv6 PD withdrawn  | Symptom: phones "cannot browse" while IPv4 is fine (2026-08-26). ISP rotated the WAN /64 and withdrew the delegated /56 (`preferred_lft 0`); `odhcp6c` kept the dead lease for 45 days and every VLAN advertised a deprecated prefix, so client IPv6 died upstream. Diagnose on the gateway: `ip -6 addr show br2` shows `deprecated`, `curl -6 https://www.google.com` times out. Fix without reboot: `kill -USR2 $(pgrep odhcp6c); sleep 3; kill -USR1 $(pgrep odhcp6c)` (release + re-solicit), then check `br2` has a preferred address and `/data/udapi-config/pd.leases` has a new /56 |
 | IPv6 PD unrouted   | Same symptom, different cause (2026-09-24): prefix NOT deprecated, re-solicit returned the SAME /56 (`2a0d:b287:dc20:5900::/56`), but the ISP does not route it. Gateway IPv6 from its WAN /128 works, so plain `curl -6` on the gateway passes — test from the LAN prefix: `curl -6 --interface 2a0d:b287:dc20:5901::1 https://www.google.com` fails, and `tcpdump -ni eth4.835 ip6` shows echo requests out, no replies. No local fix: set IPv6 Interface Type = **None** on Trusted, IoT, Multimedia, Infra (Network → Settings → Networks), then clients toggle WiFi. Open an ISP ticket; re-enable Prefix Delegation only after the ISP confirms routing. **Fixed 2026-09-28** (Navigabene ticket #VYU-510137): ISP made the WAN /128 static on their side, then we renewed BOTH leases — `kill -USR1 $(pgrep -f "udhcpc.*eth4.835")` (v4 renew, no release, IP kept) + the `odhcp6c` USR2/USR1 above; same /56 came back and routed. Gotchas: keep ONE network (Infra) on Prefix Delegation while debugging — with all four on None the gateway drops the PD lease (`pd.leases` empty) and every test is void. Inbound replies do not reliably show in `tcpdump` on the UCG; prove with `/proc/net/snmp6` (`Icmp6InEchoReplies`), per-destination `ip6tables` counters, and external pings via `api.globalping.io`. Hand-added `ip6tables` rules vanish on the next UniFi provision. From outside the LAN reach the gateway with `ssh -J root@192.168.100.38 root@192.168.1.1` |
